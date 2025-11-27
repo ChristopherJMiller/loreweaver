@@ -3,8 +3,10 @@
 use sea_orm::entity::prelude::*;
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Debug, PartialEq, DeriveEntityModel, Eq, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, DeriveEntityModel, Eq, Serialize, Deserialize, ts_rs :: TS)]
 #[sea_orm(table_name = "locations")]
+#[ts(rename = "Locations")]
+#[ts(export)]
 pub struct Model {
     #[sea_orm(primary_key, auto_increment = false)]
     pub id: String,
