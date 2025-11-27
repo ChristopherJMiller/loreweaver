@@ -18,11 +18,10 @@ interface CharacterEntity extends BaseEntity {
 interface LocationEntity extends BaseEntity {
   name: string;
   parent_id: string | null;
-  location_type: string | null;
+  location_type: string;
   description: string | null;
-  known_for: string | null;
-  current_state: string | null;
   detail_level: number;
+  gm_notes: string | null;
 }
 
 // Organization entity

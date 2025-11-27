@@ -5,6 +5,8 @@ import {
   CampaignsPage,
   CharactersPage,
   CharacterDetailPage,
+  LocationsPage,
+  LocationDetailPage,
   PlaceholderPage,
 } from "@/pages";
 
@@ -23,24 +25,8 @@ function App() {
           <Route path="/characters" element={<CharactersPage />} />
           <Route path="/characters/:id" element={<CharacterDetailPage />} />
 
-          <Route
-            path="/locations"
-            element={
-              <PlaceholderPage
-                title="Locations"
-                description="Places in your world"
-              />
-            }
-          />
-          <Route
-            path="/locations/:id"
-            element={
-              <PlaceholderPage
-                title="Location Details"
-                description="View location"
-              />
-            }
-          />
+          <Route path="/locations" element={<LocationsPage />} />
+          <Route path="/locations/:id" element={<LocationDetailPage />} />
 
           <Route
             path="/organizations"
