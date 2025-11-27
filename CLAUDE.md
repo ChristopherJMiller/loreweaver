@@ -191,3 +191,89 @@ This project has Claude Code agents in `.claude/agents/`:
 - **code-reviewer** - Review code quality before commits
 - **architecture-guardian** - Validate architectural decisions
 - **project-manager** - Track issues, close completed work, manage milestones
+
+## Workflow: Committing and Closing Issues
+
+Follow this workflow when completing work on an issue:
+
+### 1. Stage Changes
+
+Ensure all work is staged (files should appear in `git status` under "Changes to be committed"):
+
+```bash
+git add .
+```
+
+### 2. Create Commit with Issue References
+
+Write a descriptive commit message that references the closed issue(s) using `Closes #N`:
+
+```bash
+git commit -m "$(cat <<'EOF'
+feat(scope): brief description
+
+- Bullet point detail 1
+- Bullet point detail 2
+
+Closes #33, Closes #34
+
+Generated with Claude Code
+
+Co-Authored-By: Claude <noreply@anthropic.com>
+EOF
+)"
+```
+
+**Important:** Never close issues prematurely. Keep them open until the commit is created.
+
+### 3. Verify Commit
+
+Check that the commit was created with proper references:
+
+```bash
+git log --oneline -1
+```
+
+### 4. Push to Remote
+
+Push the commit to the default branch (main):
+
+```bash
+git push origin main
+```
+
+### 5. GitHub Auto-Closes Issues
+
+GitHub automatically closes issues when commits containing "Closes #N" are pushed to the default branch. Verify in the issue:
+
+```bash
+gh issue view <number> --json state
+```
+
+### Common Patterns
+
+**Single issue:**
+```
+Closes #33
+```
+
+**Multiple issues:**
+```
+Closes #33, Closes #34
+```
+
+**Related but not completing:**
+```
+Refs #35
+```
+
+**Blocked issue:**
+```
+See #35 (blocked by this issue)
+```
+
+### Never Do This
+
+- Close issues manually via GitHub UI before commits are pushed
+- Create commits without issue references
+- Push without verifying the commit message format
