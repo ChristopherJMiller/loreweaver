@@ -1,50 +1,171 @@
-import { useState } from "react";
-import reactLogo from "./assets/react.svg";
-import { invoke } from "@tauri-apps/api/core";
-import "./App.css";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { AppShell } from "@/components/layout";
+import {
+  DashboardPage,
+  CampaignsPage,
+  CharactersPage,
+  CharacterDetailPage,
+  PlaceholderPage,
+} from "@/pages";
 
 function App() {
-  const [greetMsg, setGreetMsg] = useState("");
-  const [name, setName] = useState("");
-
-  async function greet() {
-    // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-    setGreetMsg(await invoke("greet", { name }));
-  }
-
   return (
-    <main className="container">
-      <h1>Welcome to Tauri + React</h1>
+    <BrowserRouter>
+      <Routes>
+        {/* Campaign selection - standalone page */}
+        <Route path="/campaigns" element={<CampaignsPage />} />
 
-      <div className="row">
-        <a href="https://vite.dev" target="_blank">
-          <img src="/vite.svg" className="logo vite" alt="Vite logo" />
-        </a>
-        <a href="https://tauri.app" target="_blank">
-          <img src="/tauri.svg" className="logo tauri" alt="Tauri logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
-      </div>
-      <p>Click on the Tauri, Vite, and React logos to learn more.</p>
+        {/* All routes within AppShell require active campaign */}
+        <Route element={<AppShell />}>
+          <Route path="/" element={<DashboardPage />} />
 
-      <form
-        className="row"
-        onSubmit={(e) => {
-          e.preventDefault();
-          greet();
-        }}
-      >
-        <input
-          id="greet-input"
-          onChange={(e) => setName(e.currentTarget.value)}
-          placeholder="Enter a name..."
-        />
-        <button type="submit">Greet</button>
-      </form>
-      <p>{greetMsg}</p>
-    </main>
+          {/* Entity routes */}
+          <Route path="/characters" element={<CharactersPage />} />
+          <Route path="/characters/:id" element={<CharacterDetailPage />} />
+
+          <Route
+            path="/locations"
+            element={
+              <PlaceholderPage
+                title="Locations"
+                description="Places in your world"
+              />
+            }
+          />
+          <Route
+            path="/locations/:id"
+            element={
+              <PlaceholderPage
+                title="Location Details"
+                description="View location"
+              />
+            }
+          />
+
+          <Route
+            path="/organizations"
+            element={
+              <PlaceholderPage
+                title="Organizations"
+                description="Factions and groups"
+              />
+            }
+          />
+          <Route
+            path="/organizations/:id"
+            element={
+              <PlaceholderPage
+                title="Organization Details"
+                description="View organization"
+              />
+            }
+          />
+
+          <Route
+            path="/quests"
+            element={
+              <PlaceholderPage
+                title="Quests"
+                description="Story threads and objectives"
+              />
+            }
+          />
+          <Route
+            path="/quests/:id"
+            element={
+              <PlaceholderPage
+                title="Quest Details"
+                description="View quest"
+              />
+            }
+          />
+
+          <Route
+            path="/heroes"
+            element={
+              <PlaceholderPage
+                title="Heroes"
+                description="Player characters"
+              />
+            }
+          />
+          <Route
+            path="/heroes/:id"
+            element={
+              <PlaceholderPage title="Hero Details" description="View hero" />
+            }
+          />
+
+          <Route
+            path="/players"
+            element={
+              <PlaceholderPage
+                title="Players"
+                description="Real-world players"
+              />
+            }
+          />
+          <Route
+            path="/players/:id"
+            element={
+              <PlaceholderPage
+                title="Player Details"
+                description="View player"
+              />
+            }
+          />
+
+          <Route
+            path="/sessions"
+            element={
+              <PlaceholderPage title="Sessions" description="Game sessions" />
+            }
+          />
+          <Route
+            path="/sessions/:id"
+            element={
+              <PlaceholderPage
+                title="Session Details"
+                description="View session"
+              />
+            }
+          />
+
+          <Route
+            path="/timeline"
+            element={
+              <PlaceholderPage
+                title="Timeline"
+                description="Historical events"
+              />
+            }
+          />
+
+          <Route
+            path="/secrets"
+            element={
+              <PlaceholderPage
+                title="Secrets"
+                description="GM-only information"
+              />
+            }
+          />
+
+          <Route
+            path="/search"
+            element={
+              <PlaceholderPage
+                title="Search"
+                description="Search across your campaign"
+              />
+            }
+          />
+        </Route>
+
+        {/* Fallback */}
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
+    </BrowserRouter>
   );
 }
 
