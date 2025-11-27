@@ -21,12 +21,35 @@
         rustToolchain = pkgs.rust-bin.stable.latest.default.override {
           extensions = [ "rust-src" "rust-analyzer" ];
         };
+
+        # SeaORM CLI for entity generation (matching SeaORM 1.1.x)
+        sea-orm-cli = pkgs.rustPlatform.buildRustPackage rec {
+          pname = "sea-orm-cli";
+          version = "1.1.0";
+
+          src = pkgs.fetchCrate {
+            inherit pname version;
+            sha256 = "sha256-qwWXHWo3gist1pTN5GlvjwyzXDLoKYcEEspy2gxJheA=";
+          };
+
+          cargoHash = "sha256-Mg5u4k07y7fcfBILD/viM9pJywH+5UWwaT3kNV6Uu30=";
+
+          nativeBuildInputs = with pkgs; [ pkg-config ];
+          buildInputs = with pkgs; [ openssl ];
+
+          meta = with pkgs.lib; {
+            description = "Command line utility for SeaORM";
+            homepage = "https://www.sea-ql.org/SeaORM/";
+            license = with licenses; [ mit asl20 ];
+          };
+        };
       in {
         devShells.default = pkgs.mkShell {
           nativeBuildInputs = with pkgs; [
             # Rust
             rustToolchain
             cargo-tauri
+            sea-orm-cli
 
             # Node.js
             nodejs_22
