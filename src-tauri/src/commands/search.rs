@@ -13,10 +13,10 @@ pub struct SearchResult {
     pub rank: f64,
 }
 
-/// Search across all entities using FTS5 full-text search
-#[tauri::command]
-pub async fn search_entities(
-    state: State<'_, AppState>,
+// ============ Core implementation functions (testable) ============
+
+pub async fn search_entities_impl(
+    db: &DatabaseConnection,
     campaign_id: String,
     query: String,
     entity_types: Option<Vec<String>>,
@@ -25,18 +25,11 @@ pub async fn search_entities(
     let limit = limit.unwrap_or(50);
     let _ = entity_types; // TODO: Implement entity type filtering
 
-    // Build the FTS5 query
-    // Escape special FTS5 characters and add prefix matching
-    let fts_query = query
-        .split_whitespace()
-        .map(|word| format!("{}*", word.replace('"', "")))
-        .collect::<Vec<_>>()
-        .join(" ");
+    // Build the FTS5 query with prefix matching
+    let fts_query = build_fts_query(&query);
 
-    let db = &state.db;
     let backend = db.get_database_backend();
 
-    // Note: Using raw SQL with parameter binding for FTS5 query
     let results: Vec<SearchResult> = db
         .query_all(Statement::from_sql_and_values(
             backend,
@@ -73,4 +66,71 @@ pub async fn search_entities(
         .collect();
 
     Ok(results)
+}
+
+// ============ Tauri command wrappers ============
+
+#[tauri::command]
+pub async fn search_entities(
+    state: State<'_, AppState>,
+    campaign_id: String,
+    query: String,
+    entity_types: Option<Vec<String>>,
+    limit: Option<u64>,
+) -> Result<Vec<SearchResult>, AppError> {
+    search_entities_impl(&state.db, campaign_id, query, entity_types, limit).await
+}
+
+/// Build FTS5 query string from user input
+/// - Splits on whitespace
+/// - Removes quotes (FTS5 special character)
+/// - Adds prefix matching with *
+fn build_fts_query(query: &str) -> String {
+    query
+        .split_whitespace()
+        .map(|word| format!("{}*", word.replace('"', "")))
+        .collect::<Vec<_>>()
+        .join(" ")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_fts_query_adds_prefix_wildcard() {
+        let result = build_fts_query("gandalf wizard");
+        assert_eq!(result, "gandalf* wizard*");
+    }
+
+    #[test]
+    fn test_fts_query_removes_quotes() {
+        // Quotes are FTS5 special characters that could break queries
+        let result = build_fts_query(r#"gandalf "the grey""#);
+        assert_eq!(result, "gandalf* the* grey*");
+    }
+
+    #[test]
+    fn test_fts_query_handles_empty_string() {
+        let result = build_fts_query("");
+        assert_eq!(result, "");
+    }
+
+    #[test]
+    fn test_fts_query_handles_whitespace_only() {
+        let result = build_fts_query("   ");
+        assert_eq!(result, "");
+    }
+
+    #[test]
+    fn test_fts_query_normalizes_multiple_spaces() {
+        let result = build_fts_query("gandalf    wizard");
+        assert_eq!(result, "gandalf* wizard*");
+    }
+
+    #[test]
+    fn test_fts_query_single_word() {
+        let result = build_fts_query("dragon");
+        assert_eq!(result, "dragon*");
+    }
 }

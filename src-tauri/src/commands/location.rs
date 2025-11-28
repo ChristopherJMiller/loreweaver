@@ -36,9 +36,10 @@ impl From<locations::Model> for LocationResponse {
     }
 }
 
-#[tauri::command]
-pub async fn create_location(
-    state: State<'_, AppState>,
+// ============ Core implementation functions (testable) ============
+
+pub async fn create_location_impl(
+    db: &DatabaseConnection,
     campaign_id: String,
     name: String,
     location_type: Option<String>,
@@ -61,54 +62,51 @@ pub async fn create_location(
         updated_at: Set(now),
     };
 
-    let result = model.insert(&state.db).await?;
+    let result = model.insert(db).await?;
     Ok(result.into())
 }
 
-#[tauri::command]
-pub async fn get_location(
-    state: State<'_, AppState>,
+pub async fn get_location_impl(
+    db: &DatabaseConnection,
     id: String,
 ) -> Result<LocationResponse, AppError> {
     let location = Location::find_by_id(&id)
-        .one(&state.db)
+        .one(db)
         .await?
         .ok_or_else(|| AppError::NotFound(format!("Location {} not found", id)))?;
 
     Ok(location.into())
 }
 
-#[tauri::command]
-pub async fn list_locations(
-    state: State<'_, AppState>,
+pub async fn list_locations_impl(
+    db: &DatabaseConnection,
     campaign_id: String,
 ) -> Result<Vec<LocationResponse>, AppError> {
     let locations = Location::find()
         .filter(locations::Column::CampaignId.eq(&campaign_id))
         .order_by_asc(locations::Column::Name)
-        .all(&state.db)
+        .all(db)
         .await?;
 
     Ok(locations.into_iter().map(|l| l.into()).collect())
 }
 
-#[tauri::command]
-pub async fn get_location_children(
-    state: State<'_, AppState>,
+pub async fn get_location_children_impl(
+    db: &DatabaseConnection,
     parent_id: String,
 ) -> Result<Vec<LocationResponse>, AppError> {
     let locations = Location::find()
         .filter(locations::Column::ParentId.eq(&parent_id))
         .order_by_asc(locations::Column::Name)
-        .all(&state.db)
+        .all(db)
         .await?;
 
     Ok(locations.into_iter().map(|l| l.into()).collect())
 }
 
-#[tauri::command]
-pub async fn update_location(
-    state: State<'_, AppState>,
+#[allow(clippy::too_many_arguments)]
+pub async fn update_location_impl(
+    db: &DatabaseConnection,
     id: String,
     name: Option<String>,
     location_type: Option<String>,
@@ -118,7 +116,7 @@ pub async fn update_location(
     gm_notes: Option<String>,
 ) -> Result<LocationResponse, AppError> {
     let location = Location::find_by_id(&id)
-        .one(&state.db)
+        .one(db)
         .await?
         .ok_or_else(|| AppError::NotFound(format!("Location {} not found", id)))?;
 
@@ -144,12 +142,72 @@ pub async fn update_location(
     }
     active.updated_at = Set(chrono::Utc::now());
 
-    let result = active.update(&state.db).await?;
+    let result = active.update(db).await?;
     Ok(result.into())
+}
+
+pub async fn delete_location_impl(
+    db: &DatabaseConnection,
+    id: String,
+) -> Result<bool, AppError> {
+    let result = Location::delete_by_id(&id).exec(db).await?;
+    Ok(result.rows_affected > 0)
+}
+
+// ============ Tauri command wrappers ============
+
+#[tauri::command]
+pub async fn create_location(
+    state: State<'_, AppState>,
+    campaign_id: String,
+    name: String,
+    location_type: Option<String>,
+    parent_id: Option<String>,
+    description: Option<String>,
+) -> Result<LocationResponse, AppError> {
+    create_location_impl(&state.db, campaign_id, name, location_type, parent_id, description).await
+}
+
+#[tauri::command]
+pub async fn get_location(
+    state: State<'_, AppState>,
+    id: String,
+) -> Result<LocationResponse, AppError> {
+    get_location_impl(&state.db, id).await
+}
+
+#[tauri::command]
+pub async fn list_locations(
+    state: State<'_, AppState>,
+    campaign_id: String,
+) -> Result<Vec<LocationResponse>, AppError> {
+    list_locations_impl(&state.db, campaign_id).await
+}
+
+#[tauri::command]
+pub async fn get_location_children(
+    state: State<'_, AppState>,
+    parent_id: String,
+) -> Result<Vec<LocationResponse>, AppError> {
+    get_location_children_impl(&state.db, parent_id).await
+}
+
+#[tauri::command]
+pub async fn update_location(
+    state: State<'_, AppState>,
+    id: String,
+    name: Option<String>,
+    location_type: Option<String>,
+    parent_id: Option<String>,
+    description: Option<String>,
+    detail_level: Option<i32>,
+    gm_notes: Option<String>,
+) -> Result<LocationResponse, AppError> {
+    update_location_impl(&state.db, id, name, location_type, parent_id, description, detail_level, gm_notes).await
 }
 
 #[tauri::command]
 pub async fn delete_location(state: State<'_, AppState>, id: String) -> Result<bool, AppError> {
-    let result = Location::delete_by_id(&id).exec(&state.db).await?;
-    Ok(result.rows_affected > 0)
+    delete_location_impl(&state.db, id).await
 }
+

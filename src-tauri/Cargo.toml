@@ -44,3 +44,7 @@ chrono = { version = "0.4", features = ["serde"] }
 thiserror = "2"
 tokio = { version = "1", features = ["full"] }
 
+[dev-dependencies]
+# tokio runtime is already available via [dependencies]
+# Additional test utilities can be added here as needed
+

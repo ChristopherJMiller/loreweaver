@@ -44,9 +44,10 @@ impl From<characters::Model> for CharacterResponse {
     }
 }
 
-#[tauri::command]
-pub async fn create_character(
-    state: State<'_, AppState>,
+// ============ Core implementation functions (testable) ============
+
+pub async fn create_character_impl(
+    db: &DatabaseConnection,
     campaign_id: String,
     name: String,
     lineage: Option<String>,
@@ -73,40 +74,38 @@ pub async fn create_character(
         updated_at: Set(now),
     };
 
-    let result = model.insert(&state.db).await?;
+    let result = model.insert(db).await?;
     Ok(result.into())
 }
 
-#[tauri::command]
-pub async fn get_character(
-    state: State<'_, AppState>,
+pub async fn get_character_impl(
+    db: &DatabaseConnection,
     id: String,
 ) -> Result<CharacterResponse, AppError> {
     let character = Character::find_by_id(&id)
-        .one(&state.db)
+        .one(db)
         .await?
         .ok_or_else(|| AppError::NotFound(format!("Character {} not found", id)))?;
 
     Ok(character.into())
 }
 
-#[tauri::command]
-pub async fn list_characters(
-    state: State<'_, AppState>,
+pub async fn list_characters_impl(
+    db: &DatabaseConnection,
     campaign_id: String,
 ) -> Result<Vec<CharacterResponse>, AppError> {
     let characters = Character::find()
         .filter(characters::Column::CampaignId.eq(&campaign_id))
         .order_by_asc(characters::Column::Name)
-        .all(&state.db)
+        .all(db)
         .await?;
 
     Ok(characters.into_iter().map(|c| c.into()).collect())
 }
 
-#[tauri::command]
-pub async fn update_character(
-    state: State<'_, AppState>,
+#[allow(clippy::too_many_arguments)]
+pub async fn update_character_impl(
+    db: &DatabaseConnection,
     id: String,
     name: Option<String>,
     lineage: Option<String>,
@@ -120,7 +119,7 @@ pub async fn update_character(
     stat_block_json: Option<String>,
 ) -> Result<CharacterResponse, AppError> {
     let character = Character::find_by_id(&id)
-        .one(&state.db)
+        .one(db)
         .await?
         .ok_or_else(|| AppError::NotFound(format!("Character {} not found", id)))?;
 
@@ -158,12 +157,71 @@ pub async fn update_character(
     }
     active.updated_at = Set(chrono::Utc::now());
 
-    let result = active.update(&state.db).await?;
+    let result = active.update(db).await?;
     Ok(result.into())
+}
+
+pub async fn delete_character_impl(
+    db: &DatabaseConnection,
+    id: String,
+) -> Result<bool, AppError> {
+    let result = Character::delete_by_id(&id).exec(db).await?;
+    Ok(result.rows_affected > 0)
+}
+
+// ============ Tauri command wrappers ============
+
+#[tauri::command]
+pub async fn create_character(
+    state: State<'_, AppState>,
+    campaign_id: String,
+    name: String,
+    lineage: Option<String>,
+    occupation: Option<String>,
+    description: Option<String>,
+) -> Result<CharacterResponse, AppError> {
+    create_character_impl(&state.db, campaign_id, name, lineage, occupation, description).await
+}
+
+#[tauri::command]
+pub async fn get_character(
+    state: State<'_, AppState>,
+    id: String,
+) -> Result<CharacterResponse, AppError> {
+    get_character_impl(&state.db, id).await
+}
+
+#[tauri::command]
+pub async fn list_characters(
+    state: State<'_, AppState>,
+    campaign_id: String,
+) -> Result<Vec<CharacterResponse>, AppError> {
+    list_characters_impl(&state.db, campaign_id).await
+}
+
+#[tauri::command]
+pub async fn update_character(
+    state: State<'_, AppState>,
+    id: String,
+    name: Option<String>,
+    lineage: Option<String>,
+    occupation: Option<String>,
+    is_alive: Option<bool>,
+    description: Option<String>,
+    personality: Option<String>,
+    motivations: Option<String>,
+    secrets: Option<String>,
+    voice_notes: Option<String>,
+    stat_block_json: Option<String>,
+) -> Result<CharacterResponse, AppError> {
+    update_character_impl(
+        &state.db, id, name, lineage, occupation, is_alive,
+        description, personality, motivations, secrets, voice_notes, stat_block_json,
+    ).await
 }
 
 #[tauri::command]
 pub async fn delete_character(state: State<'_, AppState>, id: String) -> Result<bool, AppError> {
-    let result = Character::delete_by_id(&id).exec(&state.db).await?;
-    Ok(result.rows_affected > 0)
+    delete_character_impl(&state.db, id).await
 }
+

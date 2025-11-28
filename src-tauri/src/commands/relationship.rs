@@ -42,9 +42,11 @@ impl From<relationships::Model> for RelationshipResponse {
     }
 }
 
-#[tauri::command]
-pub async fn create_relationship(
-    state: State<'_, AppState>,
+// ============ Core implementation functions (testable) ============
+
+#[allow(clippy::too_many_arguments)]
+pub async fn create_relationship_impl(
+    db: &DatabaseConnection,
     campaign_id: String,
     source_type: String,
     source_id: String,
@@ -74,41 +76,37 @@ pub async fn create_relationship(
         updated_at: Set(now),
     };
 
-    let result = model.insert(&state.db).await?;
+    let result = model.insert(db).await?;
     Ok(result.into())
 }
 
-#[tauri::command]
-pub async fn get_relationship(
-    state: State<'_, AppState>,
+pub async fn get_relationship_impl(
+    db: &DatabaseConnection,
     id: String,
 ) -> Result<RelationshipResponse, AppError> {
     let rel = Relationship::find_by_id(&id)
-        .one(&state.db)
+        .one(db)
         .await?
         .ok_or_else(|| AppError::NotFound(format!("Relationship {} not found", id)))?;
 
     Ok(rel.into())
 }
 
-#[tauri::command]
-pub async fn list_relationships(
-    state: State<'_, AppState>,
+pub async fn list_relationships_impl(
+    db: &DatabaseConnection,
     campaign_id: String,
 ) -> Result<Vec<RelationshipResponse>, AppError> {
     let rels = Relationship::find()
         .filter(relationships::Column::CampaignId.eq(&campaign_id))
         .order_by_desc(relationships::Column::CreatedAt)
-        .all(&state.db)
+        .all(db)
         .await?;
 
     Ok(rels.into_iter().map(|r| r.into()).collect())
 }
 
-/// Get all relationships for a specific entity (as source or target)
-#[tauri::command]
-pub async fn get_entity_relationships(
-    state: State<'_, AppState>,
+pub async fn get_entity_relationships_impl(
+    db: &DatabaseConnection,
     entity_type: String,
     entity_id: String,
 ) -> Result<Vec<RelationshipResponse>, AppError> {
@@ -126,15 +124,15 @@ pub async fn get_entity_relationships(
                         .add(relationships::Column::TargetId.eq(&entity_id)),
                 ),
         )
-        .all(&state.db)
+        .all(db)
         .await?;
 
     Ok(rels.into_iter().map(|r| r.into()).collect())
 }
 
-#[tauri::command]
-pub async fn update_relationship(
-    state: State<'_, AppState>,
+#[allow(clippy::too_many_arguments)]
+pub async fn update_relationship_impl(
+    db: &DatabaseConnection,
     id: String,
     relationship_type: Option<String>,
     description: Option<String>,
@@ -143,7 +141,7 @@ pub async fn update_relationship(
     is_public: Option<bool>,
 ) -> Result<RelationshipResponse, AppError> {
     let rel = Relationship::find_by_id(&id)
-        .one(&state.db)
+        .one(db)
         .await?
         .ok_or_else(|| AppError::NotFound(format!("Relationship {} not found", id)))?;
 
@@ -166,12 +164,79 @@ pub async fn update_relationship(
     }
     active.updated_at = Set(chrono::Utc::now());
 
-    let result = active.update(&state.db).await?;
+    let result = active.update(db).await?;
     Ok(result.into())
+}
+
+pub async fn delete_relationship_impl(
+    db: &DatabaseConnection,
+    id: String,
+) -> Result<bool, AppError> {
+    let result = Relationship::delete_by_id(&id).exec(db).await?;
+    Ok(result.rows_affected > 0)
+}
+
+// ============ Tauri command wrappers ============
+
+#[tauri::command]
+pub async fn create_relationship(
+    state: State<'_, AppState>,
+    campaign_id: String,
+    source_type: String,
+    source_id: String,
+    target_type: String,
+    target_id: String,
+    relationship_type: String,
+    description: Option<String>,
+    is_bidirectional: Option<bool>,
+    strength: Option<i32>,
+) -> Result<RelationshipResponse, AppError> {
+    create_relationship_impl(
+        &state.db, campaign_id, source_type, source_id, target_type,
+        target_id, relationship_type, description, is_bidirectional, strength,
+    ).await
+}
+
+#[tauri::command]
+pub async fn get_relationship(
+    state: State<'_, AppState>,
+    id: String,
+) -> Result<RelationshipResponse, AppError> {
+    get_relationship_impl(&state.db, id).await
+}
+
+#[tauri::command]
+pub async fn list_relationships(
+    state: State<'_, AppState>,
+    campaign_id: String,
+) -> Result<Vec<RelationshipResponse>, AppError> {
+    list_relationships_impl(&state.db, campaign_id).await
+}
+
+#[tauri::command]
+pub async fn get_entity_relationships(
+    state: State<'_, AppState>,
+    entity_type: String,
+    entity_id: String,
+) -> Result<Vec<RelationshipResponse>, AppError> {
+    get_entity_relationships_impl(&state.db, entity_type, entity_id).await
+}
+
+#[tauri::command]
+pub async fn update_relationship(
+    state: State<'_, AppState>,
+    id: String,
+    relationship_type: Option<String>,
+    description: Option<String>,
+    is_bidirectional: Option<bool>,
+    strength: Option<i32>,
+    is_public: Option<bool>,
+) -> Result<RelationshipResponse, AppError> {
+    update_relationship_impl(&state.db, id, relationship_type, description, is_bidirectional, strength, is_public).await
 }
 
 #[tauri::command]
 pub async fn delete_relationship(state: State<'_, AppState>, id: String) -> Result<bool, AppError> {
-    let result = Relationship::delete_by_id(&id).exec(&state.db).await?;
-    Ok(result.rows_affected > 0)
+    delete_relationship_impl(&state.db, id).await
 }
+

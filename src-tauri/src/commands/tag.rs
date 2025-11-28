@@ -27,9 +27,10 @@ impl From<tags::Model> for TagResponse {
     }
 }
 
-#[tauri::command]
-pub async fn create_tag(
-    state: State<'_, AppState>,
+// ============ Core implementation functions (testable) ============
+
+pub async fn create_tag_impl(
+    db: &DatabaseConnection,
     campaign_id: String,
     name: String,
     color: Option<String>,
@@ -45,44 +46,45 @@ pub async fn create_tag(
         created_at: Set(now),
     };
 
-    let result = model.insert(&state.db).await?;
+    let result = model.insert(db).await?;
     Ok(result.into())
 }
 
-#[tauri::command]
-pub async fn get_tag(state: State<'_, AppState>, id: String) -> Result<TagResponse, AppError> {
+pub async fn get_tag_impl(
+    db: &DatabaseConnection,
+    id: String,
+) -> Result<TagResponse, AppError> {
     let tag = Tag::find_by_id(&id)
-        .one(&state.db)
+        .one(db)
         .await?
         .ok_or_else(|| AppError::NotFound(format!("Tag {} not found", id)))?;
 
     Ok(tag.into())
 }
 
-#[tauri::command]
-pub async fn list_tags(
-    state: State<'_, AppState>,
+pub async fn list_tags_impl(
+    db: &DatabaseConnection,
     campaign_id: String,
 ) -> Result<Vec<TagResponse>, AppError> {
     let tags = Tag::find()
         .filter(tags::Column::CampaignId.eq(&campaign_id))
         .order_by_asc(tags::Column::Name)
-        .all(&state.db)
+        .all(db)
         .await?;
 
     Ok(tags.into_iter().map(|t| t.into()).collect())
 }
 
-#[tauri::command]
-pub async fn delete_tag(state: State<'_, AppState>, id: String) -> Result<bool, AppError> {
-    let result = Tag::delete_by_id(&id).exec(&state.db).await?;
+pub async fn delete_tag_impl(
+    db: &DatabaseConnection,
+    id: String,
+) -> Result<bool, AppError> {
+    let result = Tag::delete_by_id(&id).exec(db).await?;
     Ok(result.rows_affected > 0)
 }
 
-/// Add a tag to an entity
-#[tauri::command]
-pub async fn add_entity_tag(
-    state: State<'_, AppState>,
+pub async fn add_entity_tag_impl(
+    db: &DatabaseConnection,
     tag_id: String,
     entity_type: String,
     entity_id: String,
@@ -93,14 +95,12 @@ pub async fn add_entity_tag(
         entity_id: Set(entity_id),
     };
 
-    model.insert(&state.db).await?;
+    model.insert(db).await?;
     Ok(true)
 }
 
-/// Remove a tag from an entity
-#[tauri::command]
-pub async fn remove_entity_tag(
-    state: State<'_, AppState>,
+pub async fn remove_entity_tag_impl(
+    db: &DatabaseConnection,
     tag_id: String,
     entity_type: String,
     entity_id: String,
@@ -109,39 +109,94 @@ pub async fn remove_entity_tag(
         .filter(entity_tags::Column::TagId.eq(&tag_id))
         .filter(entity_tags::Column::EntityType.eq(&entity_type))
         .filter(entity_tags::Column::EntityId.eq(&entity_id))
-        .exec(&state.db)
+        .exec(db)
         .await?;
 
     Ok(result.rows_affected > 0)
 }
 
-/// Get all tags for an entity
-#[tauri::command]
-pub async fn get_entity_tags(
-    state: State<'_, AppState>,
+pub async fn get_entity_tags_impl(
+    db: &DatabaseConnection,
     entity_type: String,
     entity_id: String,
 ) -> Result<Vec<TagResponse>, AppError> {
-    // First get the entity_tags junction records
     let entity_tag_records = EntityTag::find()
         .filter(entity_tags::Column::EntityType.eq(&entity_type))
         .filter(entity_tags::Column::EntityId.eq(&entity_id))
-        .all(&state.db)
+        .all(db)
         .await?;
 
-    // Extract tag IDs
     let tag_ids: Vec<String> = entity_tag_records.iter().map(|et| et.tag_id.clone()).collect();
 
     if tag_ids.is_empty() {
         return Ok(vec![]);
     }
 
-    // Fetch the actual tags
     let tags = Tag::find()
         .filter(tags::Column::Id.is_in(tag_ids))
         .order_by_asc(tags::Column::Name)
-        .all(&state.db)
+        .all(db)
         .await?;
 
     Ok(tags.into_iter().map(|t| t.into()).collect())
 }
+
+// ============ Tauri command wrappers ============
+
+#[tauri::command]
+pub async fn create_tag(
+    state: State<'_, AppState>,
+    campaign_id: String,
+    name: String,
+    color: Option<String>,
+) -> Result<TagResponse, AppError> {
+    create_tag_impl(&state.db, campaign_id, name, color).await
+}
+
+#[tauri::command]
+pub async fn get_tag(state: State<'_, AppState>, id: String) -> Result<TagResponse, AppError> {
+    get_tag_impl(&state.db, id).await
+}
+
+#[tauri::command]
+pub async fn list_tags(
+    state: State<'_, AppState>,
+    campaign_id: String,
+) -> Result<Vec<TagResponse>, AppError> {
+    list_tags_impl(&state.db, campaign_id).await
+}
+
+#[tauri::command]
+pub async fn delete_tag(state: State<'_, AppState>, id: String) -> Result<bool, AppError> {
+    delete_tag_impl(&state.db, id).await
+}
+
+#[tauri::command]
+pub async fn add_entity_tag(
+    state: State<'_, AppState>,
+    tag_id: String,
+    entity_type: String,
+    entity_id: String,
+) -> Result<bool, AppError> {
+    add_entity_tag_impl(&state.db, tag_id, entity_type, entity_id).await
+}
+
+#[tauri::command]
+pub async fn remove_entity_tag(
+    state: State<'_, AppState>,
+    tag_id: String,
+    entity_type: String,
+    entity_id: String,
+) -> Result<bool, AppError> {
+    remove_entity_tag_impl(&state.db, tag_id, entity_type, entity_id).await
+}
+
+#[tauri::command]
+pub async fn get_entity_tags(
+    state: State<'_, AppState>,
+    entity_type: String,
+    entity_id: String,
+) -> Result<Vec<TagResponse>, AppError> {
+    get_entity_tags_impl(&state.db, entity_type, entity_id).await
+}
+

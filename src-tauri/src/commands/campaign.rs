@@ -30,9 +30,10 @@ impl From<campaigns::Model> for CampaignResponse {
     }
 }
 
-#[tauri::command]
-pub async fn create_campaign(
-    state: State<'_, AppState>,
+// ============ Core implementation functions (testable) ============
+
+pub async fn create_campaign_impl(
+    db: &DatabaseConnection,
     name: String,
     description: Option<String>,
     system: Option<String>,
@@ -50,36 +51,35 @@ pub async fn create_campaign(
         updated_at: Set(now),
     };
 
-    let result = model.insert(&state.db).await?;
+    let result = model.insert(db).await?;
     Ok(result.into())
 }
 
-#[tauri::command]
-pub async fn get_campaign(
-    state: State<'_, AppState>,
+pub async fn get_campaign_impl(
+    db: &DatabaseConnection,
     id: String,
 ) -> Result<CampaignResponse, AppError> {
     let campaign = Campaign::find_by_id(&id)
-        .one(&state.db)
+        .one(db)
         .await?
         .ok_or_else(|| AppError::NotFound(format!("Campaign {} not found", id)))?;
 
     Ok(campaign.into())
 }
 
-#[tauri::command]
-pub async fn list_campaigns(state: State<'_, AppState>) -> Result<Vec<CampaignResponse>, AppError> {
+pub async fn list_campaigns_impl(
+    db: &DatabaseConnection,
+) -> Result<Vec<CampaignResponse>, AppError> {
     let campaigns = Campaign::find()
         .order_by_desc(campaigns::Column::UpdatedAt)
-        .all(&state.db)
+        .all(db)
         .await?;
 
     Ok(campaigns.into_iter().map(|c| c.into()).collect())
 }
 
-#[tauri::command]
-pub async fn update_campaign(
-    state: State<'_, AppState>,
+pub async fn update_campaign_impl(
+    db: &DatabaseConnection,
     id: String,
     name: Option<String>,
     description: Option<String>,
@@ -87,7 +87,7 @@ pub async fn update_campaign(
     settings_json: Option<String>,
 ) -> Result<CampaignResponse, AppError> {
     let campaign = Campaign::find_by_id(&id)
-        .one(&state.db)
+        .one(db)
         .await?
         .ok_or_else(|| AppError::NotFound(format!("Campaign {} not found", id)))?;
 
@@ -107,12 +107,57 @@ pub async fn update_campaign(
     }
     active.updated_at = Set(chrono::Utc::now());
 
-    let result = active.update(&state.db).await?;
+    let result = active.update(db).await?;
     Ok(result.into())
+}
+
+pub async fn delete_campaign_impl(
+    db: &DatabaseConnection,
+    id: String,
+) -> Result<bool, AppError> {
+    let result = Campaign::delete_by_id(&id).exec(db).await?;
+    Ok(result.rows_affected > 0)
+}
+
+// ============ Tauri command wrappers ============
+
+#[tauri::command]
+pub async fn create_campaign(
+    state: State<'_, AppState>,
+    name: String,
+    description: Option<String>,
+    system: Option<String>,
+) -> Result<CampaignResponse, AppError> {
+    create_campaign_impl(&state.db, name, description, system).await
+}
+
+#[tauri::command]
+pub async fn get_campaign(
+    state: State<'_, AppState>,
+    id: String,
+) -> Result<CampaignResponse, AppError> {
+    get_campaign_impl(&state.db, id).await
+}
+
+#[tauri::command]
+pub async fn list_campaigns(state: State<'_, AppState>) -> Result<Vec<CampaignResponse>, AppError> {
+    list_campaigns_impl(&state.db).await
+}
+
+#[tauri::command]
+pub async fn update_campaign(
+    state: State<'_, AppState>,
+    id: String,
+    name: Option<String>,
+    description: Option<String>,
+    system: Option<String>,
+    settings_json: Option<String>,
+) -> Result<CampaignResponse, AppError> {
+    update_campaign_impl(&state.db, id, name, description, system, settings_json).await
 }
 
 #[tauri::command]
 pub async fn delete_campaign(state: State<'_, AppState>, id: String) -> Result<bool, AppError> {
-    let result = Campaign::delete_by_id(&id).exec(&state.db).await?;
-    Ok(result.rows_affected > 0)
+    delete_campaign_impl(&state.db, id).await
 }
+
