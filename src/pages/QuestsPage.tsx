@@ -32,7 +32,6 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
@@ -83,7 +82,6 @@ export function QuestsPage() {
     name: "",
     plot_type: "side",
     status: "planned",
-    description: "",
   });
   const [isCreating, setIsCreating] = useState(false);
 
@@ -103,10 +101,9 @@ export function QuestsPage() {
         name: newQuest.name,
         plot_type: newQuest.plot_type,
         status: newQuest.status,
-        description: newQuest.description || undefined,
       });
       setCreateDialogOpen(false);
-      setNewQuest({ name: "", plot_type: "side", status: "planned", description: "" });
+      setNewQuest({ name: "", plot_type: "side", status: "planned" });
       navigate(`/quests/${quest.id}`);
     } finally {
       setIsCreating(false);
@@ -308,17 +305,6 @@ export function QuestsPage() {
                   </SelectContent>
                 </Select>
               </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
-                placeholder="Brief description of this quest..."
-                value={newQuest.description}
-                onChange={(e) =>
-                  setNewQuest({ ...newQuest, description: e.target.value })
-                }
-              />
             </div>
           </div>
           <DialogFooter>

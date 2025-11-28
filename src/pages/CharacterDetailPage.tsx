@@ -1,30 +1,17 @@
-import { useEffect, useState } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
-import {
-  ArrowLeft,
-  Edit2,
-  Trash2,
-  Save,
-  X,
-  Heart,
-  Skull,
-} from "lucide-react";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { useEffect, useState, useCallback } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { Heart, Skull } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Separator } from "@/components/ui/separator";
 import { LoadingState, DeleteDialog } from "@/components/common";
-import { Editor } from "@/components/editor";
-import { RelationshipList } from "@/components/relationship";
+import {
+  DocumentHeader,
+  DocumentCanvas,
+  MetadataSection,
+  RelationshipsPanel,
+  DocumentSection,
+} from "@/components/document";
 import { useCharacterStore, useCampaignStore } from "@/stores";
 
 export function CharacterDetailPage() {
@@ -93,6 +80,23 @@ export function CharacterDetailPage() {
     }
   };
 
+  const handleCancel = () => {
+    if (character) {
+      setEditForm({
+        name: character.name,
+        lineage: character.lineage || "",
+        occupation: character.occupation || "",
+        description: character.description || "",
+        personality: character.personality || "",
+        motivations: character.motivations || "",
+        secrets: character.secrets || "",
+        voice_notes: character.voice_notes || "",
+        is_alive: character.is_alive,
+      });
+    }
+    setIsEditing(false);
+  };
+
   const handleDelete = async () => {
     if (!id) return;
     await remove(id);
@@ -104,252 +108,153 @@ export function CharacterDetailPage() {
     await update(id, { is_alive: !character.is_alive });
   };
 
+  const handleSectionChange = useCallback(
+    (fieldId: string, content: string) => {
+      setEditForm((prev) => ({ ...prev, [fieldId]: content }));
+    },
+    []
+  );
+
   if (isLoading || !character) {
     return <LoadingState type="detail" />;
   }
 
+  const sections: DocumentSection[] = [
+    {
+      id: "description",
+      title: "Description",
+      content: editForm.description,
+      placeholder: "Physical appearance, mannerisms, notable features...",
+    },
+    {
+      id: "personality",
+      title: "Personality",
+      content: editForm.personality,
+      placeholder: "Personality traits, quirks, behaviors...",
+    },
+    {
+      id: "motivations",
+      title: "Motivations",
+      content: editForm.motivations,
+      placeholder: "Goals, desires, fears...",
+    },
+    {
+      id: "voice_notes",
+      title: "Voice Notes",
+      content: editForm.voice_notes,
+      placeholder: "Accent, catch phrases, mannerisms...",
+    },
+    {
+      id: "secrets",
+      title: "Secrets",
+      content: editForm.secrets,
+      placeholder: "Hidden information, plot hooks, true identity...",
+    },
+  ];
+
+  const subtitle = (
+    <>
+      {character.lineage && <span>{character.lineage}</span>}
+      {character.lineage && character.occupation && <span>•</span>}
+      {character.occupation && <span>{character.occupation}</span>}
+    </>
+  );
+
+  const badges = (
+    <Badge
+      variant={character.is_alive ? "default" : "secondary"}
+      className="cursor-pointer"
+      onClick={toggleAlive}
+    >
+      {character.is_alive ? (
+        <>
+          <Heart className="mr-1 h-3 w-3" /> Alive
+        </>
+      ) : (
+        <>
+          <Skull className="mr-1 h-3 w-3" /> Deceased
+        </>
+      )}
+    </Badge>
+  );
+
+  const titleContent = isEditing ? (
+    <Input
+      value={editForm.name}
+      onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+      className="text-2xl font-bold h-auto py-1"
+    />
+  ) : (
+    character.name
+  );
+
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" asChild>
-            <Link to="/characters">
-              <ArrowLeft className="h-4 w-4" />
-            </Link>
-          </Button>
-          <div>
-            {isEditing ? (
-              <Input
-                value={editForm.name}
-                onChange={(e) =>
-                  setEditForm({ ...editForm, name: e.target.value })
-                }
-                className="text-2xl font-bold"
-              />
-            ) : (
-              <h1 className="text-2xl font-bold">{character.name}</h1>
-            )}
-            <div className="flex items-center gap-2 text-muted-foreground">
-              {character.lineage && <span>{character.lineage}</span>}
-              {character.lineage && character.occupation && <span>•</span>}
-              {character.occupation && <span>{character.occupation}</span>}
-            </div>
-          </div>
-        </div>
+    <div className="space-y-0">
+      <DocumentHeader
+        title={titleContent}
+        subtitle={subtitle}
+        badges={badges}
+        isEditing={isEditing}
+        isSaving={isSaving}
+        onEdit={() => setIsEditing(true)}
+        onSave={handleSave}
+        onCancel={handleCancel}
+        onDelete={() => setDeleteDialogOpen(true)}
+        backLink="/characters"
+      />
 
-        <div className="flex items-center gap-2">
-          <Badge
-            variant={character.is_alive ? "default" : "secondary"}
-            className="cursor-pointer"
-            onClick={toggleAlive}
-          >
-            {character.is_alive ? (
-              <>
-                <Heart className="mr-1 h-3 w-3" /> Alive
-              </>
-            ) : (
-              <>
-                <Skull className="mr-1 h-3 w-3" /> Deceased
-              </>
-            )}
-          </Badge>
-
+      <DocumentCanvas
+        sections={sections}
+        isEditing={isEditing}
+        onChange={handleSectionChange}
+        campaignId={activeCampaignId || undefined}
+      >
+        <MetadataSection defaultOpen={isEditing}>
           {isEditing ? (
-            <>
-              <Button variant="ghost" size="icon" onClick={() => setIsEditing(false)}>
-                <X className="h-4 w-4" />
-              </Button>
-              <Button onClick={handleSave} disabled={isSaving}>
-                <Save className="mr-2 h-4 w-4" />
-                {isSaving ? "Saving..." : "Save"}
-              </Button>
-            </>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label>Lineage</Label>
+                <Input
+                  value={editForm.lineage}
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, lineage: e.target.value })
+                  }
+                  placeholder="Human, Elf, Dwarf..."
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Occupation</Label>
+                <Input
+                  value={editForm.occupation}
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, occupation: e.target.value })
+                  }
+                  placeholder="Blacksmith, Mage..."
+                />
+              </div>
+            </div>
           ) : (
-            <>
-              <Button variant="outline" onClick={() => setIsEditing(true)}>
-                <Edit2 className="mr-2 h-4 w-4" />
-                Edit
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setDeleteDialogOpen(true)}
-              >
-                <Trash2 className="h-4 w-4 text-destructive" />
-              </Button>
-            </>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <span className="text-sm text-muted-foreground">Lineage</span>
+                <p>{character.lineage || "—"}</p>
+              </div>
+              <div>
+                <span className="text-sm text-muted-foreground">Occupation</span>
+                <p>{character.occupation || "—"}</p>
+              </div>
+            </div>
           )}
-        </div>
-      </div>
+        </MetadataSection>
 
-      <Separator />
-
-      {/* Content */}
-      <Tabs defaultValue="overview">
-        <TabsList>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="personality">Personality</TabsTrigger>
-          <TabsTrigger value="relationships">Relationships</TabsTrigger>
-          <TabsTrigger value="secrets">GM Notes</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="overview" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Details</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {isEditing ? (
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label>Lineage</Label>
-                    <Input
-                      value={editForm.lineage}
-                      onChange={(e) =>
-                        setEditForm({ ...editForm, lineage: e.target.value })
-                      }
-                      placeholder="Human, Elf, Dwarf..."
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Occupation</Label>
-                    <Input
-                      value={editForm.occupation}
-                      onChange={(e) =>
-                        setEditForm({ ...editForm, occupation: e.target.value })
-                      }
-                      placeholder="Blacksmith, Mage..."
-                    />
-                  </div>
-                </div>
-              ) : (
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div>
-                    <span className="text-sm text-muted-foreground">
-                      Lineage
-                    </span>
-                    <p>{character.lineage || "—"}</p>
-                  </div>
-                  <div>
-                    <span className="text-sm text-muted-foreground">
-                      Occupation
-                    </span>
-                    <p>{character.occupation || "—"}</p>
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Description</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Editor
-                content={editForm.description}
-                onChange={(content) =>
-                  setEditForm({ ...editForm, description: content })
-                }
-                placeholder="Physical appearance, mannerisms, notable features..."
-                readOnly={!isEditing}
-                campaignId={activeCampaignId || undefined}
-              />
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="personality" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Personality</CardTitle>
-              <CardDescription>
-                How this character acts and speaks
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Editor
-                content={editForm.personality}
-                onChange={(content) =>
-                  setEditForm({ ...editForm, personality: content })
-                }
-                placeholder="Personality traits, quirks, behaviors..."
-                readOnly={!isEditing}
-                campaignId={activeCampaignId || undefined}
-              />
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Motivations</CardTitle>
-              <CardDescription>What drives this character</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Editor
-                content={editForm.motivations}
-                onChange={(content) =>
-                  setEditForm({ ...editForm, motivations: content })
-                }
-                placeholder="Goals, desires, fears..."
-                readOnly={!isEditing}
-                campaignId={activeCampaignId || undefined}
-              />
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader>
-              <CardTitle>Voice Notes</CardTitle>
-              <CardDescription>
-                How to roleplay this character
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Editor
-                content={editForm.voice_notes}
-                onChange={(content) =>
-                  setEditForm({ ...editForm, voice_notes: content })
-                }
-                placeholder="Accent, catch phrases, mannerisms..."
-                readOnly={!isEditing}
-                campaignId={activeCampaignId || undefined}
-              />
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="relationships" className="space-y-4">
-          {id && character && (
-            <RelationshipList
-              entityType="character"
-              entityId={id}
-              entityName={character.name}
-            />
-          )}
-        </TabsContent>
-
-        <TabsContent value="secrets" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Secrets</CardTitle>
-              <CardDescription>GM-only information</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Editor
-                content={editForm.secrets}
-                onChange={(content) =>
-                  setEditForm({ ...editForm, secrets: content })
-                }
-                placeholder="Hidden information, plot hooks, true identity..."
-                readOnly={!isEditing}
-                campaignId={activeCampaignId || undefined}
-              />
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+        {id && character && (
+          <RelationshipsPanel
+            entityType="character"
+            entityId={id}
+            entityName={character.name}
+          />
+        )}
+      </DocumentCanvas>
 
       <DeleteDialog
         open={deleteDialogOpen}

@@ -8,7 +8,7 @@ const mockInvoke = vi.mocked(invoke);
 const createMockSearchResult = (id: string, name: string): SearchResult => ({
   entity_type: "character",
   entity_id: id,
-  entity_name: name,
+  name: name,
   snippet: `Description of ${name}`,
   rank: 1.0,
 });

@@ -12,6 +12,7 @@ const createMockLocation = (overrides: Partial<Location> = {}): Location => ({
   id: "loc-123",
   campaign_id: "camp-123",
   name: "Test Location",
+  location_type: "city",
   description: "",
   gm_notes: null,
   parent_id: null,
@@ -35,6 +36,7 @@ const createMockRelationship = (
   description: null,
   strength: 50,
   is_bidirectional: false,
+  is_public: true,
   created_at: "2024-01-01T00:00:00Z",
   updated_at: "2024-01-01T00:00:00Z",
 });

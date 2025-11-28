@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@plugin "@tailwindcss/typography";
 
 @theme {
   --color-background: var(--color-slate-950);
@@ -49,4 +50,32 @@
 .tiptap p.is-editor-empty:first-child::before {
   @apply text-muted-foreground float-left h-0 pointer-events-none;
   content: attr(data-placeholder);
+}
+
+/* Document Canvas Styles */
+.document-canvas {
+  @apply max-w-4xl mx-auto;
+}
+
+.document-section {
+  @apply mb-8;
+}
+
+.document-section h2 {
+  @apply text-lg font-semibold mb-3 text-foreground;
+}
+
+/* Relationships panel styles */
+.relationships-panel {
+  @apply border-t border-border mt-8 pt-6;
+}
+
+.relationships-panel-header {
+  @apply flex items-center justify-between cursor-pointer py-2;
+  @apply hover:text-foreground transition-colors;
+}
+
+/* Metadata section styles */
+.metadata-section {
+  @apply border-b border-border pb-4 mb-6;
 }

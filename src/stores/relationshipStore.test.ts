@@ -16,6 +16,7 @@ const createMockRelationship = (id: string): Relationship => ({
   description: "Test relationship",
   strength: 75,
   is_bidirectional: false,
+  is_public: true,
   created_at: "2024-01-01T00:00:00Z",
   updated_at: "2024-01-01T00:00:00Z",
 });

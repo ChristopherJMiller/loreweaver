@@ -32,7 +32,6 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
@@ -62,7 +61,6 @@ export function OrganizationsPage() {
   const [newOrg, setNewOrg] = useState({
     name: "",
     org_type: "guild",
-    description: "",
   });
   const [isCreating, setIsCreating] = useState(false);
 
@@ -81,11 +79,10 @@ export function OrganizationsPage() {
         campaign_id: activeCampaignId,
         name: newOrg.name,
         org_type: newOrg.org_type,
-        description: newOrg.description || undefined,
         is_active: true,
       });
       setCreateDialogOpen(false);
-      setNewOrg({ name: "", org_type: "guild", description: "" });
+      setNewOrg({ name: "", org_type: "guild" });
       navigate(`/organizations/${org.id}`);
     } finally {
       setIsCreating(false);
@@ -265,17 +262,6 @@ export function OrganizationsPage() {
                   ))}
                 </SelectContent>
               </Select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
-                placeholder="Brief description of this organization..."
-                value={newOrg.description}
-                onChange={(e) =>
-                  setNewOrg({ ...newOrg, description: e.target.value })
-                }
-              />
             </div>
           </div>
           <DialogFooter>

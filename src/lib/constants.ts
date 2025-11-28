@@ -18,6 +18,34 @@ export function getLocationTypeLabel(type: string): string {
   return LOCATION_TYPES.find((t) => t.value === type)?.label || type;
 }
 
+export function getLocationTypeIndex(type: string): number {
+  const index = LOCATION_TYPES.findIndex((t) => t.value === type);
+  return index === -1 ? 999 : index;
+}
+
+/**
+ * Returns the valid parent location types for a given child type.
+ * Based on hierarchy: world > continent > region > territory > settlement > district > building > room
+ * Special cases: landmark (can be child of most), wilderness (larger areas only)
+ */
+export function getValidParentTypes(childType: string): string[] {
+  const childIndex = getLocationTypeIndex(childType);
+
+  // Special cases
+  if (childType === "landmark") {
+    // Landmarks can be anywhere except in rooms or other landmarks
+    return LOCATION_TYPES.filter(t => t.value !== "room" && t.value !== "landmark")
+      .map(t => t.value);
+  }
+  if (childType === "wilderness") {
+    // Wilderness is typically in larger areas
+    return ["world", "continent", "region", "territory"];
+  }
+
+  // Normal hierarchy: parent must be larger (lower index)
+  return LOCATION_TYPES.slice(0, childIndex).map(t => t.value);
+}
+
 // Organization type constants
 export const ORG_TYPES = [
   { value: "government", label: "Government" },

@@ -1,14 +1,6 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { ArrowLeft, Edit2, Trash2, Save, X, MapPin } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { MapPin } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
@@ -19,11 +11,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Separator } from "@/components/ui/separator";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { LoadingState, DeleteDialog } from "@/components/common";
-import { Editor } from "@/components/editor";
-import { RelationshipList } from "@/components/relationship";
+import {
+  DocumentHeader,
+  DocumentCanvas,
+  MetadataSection,
+  RelationshipsPanel,
+  DocumentSection,
+} from "@/components/document";
 import { DetailLevelBar, LocationBreadcrumb } from "@/components/location";
 import { useLocationStore, useCampaignStore, useRelationshipStore } from "@/stores";
 import { LOCATION_TYPES, getLocationTypeLabel } from "@/lib/constants";
@@ -96,296 +92,253 @@ export function LocationDetailPage() {
     }
   };
 
+  const handleCancel = () => {
+    if (location) {
+      setEditForm({
+        name: location.name,
+        location_type: location.location_type || "settlement",
+        parent_id: location.parent_id || "",
+        description: location.description || "",
+        gm_notes: location.gm_notes || "",
+        detail_level: location.detail_level,
+      });
+    }
+    setIsEditing(false);
+  };
+
   const handleDelete = async () => {
     if (!id) return;
     await remove(id);
     navigate("/locations");
   };
 
+  const handleSectionChange = useCallback(
+    (fieldId: string, content: string) => {
+      setEditForm((prev) => ({ ...prev, [fieldId]: content }));
+    },
+    []
+  );
+
   if (isLoading || !location) {
     return <LoadingState type="detail" />;
   }
 
+  const sections: DocumentSection[] = [
+    {
+      id: "description",
+      title: "Description",
+      content: editForm.description,
+      placeholder: "Describe this location...",
+    },
+    {
+      id: "gm_notes",
+      title: "GM Notes",
+      content: editForm.gm_notes,
+      placeholder: "Hidden information, plot hooks, secrets about this location...",
+    },
+  ];
+
+  const titleContent = isEditing ? (
+    <Input
+      value={editForm.name}
+      onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+      className="text-2xl font-bold h-auto py-1"
+    />
+  ) : (
+    location.name
+  );
+
+  const subtitle = (
+    <>
+      {parentLocation && (
+        <>
+          <span>in</span>
+          <Link
+            to={`/locations/${parentLocation.id}`}
+            className="hover:underline"
+          >
+            {parentLocation.name}
+          </Link>
+          <span>•</span>
+        </>
+      )}
+      <span>{getLocationTypeLabel(location.location_type)}</span>
+    </>
+  );
+
+  const badges = (
+    <div className="w-32">
+      <DetailLevelBar
+        location={location}
+        relationships={relationships}
+        childCount={childLocations.length}
+      />
+    </div>
+  );
+
   return (
-    <div className="space-y-6">
-      {/* Breadcrumb */}
-      <LocationBreadcrumb location={location} allLocations={entities} />
-
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" asChild>
-            <Link to="/locations">
-              <ArrowLeft className="h-4 w-4" />
-            </Link>
-          </Button>
-          <div>
-            {isEditing ? (
-              <Input
-                value={editForm.name}
-                onChange={(e) =>
-                  setEditForm({ ...editForm, name: e.target.value })
-                }
-                className="text-2xl font-bold"
-              />
-            ) : (
-              <h1 className="text-2xl font-bold">{location.name}</h1>
-            )}
-            <div className="flex items-center gap-2 text-muted-foreground">
-              {parentLocation && (
-                <>
-                  <span>in</span>
-                  <Link
-                    to={`/locations/${parentLocation.id}`}
-                    className="hover:underline"
-                  >
-                    {parentLocation.name}
-                  </Link>
-                  <span>•</span>
-                </>
-              )}
-              <span>{getLocationTypeLabel(location.location_type)}</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <div className="w-32">
-            <DetailLevelBar
-              location={location}
-              relationships={relationships}
-              childCount={childLocations.length}
-            />
-          </div>
-
-          {isEditing ? (
-            <>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setIsEditing(false)}
-              >
-                <X className="h-4 w-4" />
-              </Button>
-              <Button onClick={handleSave} disabled={isSaving}>
-                <Save className="mr-2 h-4 w-4" />
-                {isSaving ? "Saving..." : "Save"}
-              </Button>
-            </>
-          ) : (
-            <>
-              <Button variant="outline" onClick={() => setIsEditing(true)}>
-                <Edit2 className="mr-2 h-4 w-4" />
-                Edit
-              </Button>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => setDeleteDialogOpen(true)}
-              >
-                <Trash2 className="h-4 w-4 text-destructive" />
-              </Button>
-            </>
-          )}
-        </div>
+    <div className="space-y-0">
+      {/* Breadcrumb stays outside the document flow */}
+      <div className="mb-4">
+        <LocationBreadcrumb location={location} allLocations={entities} />
       </div>
 
-      <Separator />
+      <DocumentHeader
+        title={titleContent}
+        subtitle={subtitle}
+        badges={badges}
+        isEditing={isEditing}
+        isSaving={isSaving}
+        onEdit={() => setIsEditing(true)}
+        onSave={handleSave}
+        onCancel={handleCancel}
+        onDelete={() => setDeleteDialogOpen(true)}
+        backLink="/locations"
+      />
 
-      {/* Content */}
-      <Tabs defaultValue="overview">
-        <TabsList>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="places">
-            Places ({childLocations.length})
-          </TabsTrigger>
-          <TabsTrigger value="relationships">Relationships</TabsTrigger>
-          <TabsTrigger value="gm-notes">GM Notes</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="overview" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Details</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {isEditing ? (
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label>Location Type</Label>
-                    <Select
-                      value={editForm.location_type}
-                      onValueChange={(value) =>
-                        setEditForm({ ...editForm, location_type: value })
-                      }
+      <DocumentCanvas
+        sections={sections}
+        isEditing={isEditing}
+        onChange={handleSectionChange}
+        campaignId={activeCampaignId || undefined}
+      >
+        <MetadataSection defaultOpen={isEditing}>
+          {isEditing ? (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label>Location Type</Label>
+                <Select
+                  value={editForm.location_type}
+                  onValueChange={(value) =>
+                    setEditForm({ ...editForm, location_type: value })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {LOCATION_TYPES.map((type) => (
+                      <SelectItem key={type.value} value={type.value}>
+                        {type.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Parent Location</Label>
+                <Select
+                  value={editForm.parent_id || "none"}
+                  onValueChange={(value) =>
+                    setEditForm({
+                      ...editForm,
+                      parent_id: value === "none" ? "" : value,
+                    })
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None (top-level)</SelectItem>
+                    {entities
+                      .filter((l) => l.id !== id)
+                      .map((loc) => (
+                        <SelectItem key={loc.id} value={loc.id}>
+                          {loc.name}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="sm:col-span-2">
+                <span className="text-sm text-muted-foreground">Detail Level</span>
+                <DetailLevelBar
+                  location={location}
+                  relationships={relationships}
+                  childCount={childLocations.length}
+                  showLabel
+                  className="mt-1 w-48"
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <span className="text-sm text-muted-foreground">Type</span>
+                <p>{getLocationTypeLabel(location.location_type)}</p>
+              </div>
+              <div>
+                <span className="text-sm text-muted-foreground">Parent</span>
+                <p>
+                  {parentLocation ? (
+                    <Link
+                      to={`/locations/${parentLocation.id}`}
+                      className="hover:underline"
                     >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {LOCATION_TYPES.map((type) => (
-                          <SelectItem key={type.value} value={type.value}>
-                            {type.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Parent Location</Label>
-                    <Select
-                      value={editForm.parent_id || "none"}
-                      onValueChange={(value) =>
-                        setEditForm({
-                          ...editForm,
-                          parent_id: value === "none" ? "" : value,
-                        })
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">None (top-level)</SelectItem>
-                        {entities
-                          .filter((l) => l.id !== id)
-                          .map((loc) => (
-                            <SelectItem key={loc.id} value={loc.id}>
-                              {loc.name}
-                            </SelectItem>
-                          ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-              ) : (
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div>
-                    <span className="text-sm text-muted-foreground">Type</span>
-                    <p>{getLocationTypeLabel(location.location_type)}</p>
-                  </div>
-                  <div>
-                    <span className="text-sm text-muted-foreground">
-                      Parent
-                    </span>
-                    <p>
-                      {parentLocation ? (
-                        <Link
-                          to={`/locations/${parentLocation.id}`}
-                          className="hover:underline"
-                        >
-                          {parentLocation.name}
-                        </Link>
-                      ) : (
-                        "—"
-                      )}
-                    </p>
-                  </div>
-                  <div>
-                    <span className="text-sm text-muted-foreground">
-                      Detail Level
-                    </span>
-                    <DetailLevelBar
-                      location={location}
-                      relationships={relationships}
-                      childCount={childLocations.length}
-                      showLabel
-                      className="mt-1 w-48"
-                    />
-                  </div>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                      {parentLocation.name}
+                    </Link>
+                  ) : (
+                    "—"
+                  )}
+                </p>
+              </div>
+              <div className="sm:col-span-2">
+                <span className="text-sm text-muted-foreground">Detail Level</span>
+                <DetailLevelBar
+                  location={location}
+                  relationships={relationships}
+                  childCount={childLocations.length}
+                  showLabel
+                  className="mt-1 w-48"
+                />
+              </div>
+            </div>
+          )}
+        </MetadataSection>
 
-          <Card>
+        {/* Child Locations Section */}
+        {childLocations.length > 0 && (
+          <Card className="mt-8">
             <CardHeader>
-              <CardTitle>Description</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Editor
-                content={editForm.description}
-                onChange={(content) =>
-                  setEditForm({ ...editForm, description: content })
-                }
-                placeholder="Describe this location..."
-                readOnly={!isEditing}
-                campaignId={activeCampaignId || undefined}
-              />
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="places" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>Child Locations</CardTitle>
+              <CardTitle>Places ({childLocations.length})</CardTitle>
               <CardDescription>
-                Places contained within {location.name}
+                Locations contained within {location.name}
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {childLocations.length === 0 ? (
-                <p className="text-muted-foreground">
-                  No child locations yet. Create locations with this as their
-                  parent to see them here.
-                </p>
-              ) : (
-                <div className="space-y-2">
-                  {childLocations.map((child) => (
-                    <Link
-                      key={child.id}
-                      to={`/locations/${child.id}`}
-                      className="flex items-center justify-between rounded-md border p-3 transition-colors hover:bg-accent"
-                    >
-                      <div className="flex items-center gap-3">
-                        <MapPin className="h-4 w-4 text-muted-foreground" />
-                        <div>
-                          <p className="font-medium">{child.name}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {getLocationTypeLabel(child.location_type)}
-                          </p>
-                        </div>
+              <div className="space-y-2">
+                {childLocations.map((child) => (
+                  <Link
+                    key={child.id}
+                    to={`/locations/${child.id}`}
+                    className="flex items-center justify-between rounded-md border p-3 transition-colors hover:bg-accent"
+                  >
+                    <div className="flex items-center gap-3">
+                      <MapPin className="h-4 w-4 text-muted-foreground" />
+                      <div>
+                        <p className="font-medium">{child.name}</p>
+                        <p className="text-sm text-muted-foreground">
+                          {getLocationTypeLabel(child.location_type)}
+                        </p>
                       </div>
-                      <Badge variant="outline">{child.detail_level}%</Badge>
-                    </Link>
-                  ))}
-                </div>
-              )}
+                    </div>
+                    <Badge variant="outline">{child.detail_level}%</Badge>
+                  </Link>
+                ))}
+              </div>
             </CardContent>
           </Card>
-        </TabsContent>
+        )}
 
-        <TabsContent value="relationships" className="space-y-4">
-          {id && location && (
-            <RelationshipList
-              entityType="location"
-              entityId={id}
-              entityName={location.name}
-            />
-          )}
-        </TabsContent>
-
-        <TabsContent value="gm-notes" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <CardTitle>GM Notes</CardTitle>
-              <CardDescription>Private notes only visible to you</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Editor
-                content={editForm.gm_notes}
-                onChange={(content) =>
-                  setEditForm({ ...editForm, gm_notes: content })
-                }
-                placeholder="Hidden information, plot hooks, secrets about this location..."
-                readOnly={!isEditing}
-                campaignId={activeCampaignId || undefined}
-              />
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+        {id && location && (
+          <RelationshipsPanel
+            entityType="location"
+            entityId={id}
+            entityName={location.name}
+          />
+        )}
+      </DocumentCanvas>
 
       <DeleteDialog
         open={deleteDialogOpen}

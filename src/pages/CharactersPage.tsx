@@ -26,7 +26,6 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import {
   Dialog,
   DialogContent,
@@ -56,7 +55,6 @@ export function CharactersPage() {
     name: "",
     lineage: "",
     occupation: "",
-    description: "",
   });
   const [isCreating, setIsCreating] = useState(false);
 
@@ -76,11 +74,10 @@ export function CharactersPage() {
         name: newCharacter.name,
         lineage: newCharacter.lineage || undefined,
         occupation: newCharacter.occupation || undefined,
-        description: newCharacter.description || undefined,
         is_alive: true,
       });
       setCreateDialogOpen(false);
-      setNewCharacter({ name: "", lineage: "", occupation: "", description: "" });
+      setNewCharacter({ name: "", lineage: "", occupation: "" });
       navigate(`/characters/${character.id}`);
     } finally {
       setIsCreating(false);
@@ -267,20 +264,6 @@ export function CharactersPage() {
                   }
                 />
               </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
-                placeholder="A brief description..."
-                value={newCharacter.description}
-                onChange={(e) =>
-                  setNewCharacter({
-                    ...newCharacter,
-                    description: e.target.value,
-                  })
-                }
-              />
             </div>
           </div>
           <DialogFooter>

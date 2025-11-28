@@ -33,7 +33,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import {
   Dialog,
   DialogContent,
@@ -49,7 +49,7 @@ import {
   DeleteDialog,
 } from "@/components/common";
 import { useCampaignStore, useLocationStore, useUIStore } from "@/stores";
-import { LOCATION_TYPES, getLocationTypeLabel } from "@/lib/constants";
+import { LOCATION_TYPES, getLocationTypeLabel, getValidParentTypes } from "@/lib/constants";
 
 export function LocationsPage() {
   const navigate = useNavigate();
@@ -63,8 +63,7 @@ export function LocationsPage() {
   const [newLocation, setNewLocation] = useState({
     name: "",
     location_type: "settlement",
-    parent_id: "",
-    description: "",
+    parent_id: null as string | null,
   });
   const [isCreating, setIsCreating] = useState(false);
 
@@ -84,15 +83,13 @@ export function LocationsPage() {
         name: newLocation.name,
         location_type: newLocation.location_type,
         parent_id: newLocation.parent_id || undefined,
-        description: newLocation.description || undefined,
         detail_level: 0,
       });
       setCreateDialogOpen(false);
       setNewLocation({
         name: "",
         location_type: "settlement",
-        parent_id: "",
-        description: "",
+        parent_id: null,
       });
       navigate(`/locations/${location.id}`);
     } finally {
@@ -275,9 +272,18 @@ export function LocationsPage() {
                 <Label htmlFor="location_type">Type</Label>
                 <Select
                   value={newLocation.location_type}
-                  onValueChange={(value) =>
-                    setNewLocation({ ...newLocation, location_type: value })
-                  }
+                  onValueChange={(value) => {
+                    // Check if current parent is still valid for new type
+                    const validTypes = getValidParentTypes(value);
+                    const currentParent = entities.find(l => l.id === newLocation.parent_id);
+                    const parentStillValid = !currentParent || validTypes.includes(currentParent.location_type);
+
+                    setNewLocation({
+                      ...newLocation,
+                      location_type: value,
+                      parent_id: parentStillValid ? newLocation.parent_id : null,
+                    });
+                  }}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select type" />
@@ -293,42 +299,51 @@ export function LocationsPage() {
               </div>
               <div className="space-y-2">
                 <Label htmlFor="parent">Parent Location</Label>
-                <Select
-                  value={newLocation.parent_id}
-                  onValueChange={(value) =>
-                    setNewLocation({
-                      ...newLocation,
-                      parent_id: value === "none" ? "" : value,
-                    })
+                {(() => {
+                  const validParentTypes = getValidParentTypes(newLocation.location_type);
+                  const validParentLocations = entities.filter(
+                    (loc) => validParentTypes.includes(loc.location_type)
+                  );
+                  const isWorldType = newLocation.location_type === "world";
+
+                  if (isWorldType) {
+                    return (
+                      <p className="text-sm text-muted-foreground py-2">
+                        Worlds are top-level locations.
+                      </p>
+                    );
                   }
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="None (top-level)" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">None (top-level)</SelectItem>
-                    {entities.map((loc) => (
-                      <SelectItem key={loc.id} value={loc.id}>
-                        {loc.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+
+                  return (
+                    <>
+                      <SearchableSelect
+                        value={newLocation.parent_id}
+                        onValueChange={(value) =>
+                          setNewLocation({ ...newLocation, parent_id: value })
+                        }
+                        placeholder="Select parent..."
+                        searchPlaceholder="Search locations..."
+                        emptyText={validParentLocations.length === 0
+                          ? "No valid parent locations exist yet"
+                          : "No locations found"}
+                        items={validParentLocations}
+                        getItemId={(loc) => loc.id}
+                        getItemLabel={(loc) => loc.name}
+                        getItemGroup={(loc) => getLocationTypeLabel(loc.location_type)}
+                        groupOrder={LOCATION_TYPES.map((t) => t.label)}
+                        allowNone
+                        noneLabel="None (top-level)"
+                        className="w-full"
+                      />
+                      {validParentLocations.length === 0 && (
+                        <p className="text-sm text-muted-foreground">
+                          Create a larger location type first.
+                        </p>
+                      )}
+                    </>
+                  );
+                })()}
               </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
-                placeholder="A brief description of this location..."
-                value={newLocation.description}
-                onChange={(e) =>
-                  setNewLocation({
-                    ...newLocation,
-                    description: e.target.value,
-                  })
-                }
-              />
             </div>
           </div>
           <DialogFooter>

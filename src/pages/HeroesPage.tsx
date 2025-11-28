@@ -23,17 +23,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import {
   Dialog,
   DialogContent,
@@ -62,10 +55,9 @@ export function HeroesPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [newHero, setNewHero] = useState({
     name: "",
-    player_id: "",
+    player_id: null as string | null,
     lineage: "",
     classes: "",
-    description: "",
   });
   const [isCreating, setIsCreating] = useState(false);
 
@@ -87,11 +79,10 @@ export function HeroesPage() {
         player_id: newHero.player_id || undefined,
         lineage: newHero.lineage || undefined,
         classes: newHero.classes || undefined,
-        description: newHero.description || undefined,
         is_active: true,
       });
       setCreateDialogOpen(false);
-      setNewHero({ name: "", player_id: "", lineage: "", classes: "", description: "" });
+      setNewHero({ name: "", player_id: null, lineage: "", classes: "" });
       navigate(`/heroes/${hero.id}`);
     } finally {
       setIsCreating(false);
@@ -258,27 +249,21 @@ export function HeroesPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="player">Player</Label>
-              <Select
+              <SearchableSelect
                 value={newHero.player_id}
                 onValueChange={(value) =>
-                  setNewHero({
-                    ...newHero,
-                    player_id: value === "none" ? "" : value,
-                  })
+                  setNewHero({ ...newHero, player_id: value })
                 }
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select player (optional)" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">No player assigned</SelectItem>
-                  {players.map((player) => (
-                    <SelectItem key={player.id} value={player.id}>
-                      {player.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                placeholder="Select player..."
+                searchPlaceholder="Search players..."
+                emptyText="No players found"
+                items={players}
+                getItemId={(p) => p.id}
+                getItemLabel={(p) => p.name}
+                allowNone
+                noneLabel="No player assigned"
+                className="w-full"
+              />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -303,17 +288,6 @@ export function HeroesPage() {
                   }
                 />
               </div>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="description">Description</Label>
-              <Textarea
-                id="description"
-                placeholder="Brief description..."
-                value={newHero.description}
-                onChange={(e) =>
-                  setNewHero({ ...newHero, description: e.target.value })
-                }
-              />
             </div>
           </div>
           <DialogFooter>
