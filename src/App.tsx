@@ -15,6 +15,11 @@ import {
   PlayerDetailPage,
   SessionsPage,
   SessionDetailPage,
+  QuestsPage,
+  QuestDetailPage,
+  TimelinePage,
+  TimelineEventDetailPage,
+  SearchPage,
   PlaceholderPage,
 } from "@/pages";
 
@@ -39,24 +44,8 @@ function App() {
           <Route path="/organizations" element={<OrganizationsPage />} />
           <Route path="/organizations/:id" element={<OrganizationDetailPage />} />
 
-          <Route
-            path="/quests"
-            element={
-              <PlaceholderPage
-                title="Quests"
-                description="Story threads and objectives"
-              />
-            }
-          />
-          <Route
-            path="/quests/:id"
-            element={
-              <PlaceholderPage
-                title="Quest Details"
-                description="View quest"
-              />
-            }
-          />
+          <Route path="/quests" element={<QuestsPage />} />
+          <Route path="/quests/:id" element={<QuestDetailPage />} />
 
           <Route path="/heroes" element={<HeroesPage />} />
           <Route path="/heroes/:id" element={<HeroDetailPage />} />
@@ -67,15 +56,8 @@ function App() {
           <Route path="/sessions" element={<SessionsPage />} />
           <Route path="/sessions/:id" element={<SessionDetailPage />} />
 
-          <Route
-            path="/timeline"
-            element={
-              <PlaceholderPage
-                title="Timeline"
-                description="Historical events"
-              />
-            }
-          />
+          <Route path="/timeline" element={<TimelinePage />} />
+          <Route path="/timeline/:id" element={<TimelineEventDetailPage />} />
 
           <Route
             path="/secrets"
@@ -87,15 +69,7 @@ function App() {
             }
           />
 
-          <Route
-            path="/search"
-            element={
-              <PlaceholderPage
-                title="Search"
-                description="Search across your campaign"
-              />
-            }
-          />
+          <Route path="/search" element={<SearchPage />} />
         </Route>
 
         {/* Fallback */}

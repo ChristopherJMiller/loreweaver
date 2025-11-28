@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Plus, Trash2, Check, BookOpen } from "lucide-react";
+import { Plus, Trash2, Check, BookOpen, Edit2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -20,7 +20,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { useCampaignStore } from "@/stores";
 
@@ -32,38 +31,66 @@ export function CampaignsPage() {
     isLoading,
     fetchCampaigns,
     createCampaign,
+    updateCampaign,
     deleteCampaign,
     setActiveCampaign,
   } = useCampaignStore();
 
-  const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  const [newCampaign, setNewCampaign] = useState({
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [formData, setFormData] = useState({
     name: "",
     description: "",
     system: "",
   });
-  const [isCreating, setIsCreating] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
     fetchCampaigns();
   }, [fetchCampaigns]);
 
-  const handleCreate = async () => {
-    if (!newCampaign.name.trim()) return;
+  const openCreateDialog = () => {
+    setEditingId(null);
+    setFormData({ name: "", description: "", system: "" });
+    setDialogOpen(true);
+  };
 
-    setIsCreating(true);
+  const openEditDialog = (campaign: typeof campaigns[0]) => {
+    setEditingId(campaign.id);
+    setFormData({
+      name: campaign.name,
+      description: campaign.description || "",
+      system: campaign.system || "",
+    });
+    setDialogOpen(true);
+  };
+
+  const handleSave = async () => {
+    if (!formData.name.trim()) return;
+
+    setIsSaving(true);
     try {
-      const campaign = await createCampaign(
-        newCampaign.name,
-        newCampaign.description || undefined,
-        newCampaign.system || undefined
-      );
-      setActiveCampaign(campaign.id);
-      setCreateDialogOpen(false);
-      setNewCampaign({ name: "", description: "", system: "" });
-      navigate("/");
+      if (editingId) {
+        await updateCampaign(editingId, {
+          name: formData.name,
+          description: formData.description || undefined,
+          system: formData.system || undefined,
+        });
+        setDialogOpen(false);
+      } else {
+        const campaign = await createCampaign(
+          formData.name,
+          formData.description || undefined,
+          formData.system || undefined
+        );
+        setActiveCampaign(campaign.id);
+        setDialogOpen(false);
+        navigate("/");
+      }
+      setFormData({ name: "", description: "", system: "" });
+      setEditingId(null);
     } finally {
-      setIsCreating(false);
+      setIsSaving(false);
     }
   };
 
@@ -88,18 +115,21 @@ export function CampaignsPage() {
           </p>
         </div>
 
-        <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="mr-2 h-4 w-4" />
-              New Campaign
-            </Button>
-          </DialogTrigger>
+        <Button onClick={openCreateDialog}>
+          <Plus className="mr-2 h-4 w-4" />
+          New Campaign
+        </Button>
+
+        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Create Campaign</DialogTitle>
+              <DialogTitle>
+                {editingId ? "Edit Campaign" : "Create Campaign"}
+              </DialogTitle>
               <DialogDescription>
-                Start a new worldbuilding campaign
+                {editingId
+                  ? "Update your campaign details"
+                  : "Start a new worldbuilding campaign"}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
@@ -108,9 +138,9 @@ export function CampaignsPage() {
                 <Input
                   id="name"
                   placeholder="My Fantasy World"
-                  value={newCampaign.name}
+                  value={formData.name}
                   onChange={(e) =>
-                    setNewCampaign({ ...newCampaign, name: e.target.value })
+                    setFormData({ ...formData, name: e.target.value })
                   }
                 />
               </div>
@@ -119,9 +149,9 @@ export function CampaignsPage() {
                 <Input
                   id="system"
                   placeholder="D&D 5e, Pathfinder 2e, etc."
-                  value={newCampaign.system}
+                  value={formData.system}
                   onChange={(e) =>
-                    setNewCampaign({ ...newCampaign, system: e.target.value })
+                    setFormData({ ...formData, system: e.target.value })
                   }
                 />
               </div>
@@ -130,10 +160,10 @@ export function CampaignsPage() {
                 <Textarea
                   id="description"
                   placeholder="A brief description of your campaign..."
-                  value={newCampaign.description}
+                  value={formData.description}
                   onChange={(e) =>
-                    setNewCampaign({
-                      ...newCampaign,
+                    setFormData({
+                      ...formData,
                       description: e.target.value,
                     })
                   }
@@ -141,14 +171,15 @@ export function CampaignsPage() {
               </div>
             </div>
             <DialogFooter>
-              <Button
-                variant="outline"
-                onClick={() => setCreateDialogOpen(false)}
-              >
+              <Button variant="outline" onClick={() => setDialogOpen(false)}>
                 Cancel
               </Button>
-              <Button onClick={handleCreate} disabled={isCreating}>
-                {isCreating ? "Creating..." : "Create Campaign"}
+              <Button onClick={handleSave} disabled={isSaving}>
+                {isSaving
+                  ? "Saving..."
+                  : editingId
+                    ? "Save Changes"
+                    : "Create Campaign"}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -167,7 +198,7 @@ export function CampaignsPage() {
             <p className="mb-4 text-muted-foreground">
               Create your first campaign to get started
             </p>
-            <Button onClick={() => setCreateDialogOpen(true)}>
+            <Button onClick={openCreateDialog}>
               <Plus className="mr-2 h-4 w-4" />
               Create Campaign
             </Button>
@@ -211,6 +242,13 @@ export function CampaignsPage() {
                   onClick={() => handleSelect(campaign.id)}
                 >
                   {campaign.id === activeCampaignId ? "Active" : "Select"}
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => openEditDialog(campaign)}
+                >
+                  <Edit2 className="h-4 w-4" />
                 </Button>
                 <Button
                   variant="ghost"

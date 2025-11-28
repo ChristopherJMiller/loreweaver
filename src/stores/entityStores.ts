@@ -39,15 +39,14 @@ interface OrganizationEntity extends BaseEntity {
 // Quest entity
 interface QuestEntity extends BaseEntity {
   name: string;
-  quest_type: string | null;
-  status: string | null;
+  status: string;
+  plot_type: string;
   description: string | null;
+  hook: string | null;
   objectives: string | null;
-  rewards: string | null;
-  giver_id: string | null;
-  target_id: string | null;
-  deadline: string | null;
-  priority: number;
+  complications: string | null;
+  resolution: string | null;
+  reward: string | null;
 }
 
 // Hero entity
@@ -84,11 +83,11 @@ interface SessionEntity extends BaseEntity {
 
 // Timeline event entity
 interface TimelineEventEntity extends BaseEntity {
-  name: string;
-  event_date: string | null;
-  date_precision: string | null;
+  date_display: string;
+  sort_order: number;
+  title: string;
   description: string | null;
-  significance: number;
+  significance: string;
   is_public: boolean;
 }
 

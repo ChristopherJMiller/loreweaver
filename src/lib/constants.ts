@@ -37,3 +37,47 @@ export type OrgTypeValue = (typeof ORG_TYPES)[number]["value"];
 export function getOrgTypeLabel(type: string): string {
   return ORG_TYPES.find((t) => t.value === type)?.label || type;
 }
+
+// Quest status constants
+export const QUEST_STATUS = [
+  { value: "planned", label: "Planned" },
+  { value: "available", label: "Available" },
+  { value: "active", label: "Active" },
+  { value: "completed", label: "Completed" },
+  { value: "failed", label: "Failed" },
+  { value: "abandoned", label: "Abandoned" },
+] as const;
+
+export type QuestStatusValue = (typeof QUEST_STATUS)[number]["value"];
+
+export function getQuestStatusLabel(status: string): string {
+  return QUEST_STATUS.find((s) => s.value === status)?.label || status;
+}
+
+// Quest plot type constants
+export const PLOT_TYPES = [
+  { value: "main", label: "Main Quest" },
+  { value: "secondary", label: "Secondary" },
+  { value: "side", label: "Side Quest" },
+  { value: "background", label: "Background" },
+] as const;
+
+export type PlotTypeValue = (typeof PLOT_TYPES)[number]["value"];
+
+export function getPlotTypeLabel(plotType: string): string {
+  return PLOT_TYPES.find((p) => p.value === plotType)?.label || plotType;
+}
+
+// Timeline event significance constants (matches DESIGN_DOC.md Section 4.2.10)
+export const SIGNIFICANCE_LEVELS = [
+  { value: "world", label: "World" },
+  { value: "regional", label: "Regional" },
+  { value: "local", label: "Local" },
+  { value: "personal", label: "Personal" },
+] as const;
+
+export type SignificanceValue = (typeof SIGNIFICANCE_LEVELS)[number]["value"];
+
+export function getSignificanceLabel(significance: string): string {
+  return SIGNIFICANCE_LEVELS.find((s) => s.value === significance)?.label || significance;
+}
