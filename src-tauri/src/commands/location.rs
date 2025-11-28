@@ -146,10 +146,7 @@ pub async fn update_location_impl(
     Ok(result.into())
 }
 
-pub async fn delete_location_impl(
-    db: &DatabaseConnection,
-    id: String,
-) -> Result<bool, AppError> {
+pub async fn delete_location_impl(db: &DatabaseConnection, id: String) -> Result<bool, AppError> {
     let result = Location::delete_by_id(&id).exec(db).await?;
     Ok(result.rows_affected > 0)
 }
@@ -165,7 +162,15 @@ pub async fn create_location(
     parent_id: Option<String>,
     description: Option<String>,
 ) -> Result<LocationResponse, AppError> {
-    create_location_impl(&state.db, campaign_id, name, location_type, parent_id, description).await
+    create_location_impl(
+        &state.db,
+        campaign_id,
+        name,
+        location_type,
+        parent_id,
+        description,
+    )
+    .await
 }
 
 #[tauri::command(rename_all = "snake_case")]
@@ -203,11 +208,20 @@ pub async fn update_location(
     detail_level: Option<i32>,
     gm_notes: Option<String>,
 ) -> Result<LocationResponse, AppError> {
-    update_location_impl(&state.db, id, name, location_type, parent_id, description, detail_level, gm_notes).await
+    update_location_impl(
+        &state.db,
+        id,
+        name,
+        location_type,
+        parent_id,
+        description,
+        detail_level,
+        gm_notes,
+    )
+    .await
 }
 
 #[tauri::command(rename_all = "snake_case")]
 pub async fn delete_location(state: State<'_, AppState>, id: String) -> Result<bool, AppError> {
     delete_location_impl(&state.db, id).await
 }
-

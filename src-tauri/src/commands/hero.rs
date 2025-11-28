@@ -76,10 +76,7 @@ pub async fn create_hero(
 }
 
 #[tauri::command(rename_all = "snake_case")]
-pub async fn get_hero(
-    state: State<'_, AppState>,
-    id: String,
-) -> Result<HeroResponse, AppError> {
+pub async fn get_hero(state: State<'_, AppState>, id: String) -> Result<HeroResponse, AppError> {
     let hero = Hero::find_by_id(&id)
         .one(&state.db)
         .await?
@@ -161,4 +158,3 @@ pub async fn delete_hero(state: State<'_, AppState>, id: String) -> Result<bool,
     let result = Hero::delete_by_id(&id).exec(&state.db).await?;
     Ok(result.rows_affected > 0)
 }
-

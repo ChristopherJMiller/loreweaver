@@ -46,11 +46,7 @@ pub async fn search_entities_impl(
             ORDER BY rank
             LIMIT $3
             "#,
-            [
-                fts_query.into(),
-                campaign_id.into(),
-                (limit as i64).into(),
-            ],
+            [fts_query.into(), campaign_id.into(), (limit as i64).into()],
         ))
         .await?
         .into_iter()

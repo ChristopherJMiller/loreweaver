@@ -111,10 +111,7 @@ pub async fn update_campaign_impl(
     Ok(result.into())
 }
 
-pub async fn delete_campaign_impl(
-    db: &DatabaseConnection,
-    id: String,
-) -> Result<bool, AppError> {
+pub async fn delete_campaign_impl(db: &DatabaseConnection, id: String) -> Result<bool, AppError> {
     let result = Campaign::delete_by_id(&id).exec(db).await?;
     Ok(result.rows_affected > 0)
 }
@@ -160,4 +157,3 @@ pub async fn update_campaign(
 pub async fn delete_campaign(state: State<'_, AppState>, id: String) -> Result<bool, AppError> {
     delete_campaign_impl(&state.db, id).await
 }
-

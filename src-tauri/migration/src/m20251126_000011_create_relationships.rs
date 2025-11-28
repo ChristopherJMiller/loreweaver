@@ -29,21 +29,13 @@ impl MigrationTrait for Migration {
                             .string()
                             .not_null(),
                     )
-                    .col(
-                        ColumnDef::new(Relationships::SourceId)
-                            .string()
-                            .not_null(),
-                    )
+                    .col(ColumnDef::new(Relationships::SourceId).string().not_null())
                     .col(
                         ColumnDef::new(Relationships::TargetType)
                             .string()
                             .not_null(),
                     )
-                    .col(
-                        ColumnDef::new(Relationships::TargetId)
-                            .string()
-                            .not_null(),
-                    )
+                    .col(ColumnDef::new(Relationships::TargetId).string().not_null())
                     .col(
                         ColumnDef::new(Relationships::RelationshipType)
                             .string()

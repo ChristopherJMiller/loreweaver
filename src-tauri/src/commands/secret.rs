@@ -146,4 +146,3 @@ pub async fn delete_secret(state: State<'_, AppState>, id: String) -> Result<boo
     let result = Secret::delete_by_id(&id).exec(&state.db).await?;
     Ok(result.rows_affected > 0)
 }
-

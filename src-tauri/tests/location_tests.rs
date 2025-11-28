@@ -8,7 +8,9 @@ use loreweaver_lib::commands::location::{
 
 #[tokio::test]
 async fn test_create_location() {
-    let db = setup_test_db().await.expect("Failed to setup test database");
+    let db = setup_test_db()
+        .await
+        .expect("Failed to setup test database");
     let campaign = create_test_campaign(&db, "Test Campaign")
         .await
         .expect("Failed to create campaign");
@@ -33,7 +35,9 @@ async fn test_create_location() {
 
 #[tokio::test]
 async fn test_create_location_default_type() {
-    let db = setup_test_db().await.expect("Failed to setup test database");
+    let db = setup_test_db()
+        .await
+        .expect("Failed to setup test database");
     let campaign = create_test_campaign(&db, "Test Campaign")
         .await
         .expect("Failed to create campaign");
@@ -54,7 +58,9 @@ async fn test_create_location_default_type() {
 
 #[tokio::test]
 async fn test_create_location_with_parent() {
-    let db = setup_test_db().await.expect("Failed to setup test database");
+    let db = setup_test_db()
+        .await
+        .expect("Failed to setup test database");
     let campaign = create_test_campaign(&db, "Test Campaign")
         .await
         .expect("Failed to create campaign");
@@ -88,7 +94,9 @@ async fn test_create_location_with_parent() {
 
 #[tokio::test]
 async fn test_get_location() {
-    let db = setup_test_db().await.expect("Failed to setup test database");
+    let db = setup_test_db()
+        .await
+        .expect("Failed to setup test database");
     let campaign = create_test_campaign(&db, "Test Campaign")
         .await
         .expect("Failed to create campaign");
@@ -114,7 +122,9 @@ async fn test_get_location() {
 
 #[tokio::test]
 async fn test_get_location_not_found() {
-    let db = setup_test_db().await.expect("Failed to setup test database");
+    let db = setup_test_db()
+        .await
+        .expect("Failed to setup test database");
 
     let result = get_location_impl(&db, "nonexistent-id".to_string()).await;
 
@@ -125,7 +135,9 @@ async fn test_get_location_not_found() {
 
 #[tokio::test]
 async fn test_list_locations_by_campaign() {
-    let db = setup_test_db().await.expect("Failed to setup test database");
+    let db = setup_test_db()
+        .await
+        .expect("Failed to setup test database");
 
     let campaign1 = create_test_campaign(&db, "Campaign 1")
         .await
@@ -135,17 +147,38 @@ async fn test_list_locations_by_campaign() {
         .expect("Failed to create campaign 2");
 
     // Create locations in campaign 1
-    create_location_impl(&db, campaign1.id.clone(), "Location A".to_string(), None, None, None)
-        .await
-        .expect("Failed to create location");
-    create_location_impl(&db, campaign1.id.clone(), "Location B".to_string(), None, None, None)
-        .await
-        .expect("Failed to create location");
+    create_location_impl(
+        &db,
+        campaign1.id.clone(),
+        "Location A".to_string(),
+        None,
+        None,
+        None,
+    )
+    .await
+    .expect("Failed to create location");
+    create_location_impl(
+        &db,
+        campaign1.id.clone(),
+        "Location B".to_string(),
+        None,
+        None,
+        None,
+    )
+    .await
+    .expect("Failed to create location");
 
     // Create location in campaign 2
-    create_location_impl(&db, campaign2.id.clone(), "Location C".to_string(), None, None, None)
-        .await
-        .expect("Failed to create location");
+    create_location_impl(
+        &db,
+        campaign2.id.clone(),
+        "Location C".to_string(),
+        None,
+        None,
+        None,
+    )
+    .await
+    .expect("Failed to create location");
 
     let campaign1_locs = list_locations_impl(&db, campaign1.id.clone())
         .await
@@ -160,21 +193,44 @@ async fn test_list_locations_by_campaign() {
 
 #[tokio::test]
 async fn test_list_locations_ordered_by_name() {
-    let db = setup_test_db().await.expect("Failed to setup test database");
+    let db = setup_test_db()
+        .await
+        .expect("Failed to setup test database");
     let campaign = create_test_campaign(&db, "Test Campaign")
         .await
         .expect("Failed to create campaign");
 
     // Create in non-alphabetical order
-    create_location_impl(&db, campaign.id.clone(), "Zephyr City".to_string(), None, None, None)
-        .await
-        .expect("Failed to create location");
-    create_location_impl(&db, campaign.id.clone(), "Alpha Town".to_string(), None, None, None)
-        .await
-        .expect("Failed to create location");
-    create_location_impl(&db, campaign.id.clone(), "Beta Village".to_string(), None, None, None)
-        .await
-        .expect("Failed to create location");
+    create_location_impl(
+        &db,
+        campaign.id.clone(),
+        "Zephyr City".to_string(),
+        None,
+        None,
+        None,
+    )
+    .await
+    .expect("Failed to create location");
+    create_location_impl(
+        &db,
+        campaign.id.clone(),
+        "Alpha Town".to_string(),
+        None,
+        None,
+        None,
+    )
+    .await
+    .expect("Failed to create location");
+    create_location_impl(
+        &db,
+        campaign.id.clone(),
+        "Beta Village".to_string(),
+        None,
+        None,
+        None,
+    )
+    .await
+    .expect("Failed to create location");
 
     let locations = list_locations_impl(&db, campaign.id.clone())
         .await
@@ -188,7 +244,9 @@ async fn test_list_locations_ordered_by_name() {
 
 #[tokio::test]
 async fn test_get_location_children() {
-    let db = setup_test_db().await.expect("Failed to setup test database");
+    let db = setup_test_db()
+        .await
+        .expect("Failed to setup test database");
     let campaign = create_test_campaign(&db, "Test Campaign")
         .await
         .expect("Failed to create campaign");
@@ -252,7 +310,9 @@ async fn test_get_location_children() {
 
 #[tokio::test]
 async fn test_location_hierarchy_three_levels() {
-    let db = setup_test_db().await.expect("Failed to setup test database");
+    let db = setup_test_db()
+        .await
+        .expect("Failed to setup test database");
     let campaign = create_test_campaign(&db, "Test Campaign")
         .await
         .expect("Failed to create campaign");
@@ -314,7 +374,9 @@ async fn test_location_hierarchy_three_levels() {
 
 #[tokio::test]
 async fn test_update_location() {
-    let db = setup_test_db().await.expect("Failed to setup test database");
+    let db = setup_test_db()
+        .await
+        .expect("Failed to setup test database");
     let campaign = create_test_campaign(&db, "Test Campaign")
         .await
         .expect("Failed to create campaign");
@@ -347,12 +409,17 @@ async fn test_update_location() {
     assert_eq!(updated.location_type, "fortress");
     assert_eq!(updated.description, Some("A mighty fortress".to_string()));
     assert_eq!(updated.detail_level, 5);
-    assert_eq!(updated.gm_notes, Some("Secret entrance behind waterfall".to_string()));
+    assert_eq!(
+        updated.gm_notes,
+        Some("Secret entrance behind waterfall".to_string())
+    );
 }
 
 #[tokio::test]
 async fn test_update_location_reparent() {
-    let db = setup_test_db().await.expect("Failed to setup test database");
+    let db = setup_test_db()
+        .await
+        .expect("Failed to setup test database");
     let campaign = create_test_campaign(&db, "Test Campaign")
         .await
         .expect("Failed to create campaign");
@@ -426,7 +493,9 @@ async fn test_update_location_reparent() {
 
 #[tokio::test]
 async fn test_delete_location() {
-    let db = setup_test_db().await.expect("Failed to setup test database");
+    let db = setup_test_db()
+        .await
+        .expect("Failed to setup test database");
     let campaign = create_test_campaign(&db, "Test Campaign")
         .await
         .expect("Failed to create campaign");
@@ -454,7 +523,9 @@ async fn test_delete_location() {
 
 #[tokio::test]
 async fn test_location_crud_lifecycle() {
-    let db = setup_test_db().await.expect("Failed to setup test database");
+    let db = setup_test_db()
+        .await
+        .expect("Failed to setup test database");
     let campaign = create_test_campaign(&db, "Test Campaign")
         .await
         .expect("Failed to create campaign");

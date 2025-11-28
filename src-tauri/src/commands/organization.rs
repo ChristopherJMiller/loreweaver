@@ -152,4 +152,3 @@ pub async fn delete_organization(state: State<'_, AppState>, id: String) -> Resu
     let result = Organization::delete_by_id(&id).exec(&state.db).await?;
     Ok(result.rows_affected > 0)
 }
-

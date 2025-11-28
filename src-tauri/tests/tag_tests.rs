@@ -8,7 +8,9 @@ use loreweaver_lib::commands::tag::{
 
 #[tokio::test]
 async fn test_create_tag() {
-    let db = setup_test_db().await.expect("Failed to setup test database");
+    let db = setup_test_db()
+        .await
+        .expect("Failed to setup test database");
     let campaign = create_test_campaign(&db, "Test Campaign")
         .await
         .expect("Failed to create campaign");
@@ -29,7 +31,9 @@ async fn test_create_tag() {
 
 #[tokio::test]
 async fn test_create_tag_without_color() {
-    let db = setup_test_db().await.expect("Failed to setup test database");
+    let db = setup_test_db()
+        .await
+        .expect("Failed to setup test database");
     let campaign = create_test_campaign(&db, "Test Campaign")
         .await
         .expect("Failed to create campaign");
@@ -44,7 +48,9 @@ async fn test_create_tag_without_color() {
 
 #[tokio::test]
 async fn test_get_tag() {
-    let db = setup_test_db().await.expect("Failed to setup test database");
+    let db = setup_test_db()
+        .await
+        .expect("Failed to setup test database");
     let campaign = create_test_campaign(&db, "Test Campaign")
         .await
         .expect("Failed to create campaign");
@@ -63,7 +69,9 @@ async fn test_get_tag() {
 
 #[tokio::test]
 async fn test_get_tag_not_found() {
-    let db = setup_test_db().await.expect("Failed to setup test database");
+    let db = setup_test_db()
+        .await
+        .expect("Failed to setup test database");
 
     let result = get_tag_impl(&db, "nonexistent-id".to_string()).await;
 
@@ -74,7 +82,9 @@ async fn test_get_tag_not_found() {
 
 #[tokio::test]
 async fn test_list_tags_by_campaign() {
-    let db = setup_test_db().await.expect("Failed to setup test database");
+    let db = setup_test_db()
+        .await
+        .expect("Failed to setup test database");
 
     let campaign1 = create_test_campaign(&db, "Campaign 1")
         .await
@@ -106,7 +116,9 @@ async fn test_list_tags_by_campaign() {
 
 #[tokio::test]
 async fn test_list_tags_ordered_by_name() {
-    let db = setup_test_db().await.expect("Failed to setup test database");
+    let db = setup_test_db()
+        .await
+        .expect("Failed to setup test database");
     let campaign = create_test_campaign(&db, "Test Campaign")
         .await
         .expect("Failed to create campaign");
@@ -133,7 +145,9 @@ async fn test_list_tags_ordered_by_name() {
 
 #[tokio::test]
 async fn test_delete_tag() {
-    let db = setup_test_db().await.expect("Failed to setup test database");
+    let db = setup_test_db()
+        .await
+        .expect("Failed to setup test database");
     let campaign = create_test_campaign(&db, "Test Campaign")
         .await
         .expect("Failed to create campaign");
@@ -154,7 +168,9 @@ async fn test_delete_tag() {
 
 #[tokio::test]
 async fn test_add_tag_to_character() {
-    let db = setup_test_db().await.expect("Failed to setup test database");
+    let db = setup_test_db()
+        .await
+        .expect("Failed to setup test database");
     let campaign = create_test_campaign(&db, "Test Campaign")
         .await
         .expect("Failed to create campaign");
@@ -187,7 +203,9 @@ async fn test_add_tag_to_character() {
 
 #[tokio::test]
 async fn test_add_tag_to_location() {
-    let db = setup_test_db().await.expect("Failed to setup test database");
+    let db = setup_test_db()
+        .await
+        .expect("Failed to setup test database");
     let campaign = create_test_campaign(&db, "Test Campaign")
         .await
         .expect("Failed to create campaign");
@@ -217,7 +235,9 @@ async fn test_add_tag_to_location() {
 
 #[tokio::test]
 async fn test_add_multiple_tags_to_entity() {
-    let db = setup_test_db().await.expect("Failed to setup test database");
+    let db = setup_test_db()
+        .await
+        .expect("Failed to setup test database");
     let campaign = create_test_campaign(&db, "Test Campaign")
         .await
         .expect("Failed to create campaign");
@@ -235,15 +255,30 @@ async fn test_add_multiple_tags_to_entity() {
         .await
         .expect("Failed to create tag 3");
 
-    add_entity_tag_impl(&db, tag1.id.clone(), "character".to_string(), character.id.clone())
-        .await
-        .expect("Failed to add tag 1");
-    add_entity_tag_impl(&db, tag2.id.clone(), "character".to_string(), character.id.clone())
-        .await
-        .expect("Failed to add tag 2");
-    add_entity_tag_impl(&db, tag3.id.clone(), "character".to_string(), character.id.clone())
-        .await
-        .expect("Failed to add tag 3");
+    add_entity_tag_impl(
+        &db,
+        tag1.id.clone(),
+        "character".to_string(),
+        character.id.clone(),
+    )
+    .await
+    .expect("Failed to add tag 1");
+    add_entity_tag_impl(
+        &db,
+        tag2.id.clone(),
+        "character".to_string(),
+        character.id.clone(),
+    )
+    .await
+    .expect("Failed to add tag 2");
+    add_entity_tag_impl(
+        &db,
+        tag3.id.clone(),
+        "character".to_string(),
+        character.id.clone(),
+    )
+    .await
+    .expect("Failed to add tag 3");
 
     let entity_tags = get_entity_tags_impl(&db, "character".to_string(), character.id.clone())
         .await
@@ -258,7 +293,9 @@ async fn test_add_multiple_tags_to_entity() {
 
 #[tokio::test]
 async fn test_remove_entity_tag() {
-    let db = setup_test_db().await.expect("Failed to setup test database");
+    let db = setup_test_db()
+        .await
+        .expect("Failed to setup test database");
     let campaign = create_test_campaign(&db, "Test Campaign")
         .await
         .expect("Failed to create campaign");
@@ -270,9 +307,14 @@ async fn test_remove_entity_tag() {
         .expect("Failed to create tag");
 
     // Add the tag
-    add_entity_tag_impl(&db, tag.id.clone(), "character".to_string(), character.id.clone())
-        .await
-        .expect("Failed to add tag");
+    add_entity_tag_impl(
+        &db,
+        tag.id.clone(),
+        "character".to_string(),
+        character.id.clone(),
+    )
+    .await
+    .expect("Failed to add tag");
 
     // Verify it's there
     let tags_before = get_entity_tags_impl(&db, "character".to_string(), character.id.clone())
@@ -300,7 +342,9 @@ async fn test_remove_entity_tag() {
 
 #[tokio::test]
 async fn test_remove_entity_tag_not_found() {
-    let db = setup_test_db().await.expect("Failed to setup test database");
+    let db = setup_test_db()
+        .await
+        .expect("Failed to setup test database");
     let campaign = create_test_campaign(&db, "Test Campaign")
         .await
         .expect("Failed to create campaign");
@@ -324,7 +368,9 @@ async fn test_remove_entity_tag_not_found() {
 
 #[tokio::test]
 async fn test_get_entity_tags_empty() {
-    let db = setup_test_db().await.expect("Failed to setup test database");
+    let db = setup_test_db()
+        .await
+        .expect("Failed to setup test database");
     let campaign = create_test_campaign(&db, "Test Campaign")
         .await
         .expect("Failed to create campaign");
@@ -341,7 +387,9 @@ async fn test_get_entity_tags_empty() {
 
 #[tokio::test]
 async fn test_same_tag_different_entities() {
-    let db = setup_test_db().await.expect("Failed to setup test database");
+    let db = setup_test_db()
+        .await
+        .expect("Failed to setup test database");
     let campaign = create_test_campaign(&db, "Test Campaign")
         .await
         .expect("Failed to create campaign");
@@ -358,12 +406,22 @@ async fn test_same_tag_different_entities() {
         .expect("Failed to create tag");
 
     // Add same tag to both entities
-    add_entity_tag_impl(&db, tag.id.clone(), "character".to_string(), character.id.clone())
-        .await
-        .expect("Failed to add tag to character");
-    add_entity_tag_impl(&db, tag.id.clone(), "location".to_string(), location.id.clone())
-        .await
-        .expect("Failed to add tag to location");
+    add_entity_tag_impl(
+        &db,
+        tag.id.clone(),
+        "character".to_string(),
+        character.id.clone(),
+    )
+    .await
+    .expect("Failed to add tag to character");
+    add_entity_tag_impl(
+        &db,
+        tag.id.clone(),
+        "location".to_string(),
+        location.id.clone(),
+    )
+    .await
+    .expect("Failed to add tag to location");
 
     // Verify each entity has the tag
     let character_tags = get_entity_tags_impl(&db, "character".to_string(), character.id.clone())
@@ -380,7 +438,9 @@ async fn test_same_tag_different_entities() {
 
 #[tokio::test]
 async fn test_tag_lifecycle() {
-    let db = setup_test_db().await.expect("Failed to setup test database");
+    let db = setup_test_db()
+        .await
+        .expect("Failed to setup test database");
     let campaign = create_test_campaign(&db, "Test Campaign")
         .await
         .expect("Failed to create campaign");
@@ -389,14 +449,24 @@ async fn test_tag_lifecycle() {
         .expect("Failed to create character");
 
     // Create tag
-    let tag = create_tag_impl(&db, campaign.id.clone(), "Lifecycle Tag".to_string(), Some("#00FF00".to_string()))
-        .await
-        .expect("Failed to create tag");
+    let tag = create_tag_impl(
+        &db,
+        campaign.id.clone(),
+        "Lifecycle Tag".to_string(),
+        Some("#00FF00".to_string()),
+    )
+    .await
+    .expect("Failed to create tag");
 
     // Add to entity
-    add_entity_tag_impl(&db, tag.id.clone(), "character".to_string(), character.id.clone())
-        .await
-        .expect("Failed to add tag");
+    add_entity_tag_impl(
+        &db,
+        tag.id.clone(),
+        "character".to_string(),
+        character.id.clone(),
+    )
+    .await
+    .expect("Failed to add tag");
 
     // Verify association
     let tags = get_entity_tags_impl(&db, "character".to_string(), character.id.clone())
@@ -405,9 +475,14 @@ async fn test_tag_lifecycle() {
     assert_eq!(tags.len(), 1);
 
     // Remove from entity
-    remove_entity_tag_impl(&db, tag.id.clone(), "character".to_string(), character.id.clone())
-        .await
-        .expect("Failed to remove tag");
+    remove_entity_tag_impl(
+        &db,
+        tag.id.clone(),
+        "character".to_string(),
+        character.id.clone(),
+    )
+    .await
+    .expect("Failed to remove tag");
 
     // Verify removed
     let tags_after = get_entity_tags_impl(&db, "character".to_string(), character.id.clone())

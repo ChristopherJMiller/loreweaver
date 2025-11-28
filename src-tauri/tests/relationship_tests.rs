@@ -8,7 +8,9 @@ use loreweaver_lib::commands::relationship::{
 
 #[tokio::test]
 async fn test_create_relationship() {
-    let db = setup_test_db().await.expect("Failed to setup test database");
+    let db = setup_test_db()
+        .await
+        .expect("Failed to setup test database");
     let campaign = create_test_campaign(&db, "Test Campaign")
         .await
         .expect("Failed to create campaign");
@@ -40,14 +42,19 @@ async fn test_create_relationship() {
     assert_eq!(relationship.target_type, "character");
     assert_eq!(relationship.target_id, char2.id);
     assert_eq!(relationship.relationship_type, "friend");
-    assert_eq!(relationship.description, Some("Best friends since childhood".to_string()));
+    assert_eq!(
+        relationship.description,
+        Some("Best friends since childhood".to_string())
+    );
     assert!(relationship.is_bidirectional);
     assert_eq!(relationship.strength, Some(5));
 }
 
 #[tokio::test]
 async fn test_create_relationship_minimal() {
-    let db = setup_test_db().await.expect("Failed to setup test database");
+    let db = setup_test_db()
+        .await
+        .expect("Failed to setup test database");
     let campaign = create_test_campaign(&db, "Test Campaign")
         .await
         .expect("Failed to create campaign");
@@ -81,7 +88,9 @@ async fn test_create_relationship_minimal() {
 
 #[tokio::test]
 async fn test_create_relationship_between_different_entity_types() {
-    let db = setup_test_db().await.expect("Failed to setup test database");
+    let db = setup_test_db()
+        .await
+        .expect("Failed to setup test database");
     let campaign = create_test_campaign(&db, "Test Campaign")
         .await
         .expect("Failed to create campaign");
@@ -114,7 +123,9 @@ async fn test_create_relationship_between_different_entity_types() {
 
 #[tokio::test]
 async fn test_get_relationship() {
-    let db = setup_test_db().await.expect("Failed to setup test database");
+    let db = setup_test_db()
+        .await
+        .expect("Failed to setup test database");
     let campaign = create_test_campaign(&db, "Test Campaign")
         .await
         .expect("Failed to create campaign");
@@ -150,7 +161,9 @@ async fn test_get_relationship() {
 
 #[tokio::test]
 async fn test_get_relationship_not_found() {
-    let db = setup_test_db().await.expect("Failed to setup test database");
+    let db = setup_test_db()
+        .await
+        .expect("Failed to setup test database");
 
     let result = get_relationship_impl(&db, "nonexistent-id".to_string()).await;
 
@@ -161,7 +174,9 @@ async fn test_get_relationship_not_found() {
 
 #[tokio::test]
 async fn test_list_relationships_by_campaign() {
-    let db = setup_test_db().await.expect("Failed to setup test database");
+    let db = setup_test_db()
+        .await
+        .expect("Failed to setup test database");
 
     let campaign1 = create_test_campaign(&db, "Campaign 1")
         .await
@@ -230,7 +245,9 @@ async fn test_list_relationships_by_campaign() {
 
 #[tokio::test]
 async fn test_get_entity_relationships() {
-    let db = setup_test_db().await.expect("Failed to setup test database");
+    let db = setup_test_db()
+        .await
+        .expect("Failed to setup test database");
     let campaign = create_test_campaign(&db, "Test Campaign")
         .await
         .expect("Failed to create campaign");
@@ -305,7 +322,9 @@ async fn test_get_entity_relationships() {
 
 #[tokio::test]
 async fn test_get_entity_relationships_empty() {
-    let db = setup_test_db().await.expect("Failed to setup test database");
+    let db = setup_test_db()
+        .await
+        .expect("Failed to setup test database");
     let campaign = create_test_campaign(&db, "Test Campaign")
         .await
         .expect("Failed to create campaign");
@@ -322,7 +341,9 @@ async fn test_get_entity_relationships_empty() {
 
 #[tokio::test]
 async fn test_update_relationship() {
-    let db = setup_test_db().await.expect("Failed to setup test database");
+    let db = setup_test_db()
+        .await
+        .expect("Failed to setup test database");
     let campaign = create_test_campaign(&db, "Test Campaign")
         .await
         .expect("Failed to create campaign");
@@ -361,7 +382,10 @@ async fn test_update_relationship() {
     .expect("Failed to update relationship");
 
     assert_eq!(updated.relationship_type, "best_friend");
-    assert_eq!(updated.description, Some("They became close after the adventure".to_string()));
+    assert_eq!(
+        updated.description,
+        Some("They became close after the adventure".to_string())
+    );
     assert!(updated.is_bidirectional);
     assert_eq!(updated.strength, Some(10));
     assert!(!updated.is_public);
@@ -369,7 +393,9 @@ async fn test_update_relationship() {
 
 #[tokio::test]
 async fn test_update_relationship_partial() {
-    let db = setup_test_db().await.expect("Failed to setup test database");
+    let db = setup_test_db()
+        .await
+        .expect("Failed to setup test database");
     let campaign = create_test_campaign(&db, "Test Campaign")
         .await
         .expect("Failed to create campaign");
@@ -396,29 +422,27 @@ async fn test_update_relationship_partial() {
     .expect("Failed to create relationship");
 
     // Only update strength
-    let updated = update_relationship_impl(
-        &db,
-        created.id.clone(),
-        None,
-        None,
-        None,
-        Some(10),
-        None,
-    )
-    .await
-    .expect("Failed to update relationship");
+    let updated =
+        update_relationship_impl(&db, created.id.clone(), None, None, None, Some(10), None)
+            .await
+            .expect("Failed to update relationship");
 
     // Strength should be updated
     assert_eq!(updated.strength, Some(10));
     // Other fields should remain unchanged
     assert_eq!(updated.relationship_type, "friend");
-    assert_eq!(updated.description, Some("Original description".to_string()));
+    assert_eq!(
+        updated.description,
+        Some("Original description".to_string())
+    );
     assert!(updated.is_bidirectional);
 }
 
 #[tokio::test]
 async fn test_delete_relationship() {
-    let db = setup_test_db().await.expect("Failed to setup test database");
+    let db = setup_test_db()
+        .await
+        .expect("Failed to setup test database");
     let campaign = create_test_campaign(&db, "Test Campaign")
         .await
         .expect("Failed to create campaign");
@@ -456,7 +480,9 @@ async fn test_delete_relationship() {
 
 #[tokio::test]
 async fn test_delete_relationship_not_found() {
-    let db = setup_test_db().await.expect("Failed to setup test database");
+    let db = setup_test_db()
+        .await
+        .expect("Failed to setup test database");
 
     let deleted = delete_relationship_impl(&db, "nonexistent-id".to_string())
         .await
@@ -467,7 +493,9 @@ async fn test_delete_relationship_not_found() {
 
 #[tokio::test]
 async fn test_relationship_crud_lifecycle() {
-    let db = setup_test_db().await.expect("Failed to setup test database");
+    let db = setup_test_db()
+        .await
+        .expect("Failed to setup test database");
     let campaign = create_test_campaign(&db, "Test Campaign")
         .await
         .expect("Failed to create campaign");

@@ -192,9 +192,18 @@ pub async fn create_relationship(
     strength: Option<i32>,
 ) -> Result<RelationshipResponse, AppError> {
     create_relationship_impl(
-        &state.db, campaign_id, source_type, source_id, target_type,
-        target_id, relationship_type, description, is_bidirectional, strength,
-    ).await
+        &state.db,
+        campaign_id,
+        source_type,
+        source_id,
+        target_type,
+        target_id,
+        relationship_type,
+        description,
+        is_bidirectional,
+        strength,
+    )
+    .await
 }
 
 #[tauri::command(rename_all = "snake_case")]
@@ -232,11 +241,19 @@ pub async fn update_relationship(
     strength: Option<i32>,
     is_public: Option<bool>,
 ) -> Result<RelationshipResponse, AppError> {
-    update_relationship_impl(&state.db, id, relationship_type, description, is_bidirectional, strength, is_public).await
+    update_relationship_impl(
+        &state.db,
+        id,
+        relationship_type,
+        description,
+        is_bidirectional,
+        strength,
+        is_public,
+    )
+    .await
 }
 
 #[tauri::command(rename_all = "snake_case")]
 pub async fn delete_relationship(state: State<'_, AppState>, id: String) -> Result<bool, AppError> {
     delete_relationship_impl(&state.db, id).await
 }
-

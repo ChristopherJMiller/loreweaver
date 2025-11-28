@@ -50,10 +50,7 @@ pub async fn create_tag_impl(
     Ok(result.into())
 }
 
-pub async fn get_tag_impl(
-    db: &DatabaseConnection,
-    id: String,
-) -> Result<TagResponse, AppError> {
+pub async fn get_tag_impl(db: &DatabaseConnection, id: String) -> Result<TagResponse, AppError> {
     let tag = Tag::find_by_id(&id)
         .one(db)
         .await?
@@ -75,10 +72,7 @@ pub async fn list_tags_impl(
     Ok(tags.into_iter().map(|t| t.into()).collect())
 }
 
-pub async fn delete_tag_impl(
-    db: &DatabaseConnection,
-    id: String,
-) -> Result<bool, AppError> {
+pub async fn delete_tag_impl(db: &DatabaseConnection, id: String) -> Result<bool, AppError> {
     let result = Tag::delete_by_id(&id).exec(db).await?;
     Ok(result.rows_affected > 0)
 }
@@ -126,7 +120,10 @@ pub async fn get_entity_tags_impl(
         .all(db)
         .await?;
 
-    let tag_ids: Vec<String> = entity_tag_records.iter().map(|et| et.tag_id.clone()).collect();
+    let tag_ids: Vec<String> = entity_tag_records
+        .iter()
+        .map(|et| et.tag_id.clone())
+        .collect();
 
     if tag_ids.is_empty() {
         return Ok(vec![]);
@@ -199,4 +196,3 @@ pub async fn get_entity_tags(
 ) -> Result<Vec<TagResponse>, AppError> {
     get_entity_tags_impl(&state.db, entity_type, entity_id).await
 }
-

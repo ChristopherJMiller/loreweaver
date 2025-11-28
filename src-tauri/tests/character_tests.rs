@@ -8,7 +8,9 @@ use loreweaver_lib::commands::character::{
 
 #[tokio::test]
 async fn test_create_character() {
-    let db = setup_test_db().await.expect("Failed to setup test database");
+    let db = setup_test_db()
+        .await
+        .expect("Failed to setup test database");
     let campaign = create_test_campaign(&db, "Test Campaign")
         .await
         .expect("Failed to create campaign");
@@ -33,7 +35,9 @@ async fn test_create_character() {
 
 #[tokio::test]
 async fn test_create_character_minimal() {
-    let db = setup_test_db().await.expect("Failed to setup test database");
+    let db = setup_test_db()
+        .await
+        .expect("Failed to setup test database");
     let campaign = create_test_campaign(&db, "Test Campaign")
         .await
         .expect("Failed to create campaign");
@@ -57,7 +61,9 @@ async fn test_create_character_minimal() {
 
 #[tokio::test]
 async fn test_get_character() {
-    let db = setup_test_db().await.expect("Failed to setup test database");
+    let db = setup_test_db()
+        .await
+        .expect("Failed to setup test database");
     let campaign = create_test_campaign(&db, "Test Campaign")
         .await
         .expect("Failed to create campaign");
@@ -83,7 +89,9 @@ async fn test_get_character() {
 
 #[tokio::test]
 async fn test_get_character_not_found() {
-    let db = setup_test_db().await.expect("Failed to setup test database");
+    let db = setup_test_db()
+        .await
+        .expect("Failed to setup test database");
 
     let result = get_character_impl(&db, "nonexistent-id".to_string()).await;
 
@@ -94,7 +102,9 @@ async fn test_get_character_not_found() {
 
 #[tokio::test]
 async fn test_list_characters_by_campaign() {
-    let db = setup_test_db().await.expect("Failed to setup test database");
+    let db = setup_test_db()
+        .await
+        .expect("Failed to setup test database");
 
     let campaign1 = create_test_campaign(&db, "Campaign 1")
         .await
@@ -104,17 +114,38 @@ async fn test_list_characters_by_campaign() {
         .expect("Failed to create campaign 2");
 
     // Create characters in campaign 1
-    create_character_impl(&db, campaign1.id.clone(), "Frodo".to_string(), None, None, None)
-        .await
-        .expect("Failed to create Frodo");
-    create_character_impl(&db, campaign1.id.clone(), "Sam".to_string(), None, None, None)
-        .await
-        .expect("Failed to create Sam");
+    create_character_impl(
+        &db,
+        campaign1.id.clone(),
+        "Frodo".to_string(),
+        None,
+        None,
+        None,
+    )
+    .await
+    .expect("Failed to create Frodo");
+    create_character_impl(
+        &db,
+        campaign1.id.clone(),
+        "Sam".to_string(),
+        None,
+        None,
+        None,
+    )
+    .await
+    .expect("Failed to create Sam");
 
     // Create character in campaign 2
-    create_character_impl(&db, campaign2.id.clone(), "Aragorn".to_string(), None, None, None)
-        .await
-        .expect("Failed to create Aragorn");
+    create_character_impl(
+        &db,
+        campaign2.id.clone(),
+        "Aragorn".to_string(),
+        None,
+        None,
+        None,
+    )
+    .await
+    .expect("Failed to create Aragorn");
 
     // List should only return characters from the specified campaign
     let campaign1_chars = list_characters_impl(&db, campaign1.id.clone())
@@ -131,21 +162,44 @@ async fn test_list_characters_by_campaign() {
 
 #[tokio::test]
 async fn test_list_characters_ordered_by_name() {
-    let db = setup_test_db().await.expect("Failed to setup test database");
+    let db = setup_test_db()
+        .await
+        .expect("Failed to setup test database");
     let campaign = create_test_campaign(&db, "Test Campaign")
         .await
         .expect("Failed to create campaign");
 
     // Create in non-alphabetical order
-    create_character_impl(&db, campaign.id.clone(), "Zorro".to_string(), None, None, None)
-        .await
-        .expect("Failed to create Zorro");
-    create_character_impl(&db, campaign.id.clone(), "Alice".to_string(), None, None, None)
-        .await
-        .expect("Failed to create Alice");
-    create_character_impl(&db, campaign.id.clone(), "Bob".to_string(), None, None, None)
-        .await
-        .expect("Failed to create Bob");
+    create_character_impl(
+        &db,
+        campaign.id.clone(),
+        "Zorro".to_string(),
+        None,
+        None,
+        None,
+    )
+    .await
+    .expect("Failed to create Zorro");
+    create_character_impl(
+        &db,
+        campaign.id.clone(),
+        "Alice".to_string(),
+        None,
+        None,
+        None,
+    )
+    .await
+    .expect("Failed to create Alice");
+    create_character_impl(
+        &db,
+        campaign.id.clone(),
+        "Bob".to_string(),
+        None,
+        None,
+        None,
+    )
+    .await
+    .expect("Failed to create Bob");
 
     let characters = list_characters_impl(&db, campaign.id.clone())
         .await
@@ -159,7 +213,9 @@ async fn test_list_characters_ordered_by_name() {
 
 #[tokio::test]
 async fn test_update_character() {
-    let db = setup_test_db().await.expect("Failed to setup test database");
+    let db = setup_test_db()
+        .await
+        .expect("Failed to setup test database");
     let campaign = create_test_campaign(&db, "Test Campaign")
         .await
         .expect("Failed to create campaign");
@@ -205,7 +261,9 @@ async fn test_update_character() {
 
 #[tokio::test]
 async fn test_update_character_is_alive_toggle() {
-    let db = setup_test_db().await.expect("Failed to setup test database");
+    let db = setup_test_db()
+        .await
+        .expect("Failed to setup test database");
     let campaign = create_test_campaign(&db, "Test Campaign")
         .await
         .expect("Failed to create campaign");
@@ -266,7 +324,9 @@ async fn test_update_character_is_alive_toggle() {
 
 #[tokio::test]
 async fn test_delete_character() {
-    let db = setup_test_db().await.expect("Failed to setup test database");
+    let db = setup_test_db()
+        .await
+        .expect("Failed to setup test database");
     let campaign = create_test_campaign(&db, "Test Campaign")
         .await
         .expect("Failed to create campaign");
@@ -295,7 +355,9 @@ async fn test_delete_character() {
 
 #[tokio::test]
 async fn test_character_crud_lifecycle() {
-    let db = setup_test_db().await.expect("Failed to setup test database");
+    let db = setup_test_db()
+        .await
+        .expect("Failed to setup test database");
     let campaign = create_test_campaign(&db, "Test Campaign")
         .await
         .expect("Failed to create campaign");

@@ -14,12 +14,7 @@ impl MigrationTrait for Migration {
                 Table::create()
                     .table(Heroes::Table)
                     .if_not_exists()
-                    .col(
-                        ColumnDef::new(Heroes::Id)
-                            .string()
-                            .not_null()
-                            .primary_key(),
-                    )
+                    .col(ColumnDef::new(Heroes::Id).string().not_null().primary_key())
                     .col(ColumnDef::new(Heroes::CampaignId).string().not_null())
                     .col(ColumnDef::new(Heroes::PlayerId).string())
                     .col(ColumnDef::new(Heroes::Name).string().not_null())

@@ -9,7 +9,9 @@ pub struct AppState {
 }
 
 /// Initialize the database connection and run migrations
-pub async fn init_database(app: &tauri::App) -> Result<DatabaseConnection, Box<dyn std::error::Error>> {
+pub async fn init_database(
+    app: &tauri::App,
+) -> Result<DatabaseConnection, Box<dyn std::error::Error>> {
     // Get app data directory from Tauri
     let app_dir = app.path().app_data_dir()?;
 

@@ -161,10 +161,7 @@ pub async fn update_character_impl(
     Ok(result.into())
 }
 
-pub async fn delete_character_impl(
-    db: &DatabaseConnection,
-    id: String,
-) -> Result<bool, AppError> {
+pub async fn delete_character_impl(db: &DatabaseConnection, id: String) -> Result<bool, AppError> {
     let result = Character::delete_by_id(&id).exec(db).await?;
     Ok(result.rows_affected > 0)
 }
@@ -180,7 +177,15 @@ pub async fn create_character(
     occupation: Option<String>,
     description: Option<String>,
 ) -> Result<CharacterResponse, AppError> {
-    create_character_impl(&state.db, campaign_id, name, lineage, occupation, description).await
+    create_character_impl(
+        &state.db,
+        campaign_id,
+        name,
+        lineage,
+        occupation,
+        description,
+    )
+    .await
 }
 
 #[tauri::command(rename_all = "snake_case")]
@@ -215,13 +220,23 @@ pub async fn update_character(
     stat_block_json: Option<String>,
 ) -> Result<CharacterResponse, AppError> {
     update_character_impl(
-        &state.db, id, name, lineage, occupation, is_alive,
-        description, personality, motivations, secrets, voice_notes, stat_block_json,
-    ).await
+        &state.db,
+        id,
+        name,
+        lineage,
+        occupation,
+        is_alive,
+        description,
+        personality,
+        motivations,
+        secrets,
+        voice_notes,
+        stat_block_json,
+    )
+    .await
 }
 
 #[tauri::command(rename_all = "snake_case")]
 pub async fn delete_character(state: State<'_, AppState>, id: String) -> Result<bool, AppError> {
     delete_character_impl(&state.db, id).await
 }
-

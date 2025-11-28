@@ -236,7 +236,14 @@ impl MigrationTrait for Migration {
         let db = manager.get_connection();
 
         // Drop triggers
-        for table in ["characters", "locations", "organizations", "quests", "heroes", "sessions"] {
+        for table in [
+            "characters",
+            "locations",
+            "organizations",
+            "quests",
+            "heroes",
+            "sessions",
+        ] {
             db.execute_unprepared(&format!("DROP TRIGGER IF EXISTS {}_ai;", table))
                 .await?;
             db.execute_unprepared(&format!("DROP TRIGGER IF EXISTS {}_au;", table))

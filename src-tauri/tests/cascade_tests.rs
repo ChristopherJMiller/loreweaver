@@ -1,15 +1,24 @@
 mod common;
 
-use common::{create_test_campaign, create_test_character, create_test_location, create_test_tag, setup_test_db};
+use common::{
+    create_test_campaign, create_test_character, create_test_location, create_test_tag,
+    setup_test_db,
+};
 use loreweaver_lib::commands::campaign::delete_campaign_impl;
 use loreweaver_lib::commands::character::{get_character_impl, list_characters_impl};
 use loreweaver_lib::commands::location::{get_location_impl, list_locations_impl};
-use loreweaver_lib::commands::relationship::{create_relationship_impl, get_relationship_impl, list_relationships_impl};
-use loreweaver_lib::commands::tag::{add_entity_tag_impl, delete_tag_impl, get_entity_tags_impl, get_tag_impl, list_tags_impl};
+use loreweaver_lib::commands::relationship::{
+    create_relationship_impl, get_relationship_impl, list_relationships_impl,
+};
+use loreweaver_lib::commands::tag::{
+    add_entity_tag_impl, delete_tag_impl, get_entity_tags_impl, get_tag_impl, list_tags_impl,
+};
 
 #[tokio::test]
 async fn test_delete_campaign_cascades_to_characters() {
-    let db = setup_test_db().await.expect("Failed to setup test database");
+    let db = setup_test_db()
+        .await
+        .expect("Failed to setup test database");
     let campaign = create_test_campaign(&db, "Test Campaign")
         .await
         .expect("Failed to create campaign");
@@ -36,13 +45,21 @@ async fn test_delete_campaign_cascades_to_characters() {
     // Verify characters are deleted (cascade)
     let result1 = get_character_impl(&db, char1.id).await;
     let result2 = get_character_impl(&db, char2.id).await;
-    assert!(result1.is_err(), "Character 1 should be deleted with campaign");
-    assert!(result2.is_err(), "Character 2 should be deleted with campaign");
+    assert!(
+        result1.is_err(),
+        "Character 1 should be deleted with campaign"
+    );
+    assert!(
+        result2.is_err(),
+        "Character 2 should be deleted with campaign"
+    );
 }
 
 #[tokio::test]
 async fn test_delete_campaign_cascades_to_locations() {
-    let db = setup_test_db().await.expect("Failed to setup test database");
+    let db = setup_test_db()
+        .await
+        .expect("Failed to setup test database");
     let campaign = create_test_campaign(&db, "Test Campaign")
         .await
         .expect("Failed to create campaign");
@@ -69,13 +86,21 @@ async fn test_delete_campaign_cascades_to_locations() {
     // Verify locations are deleted (cascade)
     let result1 = get_location_impl(&db, loc1.id).await;
     let result2 = get_location_impl(&db, loc2.id).await;
-    assert!(result1.is_err(), "Location 1 should be deleted with campaign");
-    assert!(result2.is_err(), "Location 2 should be deleted with campaign");
+    assert!(
+        result1.is_err(),
+        "Location 1 should be deleted with campaign"
+    );
+    assert!(
+        result2.is_err(),
+        "Location 2 should be deleted with campaign"
+    );
 }
 
 #[tokio::test]
 async fn test_delete_campaign_cascades_to_tags() {
-    let db = setup_test_db().await.expect("Failed to setup test database");
+    let db = setup_test_db()
+        .await
+        .expect("Failed to setup test database");
     let campaign = create_test_campaign(&db, "Test Campaign")
         .await
         .expect("Failed to create campaign");
@@ -108,7 +133,9 @@ async fn test_delete_campaign_cascades_to_tags() {
 
 #[tokio::test]
 async fn test_delete_campaign_cascades_to_relationships() {
-    let db = setup_test_db().await.expect("Failed to setup test database");
+    let db = setup_test_db()
+        .await
+        .expect("Failed to setup test database");
     let campaign = create_test_campaign(&db, "Test Campaign")
         .await
         .expect("Failed to create campaign");
@@ -149,12 +176,17 @@ async fn test_delete_campaign_cascades_to_relationships() {
 
     // Verify relationship is deleted (cascade)
     let result = get_relationship_impl(&db, rel.id).await;
-    assert!(result.is_err(), "Relationship should be deleted with campaign");
+    assert!(
+        result.is_err(),
+        "Relationship should be deleted with campaign"
+    );
 }
 
 #[tokio::test]
 async fn test_delete_tag_cascades_to_entity_tags() {
-    let db = setup_test_db().await.expect("Failed to setup test database");
+    let db = setup_test_db()
+        .await
+        .expect("Failed to setup test database");
     let campaign = create_test_campaign(&db, "Test Campaign")
         .await
         .expect("Failed to create campaign");
@@ -168,9 +200,14 @@ async fn test_delete_tag_cascades_to_entity_tags() {
         .expect("Failed to create tag");
 
     // Add tag to character
-    add_entity_tag_impl(&db, tag.id.clone(), "character".to_string(), character.id.clone())
-        .await
-        .expect("Failed to add tag");
+    add_entity_tag_impl(
+        &db,
+        tag.id.clone(),
+        "character".to_string(),
+        character.id.clone(),
+    )
+    .await
+    .expect("Failed to add tag");
 
     // Verify association exists
     let entity_tags = get_entity_tags_impl(&db, "character".to_string(), character.id.clone())
@@ -184,15 +221,21 @@ async fn test_delete_tag_cascades_to_entity_tags() {
         .expect("Failed to delete tag");
 
     // Verify entity_tag association is deleted (cascade)
-    let entity_tags_after = get_entity_tags_impl(&db, "character".to_string(), character.id.clone())
-        .await
-        .expect("Failed to get entity tags");
-    assert!(entity_tags_after.is_empty(), "Entity tags should be deleted with tag");
+    let entity_tags_after =
+        get_entity_tags_impl(&db, "character".to_string(), character.id.clone())
+            .await
+            .expect("Failed to get entity tags");
+    assert!(
+        entity_tags_after.is_empty(),
+        "Entity tags should be deleted with tag"
+    );
 }
 
 #[tokio::test]
 async fn test_delete_campaign_full_cascade() {
-    let db = setup_test_db().await.expect("Failed to setup test database");
+    let db = setup_test_db()
+        .await
+        .expect("Failed to setup test database");
     let campaign = create_test_campaign(&db, "Full Cascade Test Campaign")
         .await
         .expect("Failed to create campaign");
@@ -217,9 +260,14 @@ async fn test_delete_campaign_full_cascade() {
         .expect("Failed to create tag");
 
     // Tag the hero
-    add_entity_tag_impl(&db, tag.id.clone(), "character".to_string(), char1.id.clone())
-        .await
-        .expect("Failed to add tag");
+    add_entity_tag_impl(
+        &db,
+        tag.id.clone(),
+        "character".to_string(),
+        char1.id.clone(),
+    )
+    .await
+    .expect("Failed to add tag");
 
     // Create relationship
     let rel = create_relationship_impl(
@@ -238,10 +286,34 @@ async fn test_delete_campaign_full_cascade() {
     .expect("Failed to create relationship");
 
     // Verify everything exists
-    assert_eq!(list_characters_impl(&db, campaign.id.clone()).await.unwrap().len(), 2);
-    assert_eq!(list_locations_impl(&db, campaign.id.clone()).await.unwrap().len(), 2);
-    assert_eq!(list_tags_impl(&db, campaign.id.clone()).await.unwrap().len(), 1);
-    assert_eq!(list_relationships_impl(&db, campaign.id.clone()).await.unwrap().len(), 1);
+    assert_eq!(
+        list_characters_impl(&db, campaign.id.clone())
+            .await
+            .unwrap()
+            .len(),
+        2
+    );
+    assert_eq!(
+        list_locations_impl(&db, campaign.id.clone())
+            .await
+            .unwrap()
+            .len(),
+        2
+    );
+    assert_eq!(
+        list_tags_impl(&db, campaign.id.clone())
+            .await
+            .unwrap()
+            .len(),
+        1
+    );
+    assert_eq!(
+        list_relationships_impl(&db, campaign.id.clone())
+            .await
+            .unwrap()
+            .len(),
+        1
+    );
 
     // Delete the campaign - everything should cascade
     delete_campaign_impl(&db, campaign.id.clone())
@@ -259,7 +331,9 @@ async fn test_delete_campaign_full_cascade() {
 
 #[tokio::test]
 async fn test_delete_parent_location_orphans_children() {
-    let db = setup_test_db().await.expect("Failed to setup test database");
+    let db = setup_test_db()
+        .await
+        .expect("Failed to setup test database");
     let campaign = create_test_campaign(&db, "Test Campaign")
         .await
         .expect("Failed to create campaign");
@@ -290,5 +364,8 @@ async fn test_delete_parent_location_orphans_children() {
 
     // The child should still exist - whether parent_id is null or unchanged depends on migration
     // Let's just verify child still exists
-    assert!(child_after.is_ok(), "Child location should still exist after parent deleted");
+    assert!(
+        child_after.is_ok(),
+        "Child location should still exist after parent deleted"
+    );
 }

@@ -148,4 +148,3 @@ pub async fn delete_session(state: State<'_, AppState>, id: String) -> Result<bo
     let result = Session::delete_by_id(&id).exec(&state.db).await?;
     Ok(result.rows_affected > 0)
 }
-

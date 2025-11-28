@@ -124,4 +124,3 @@ pub async fn delete_player(state: State<'_, AppState>, id: String) -> Result<boo
     let result = Player::delete_by_id(&id).exec(&state.db).await?;
     Ok(result.rows_affected > 0)
 }
-

@@ -13,12 +13,7 @@ impl MigrationTrait for Migration {
                 Table::create()
                     .table(Quests::Table)
                     .if_not_exists()
-                    .col(
-                        ColumnDef::new(Quests::Id)
-                            .string()
-                            .not_null()
-                            .primary_key(),
-                    )
+                    .col(ColumnDef::new(Quests::Id).string().not_null().primary_key())
                     .col(ColumnDef::new(Quests::CampaignId).string().not_null())
                     .col(ColumnDef::new(Quests::Name).string().not_null())
                     .col(

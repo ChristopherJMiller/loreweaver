@@ -8,7 +8,9 @@ use loreweaver_lib::commands::campaign::{
 
 #[tokio::test]
 async fn test_create_campaign() {
-    let db = setup_test_db().await.expect("Failed to setup test database");
+    let db = setup_test_db()
+        .await
+        .expect("Failed to setup test database");
 
     let campaign = create_campaign_impl(
         &db,
@@ -20,14 +22,19 @@ async fn test_create_campaign() {
     .expect("Failed to create campaign");
 
     assert_eq!(campaign.name, "Dragon's Lair");
-    assert_eq!(campaign.description, Some("A campaign about dragons".to_string()));
+    assert_eq!(
+        campaign.description,
+        Some("A campaign about dragons".to_string())
+    );
     assert_eq!(campaign.system, Some("D&D 5e".to_string()));
     assert!(!campaign.id.is_empty());
 }
 
 #[tokio::test]
 async fn test_create_campaign_minimal() {
-    let db = setup_test_db().await.expect("Failed to setup test database");
+    let db = setup_test_db()
+        .await
+        .expect("Failed to setup test database");
 
     let campaign = create_campaign_impl(&db, "Minimal Campaign".to_string(), None, None)
         .await
@@ -40,7 +47,9 @@ async fn test_create_campaign_minimal() {
 
 #[tokio::test]
 async fn test_get_campaign() {
-    let db = setup_test_db().await.expect("Failed to setup test database");
+    let db = setup_test_db()
+        .await
+        .expect("Failed to setup test database");
 
     let created = create_campaign_impl(&db, "Test Campaign".to_string(), None, None)
         .await
@@ -56,7 +65,9 @@ async fn test_get_campaign() {
 
 #[tokio::test]
 async fn test_get_campaign_not_found() {
-    let db = setup_test_db().await.expect("Failed to setup test database");
+    let db = setup_test_db()
+        .await
+        .expect("Failed to setup test database");
 
     let result = get_campaign_impl(&db, "nonexistent-id".to_string()).await;
 
@@ -67,7 +78,9 @@ async fn test_get_campaign_not_found() {
 
 #[tokio::test]
 async fn test_list_campaigns_empty() {
-    let db = setup_test_db().await.expect("Failed to setup test database");
+    let db = setup_test_db()
+        .await
+        .expect("Failed to setup test database");
 
     let campaigns = list_campaigns_impl(&db)
         .await
@@ -78,7 +91,9 @@ async fn test_list_campaigns_empty() {
 
 #[tokio::test]
 async fn test_list_campaigns_ordered_by_updated_at() {
-    let db = setup_test_db().await.expect("Failed to setup test database");
+    let db = setup_test_db()
+        .await
+        .expect("Failed to setup test database");
 
     // Create campaigns in order
     let first = create_campaign_impl(&db, "First".to_string(), None, None)
@@ -113,7 +128,9 @@ async fn test_list_campaigns_ordered_by_updated_at() {
 
 #[tokio::test]
 async fn test_update_campaign() {
-    let db = setup_test_db().await.expect("Failed to setup test database");
+    let db = setup_test_db()
+        .await
+        .expect("Failed to setup test database");
 
     let created = create_campaign_impl(&db, "Original".to_string(), None, None)
         .await
@@ -134,12 +151,17 @@ async fn test_update_campaign() {
     assert_eq!(updated.name, "Updated Name");
     assert_eq!(updated.description, Some("New description".to_string()));
     assert_eq!(updated.system, Some("Pathfinder 2e".to_string()));
-    assert_eq!(updated.settings_json, Some(r#"{"theme": "dark"}"#.to_string()));
+    assert_eq!(
+        updated.settings_json,
+        Some(r#"{"theme": "dark"}"#.to_string())
+    );
 }
 
 #[tokio::test]
 async fn test_update_campaign_partial() {
-    let db = setup_test_db().await.expect("Failed to setup test database");
+    let db = setup_test_db()
+        .await
+        .expect("Failed to setup test database");
 
     let created = create_campaign_impl(
         &db,
@@ -170,7 +192,9 @@ async fn test_update_campaign_partial() {
 
 #[tokio::test]
 async fn test_update_campaign_not_found() {
-    let db = setup_test_db().await.expect("Failed to setup test database");
+    let db = setup_test_db()
+        .await
+        .expect("Failed to setup test database");
 
     let result = update_campaign_impl(
         &db,
@@ -187,7 +211,9 @@ async fn test_update_campaign_not_found() {
 
 #[tokio::test]
 async fn test_delete_campaign() {
-    let db = setup_test_db().await.expect("Failed to setup test database");
+    let db = setup_test_db()
+        .await
+        .expect("Failed to setup test database");
 
     let created = create_campaign_impl(&db, "To Delete".to_string(), None, None)
         .await
@@ -206,7 +232,9 @@ async fn test_delete_campaign() {
 
 #[tokio::test]
 async fn test_delete_campaign_not_found() {
-    let db = setup_test_db().await.expect("Failed to setup test database");
+    let db = setup_test_db()
+        .await
+        .expect("Failed to setup test database");
 
     let deleted = delete_campaign_impl(&db, "nonexistent-id".to_string())
         .await
@@ -217,7 +245,9 @@ async fn test_delete_campaign_not_found() {
 
 #[tokio::test]
 async fn test_campaign_crud_lifecycle() {
-    let db = setup_test_db().await.expect("Failed to setup test database");
+    let db = setup_test_db()
+        .await
+        .expect("Failed to setup test database");
 
     // Create
     let campaign = create_campaign_impl(
@@ -260,6 +290,8 @@ async fn test_campaign_crud_lifecycle() {
     assert!(deleted);
 
     // Verify deleted
-    let list_after = list_campaigns_impl(&db).await.expect("List after delete failed");
+    let list_after = list_campaigns_impl(&db)
+        .await
+        .expect("List after delete failed");
     assert!(list_after.is_empty());
 }

@@ -5,7 +5,9 @@ use loreweaver_lib::commands::search::search_entities_impl;
 
 #[tokio::test]
 async fn test_search_by_name() {
-    let db = setup_test_db().await.expect("Failed to setup test database");
+    let db = setup_test_db()
+        .await
+        .expect("Failed to setup test database");
     let campaign = create_test_campaign(&db, "Test Campaign")
         .await
         .expect("Failed to create campaign");
@@ -29,7 +31,9 @@ async fn test_search_by_name() {
 
 #[tokio::test]
 async fn test_search_prefix_matching() {
-    let db = setup_test_db().await.expect("Failed to setup test database");
+    let db = setup_test_db()
+        .await
+        .expect("Failed to setup test database");
     let campaign = create_test_campaign(&db, "Test Campaign")
         .await
         .expect("Failed to create campaign");
@@ -57,7 +61,9 @@ async fn test_search_prefix_matching() {
 
 #[tokio::test]
 async fn test_search_multiple_words() {
-    let db = setup_test_db().await.expect("Failed to setup test database");
+    let db = setup_test_db()
+        .await
+        .expect("Failed to setup test database");
     let campaign = create_test_campaign(&db, "Test Campaign")
         .await
         .expect("Failed to create campaign");
@@ -73,9 +79,15 @@ async fn test_search_multiple_words() {
         .expect("Failed to create character");
 
     // Search for "Gandalf White" should match "Gandalf the White"
-    let results = search_entities_impl(&db, campaign.id.clone(), "Gandalf White".to_string(), None, None)
-        .await
-        .expect("Search failed");
+    let results = search_entities_impl(
+        &db,
+        campaign.id.clone(),
+        "Gandalf White".to_string(),
+        None,
+        None,
+    )
+    .await
+    .expect("Search failed");
 
     assert_eq!(results.len(), 1);
     assert_eq!(results[0].name, "Gandalf the White");
@@ -83,7 +95,9 @@ async fn test_search_multiple_words() {
 
 #[tokio::test]
 async fn test_search_across_entity_types() {
-    let db = setup_test_db().await.expect("Failed to setup test database");
+    let db = setup_test_db()
+        .await
+        .expect("Failed to setup test database");
     let campaign = create_test_campaign(&db, "Test Campaign")
         .await
         .expect("Failed to create campaign");
@@ -108,7 +122,9 @@ async fn test_search_across_entity_types() {
 
 #[tokio::test]
 async fn test_search_campaign_isolation() {
-    let db = setup_test_db().await.expect("Failed to setup test database");
+    let db = setup_test_db()
+        .await
+        .expect("Failed to setup test database");
 
     let campaign1 = create_test_campaign(&db, "Campaign 1")
         .await
@@ -126,13 +142,15 @@ async fn test_search_campaign_isolation() {
         .expect("Failed to create character in campaign 2");
 
     // Search in campaign 1 should only return that campaign's Gandalf
-    let results1 = search_entities_impl(&db, campaign1.id.clone(), "Gandalf".to_string(), None, None)
-        .await
-        .expect("Search failed");
+    let results1 =
+        search_entities_impl(&db, campaign1.id.clone(), "Gandalf".to_string(), None, None)
+            .await
+            .expect("Search failed");
 
-    let results2 = search_entities_impl(&db, campaign2.id.clone(), "Gandalf".to_string(), None, None)
-        .await
-        .expect("Search failed");
+    let results2 =
+        search_entities_impl(&db, campaign2.id.clone(), "Gandalf".to_string(), None, None)
+            .await
+            .expect("Search failed");
 
     assert_eq!(results1.len(), 1);
     assert_eq!(results2.len(), 1);
@@ -142,7 +160,9 @@ async fn test_search_campaign_isolation() {
 
 #[tokio::test]
 async fn test_search_empty_query() {
-    let db = setup_test_db().await.expect("Failed to setup test database");
+    let db = setup_test_db()
+        .await
+        .expect("Failed to setup test database");
     let campaign = create_test_campaign(&db, "Test Campaign")
         .await
         .expect("Failed to create campaign");
@@ -160,7 +180,9 @@ async fn test_search_empty_query() {
 
 #[tokio::test]
 async fn test_search_no_matches() {
-    let db = setup_test_db().await.expect("Failed to setup test database");
+    let db = setup_test_db()
+        .await
+        .expect("Failed to setup test database");
     let campaign = create_test_campaign(&db, "Test Campaign")
         .await
         .expect("Failed to create campaign");
@@ -169,16 +191,24 @@ async fn test_search_no_matches() {
         .await
         .expect("Failed to create character");
 
-    let results = search_entities_impl(&db, campaign.id.clone(), "Nonexistent".to_string(), None, None)
-        .await
-        .expect("Search failed");
+    let results = search_entities_impl(
+        &db,
+        campaign.id.clone(),
+        "Nonexistent".to_string(),
+        None,
+        None,
+    )
+    .await
+    .expect("Search failed");
 
     assert!(results.is_empty());
 }
 
 #[tokio::test]
 async fn test_search_with_limit() {
-    let db = setup_test_db().await.expect("Failed to setup test database");
+    let db = setup_test_db()
+        .await
+        .expect("Failed to setup test database");
     let campaign = create_test_campaign(&db, "Test Campaign")
         .await
         .expect("Failed to create campaign");
@@ -190,16 +220,24 @@ async fn test_search_with_limit() {
             .expect("Failed to create character");
     }
 
-    let results = search_entities_impl(&db, campaign.id.clone(), "Adventurer".to_string(), None, Some(3))
-        .await
-        .expect("Search failed");
+    let results = search_entities_impl(
+        &db,
+        campaign.id.clone(),
+        "Adventurer".to_string(),
+        None,
+        Some(3),
+    )
+    .await
+    .expect("Search failed");
 
     assert_eq!(results.len(), 3);
 }
 
 #[tokio::test]
 async fn test_search_default_limit() {
-    let db = setup_test_db().await.expect("Failed to setup test database");
+    let db = setup_test_db()
+        .await
+        .expect("Failed to setup test database");
     let campaign = create_test_campaign(&db, "Test Campaign")
         .await
         .expect("Failed to create campaign");
@@ -212,16 +250,24 @@ async fn test_search_default_limit() {
     }
 
     // Default limit should be 50
-    let results = search_entities_impl(&db, campaign.id.clone(), "Test Character".to_string(), None, None)
-        .await
-        .expect("Search failed");
+    let results = search_entities_impl(
+        &db,
+        campaign.id.clone(),
+        "Test Character".to_string(),
+        None,
+        None,
+    )
+    .await
+    .expect("Search failed");
 
     assert_eq!(results.len(), 50);
 }
 
 #[tokio::test]
 async fn test_search_returns_entity_id() {
-    let db = setup_test_db().await.expect("Failed to setup test database");
+    let db = setup_test_db()
+        .await
+        .expect("Failed to setup test database");
     let campaign = create_test_campaign(&db, "Test Campaign")
         .await
         .expect("Failed to create campaign");
@@ -240,7 +286,9 @@ async fn test_search_returns_entity_id() {
 
 #[tokio::test]
 async fn test_search_case_insensitive() {
-    let db = setup_test_db().await.expect("Failed to setup test database");
+    let db = setup_test_db()
+        .await
+        .expect("Failed to setup test database");
     let campaign = create_test_campaign(&db, "Test Campaign")
         .await
         .expect("Failed to create campaign");
@@ -250,15 +298,18 @@ async fn test_search_case_insensitive() {
         .expect("Failed to create character");
 
     // Search should be case-insensitive
-    let results_lower = search_entities_impl(&db, campaign.id.clone(), "gandalf".to_string(), None, None)
-        .await
-        .expect("Search failed");
-    let results_upper = search_entities_impl(&db, campaign.id.clone(), "GANDALF".to_string(), None, None)
-        .await
-        .expect("Search failed");
-    let results_mixed = search_entities_impl(&db, campaign.id.clone(), "GaNdAlF".to_string(), None, None)
-        .await
-        .expect("Search failed");
+    let results_lower =
+        search_entities_impl(&db, campaign.id.clone(), "gandalf".to_string(), None, None)
+            .await
+            .expect("Search failed");
+    let results_upper =
+        search_entities_impl(&db, campaign.id.clone(), "GANDALF".to_string(), None, None)
+            .await
+            .expect("Search failed");
+    let results_mixed =
+        search_entities_impl(&db, campaign.id.clone(), "GaNdAlF".to_string(), None, None)
+            .await
+            .expect("Search failed");
 
     assert_eq!(results_lower.len(), 1);
     assert_eq!(results_upper.len(), 1);
@@ -267,7 +318,9 @@ async fn test_search_case_insensitive() {
 
 #[tokio::test]
 async fn test_search_special_characters_in_query() {
-    let db = setup_test_db().await.expect("Failed to setup test database");
+    let db = setup_test_db()
+        .await
+        .expect("Failed to setup test database");
     let campaign = create_test_campaign(&db, "Test Campaign")
         .await
         .expect("Failed to create campaign");
@@ -277,16 +330,24 @@ async fn test_search_special_characters_in_query() {
         .expect("Failed to create character");
 
     // Quotes are stripped from queries to prevent FTS5 syntax errors
-    let results = search_entities_impl(&db, campaign.id.clone(), r#""Test" "Character""#.to_string(), None, None)
-        .await
-        .expect("Search failed");
+    let results = search_entities_impl(
+        &db,
+        campaign.id.clone(),
+        r#""Test" "Character""#.to_string(),
+        None,
+        None,
+    )
+    .await
+    .expect("Search failed");
 
     assert_eq!(results.len(), 1);
 }
 
 #[tokio::test]
 async fn test_search_returns_snippet() {
-    let db = setup_test_db().await.expect("Failed to setup test database");
+    let db = setup_test_db()
+        .await
+        .expect("Failed to setup test database");
     let campaign = create_test_campaign(&db, "Test Campaign")
         .await
         .expect("Failed to create campaign");
@@ -306,7 +367,9 @@ async fn test_search_returns_snippet() {
 
 #[tokio::test]
 async fn test_search_returns_rank() {
-    let db = setup_test_db().await.expect("Failed to setup test database");
+    let db = setup_test_db()
+        .await
+        .expect("Failed to setup test database");
     let campaign = create_test_campaign(&db, "Test Campaign")
         .await
         .expect("Failed to create campaign");

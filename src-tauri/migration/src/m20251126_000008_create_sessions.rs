@@ -20,11 +20,7 @@ impl MigrationTrait for Migration {
                             .primary_key(),
                     )
                     .col(ColumnDef::new(Sessions::CampaignId).string().not_null())
-                    .col(
-                        ColumnDef::new(Sessions::SessionNumber)
-                            .integer()
-                            .not_null(),
-                    )
+                    .col(ColumnDef::new(Sessions::SessionNumber).integer().not_null())
                     .col(ColumnDef::new(Sessions::Date).date())
                     .col(ColumnDef::new(Sessions::Title).string())
                     .col(ColumnDef::new(Sessions::PlannedContent).text())

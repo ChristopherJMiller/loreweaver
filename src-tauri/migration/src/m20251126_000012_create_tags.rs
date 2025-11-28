@@ -13,12 +13,7 @@ impl MigrationTrait for Migration {
                 Table::create()
                     .table(Tags::Table)
                     .if_not_exists()
-                    .col(
-                        ColumnDef::new(Tags::Id)
-                            .string()
-                            .not_null()
-                            .primary_key(),
-                    )
+                    .col(ColumnDef::new(Tags::Id).string().not_null().primary_key())
                     .col(ColumnDef::new(Tags::CampaignId).string().not_null())
                     .col(ColumnDef::new(Tags::Name).string().not_null())
                     .col(ColumnDef::new(Tags::Color).string())
