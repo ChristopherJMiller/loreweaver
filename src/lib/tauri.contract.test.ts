@@ -156,10 +156,11 @@ describe("Tauri Command Contracts - Argument Naming", () => {
 
         // Check that no key contains uppercase letters (camelCase)
         keys.forEach((key) => {
-          expect(key).not.toMatch(
-            /[A-Z]/,
+          const hasCamelCase = /[A-Z]/.test(key);
+          expect(
+            hasCamelCase,
             `Found camelCase key "${key}" - should be snake_case`
-          );
+          ).toBe(false);
         });
       }
     });
