@@ -13,6 +13,12 @@ export type { Relationships as Relationship } from "./bindings/Relationships";
 export type { Tags as Tag } from "./bindings/Tags";
 export type { EntityTags as EntityTag } from "./bindings/EntityTags";
 
+// Re-export command input types (generated from Rust via ts-rs)
+export type { ListByCampaignInput } from "./bindings/ListByCampaignInput";
+export type { GetChildrenInput } from "./bindings/GetChildrenInput";
+export type { EntityScopedInput } from "./bindings/EntityScopedInput";
+export type { SearchInput } from "./bindings/SearchInput";
+
 // Entity type union for polymorphic operations
 export type EntityType =
   | "campaign"

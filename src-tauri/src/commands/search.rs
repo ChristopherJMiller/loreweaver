@@ -70,7 +70,7 @@ pub async fn search_entities_impl(
 
 // ============ Tauri command wrappers ============
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn search_entities(
     state: State<'_, AppState>,
     campaign_id: String,

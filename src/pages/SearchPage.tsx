@@ -76,9 +76,9 @@ export function SearchPage() {
     setHasSearched(true);
     try {
       const searchResults = await invoke<SearchResult[]>("search_entities", {
-        campaignId: activeCampaignId,
+        campaign_id: activeCampaignId,
         query: query.trim(),
-        entityTypes: selectedTypes.length > 0 ? selectedTypes : null,
+        entity_types: selectedTypes.length > 0 ? selectedTypes : null,
         limit: 50,
       });
       setResults(searchResults);

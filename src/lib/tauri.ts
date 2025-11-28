@@ -15,6 +15,10 @@ import type {
   EntityTag,
   EntityType,
   SearchResult,
+  ListByCampaignInput,
+  GetChildrenInput,
+  EntityScopedInput,
+  SearchInput,
 } from "@/types";
 
 // Campaign commands
@@ -55,8 +59,8 @@ export const characters = {
 
   get: (id: string) => invoke<Character>("get_character", { id }),
 
-  list: (campaignId: string) =>
-    invoke<Character[]>("list_characters", { campaignId }),
+  list: (input: ListByCampaignInput) =>
+    invoke<Character[]>("list_characters", input),
 
   update: (data: {
     id: string;
@@ -90,11 +94,11 @@ export const locations = {
 
   get: (id: string) => invoke<Location>("get_location", { id }),
 
-  list: (campaignId: string) =>
-    invoke<Location[]>("list_locations", { campaignId }),
+  list: (input: ListByCampaignInput) =>
+    invoke<Location[]>("list_locations", input),
 
-  getChildren: (parentId: string) =>
-    invoke<Location[]>("get_location_children", { parentId }),
+  getChildren: (input: GetChildrenInput) =>
+    invoke<Location[]>("get_location_children", input),
 
   update: (data: {
     id: string;
@@ -127,8 +131,8 @@ export const organizations = {
 
   get: (id: string) => invoke<Organization>("get_organization", { id }),
 
-  list: (campaignId: string) =>
-    invoke<Organization[]>("list_organizations", { campaignId }),
+  list: (input: ListByCampaignInput) =>
+    invoke<Organization[]>("list_organizations", input),
 
   update: (data: {
     id: string;
@@ -164,7 +168,7 @@ export const quests = {
 
   get: (id: string) => invoke<Quest>("get_quest", { id }),
 
-  list: (campaignId: string) => invoke<Quest[]>("list_quests", { campaignId }),
+  list: (input: ListByCampaignInput) => invoke<Quest[]>("list_quests", input),
 
   update: (data: {
     id: string;
@@ -199,7 +203,7 @@ export const heroes = {
 
   get: (id: string) => invoke<Hero>("get_hero", { id }),
 
-  list: (campaignId: string) => invoke<Hero[]>("list_heroes", { campaignId }),
+  list: (input: ListByCampaignInput) => invoke<Hero[]>("list_heroes", input),
 
   update: (data: {
     id: string;
@@ -228,7 +232,7 @@ export const players = {
 
   get: (id: string) => invoke<Player>("get_player", { id }),
 
-  list: (campaignId: string) => invoke<Player[]>("list_players", { campaignId }),
+  list: (input: ListByCampaignInput) => invoke<Player[]>("list_players", input),
 
   update: (data: {
     id: string;
@@ -258,8 +262,8 @@ export const sessions = {
 
   get: (id: string) => invoke<Session>("get_session", { id }),
 
-  list: (campaignId: string) =>
-    invoke<Session[]>("list_sessions", { campaignId }),
+  list: (input: ListByCampaignInput) =>
+    invoke<Session[]>("list_sessions", input),
 
   update: (data: {
     id: string;
@@ -290,8 +294,8 @@ export const timelineEvents = {
 
   get: (id: string) => invoke<TimelineEvent>("get_timeline_event", { id }),
 
-  list: (campaignId: string) =>
-    invoke<TimelineEvent[]>("list_timeline_events", { campaignId }),
+  list: (input: ListByCampaignInput) =>
+    invoke<TimelineEvent[]>("list_timeline_events", input),
 
   update: (data: {
     id: string;
@@ -323,7 +327,7 @@ export const secrets = {
 
   get: (id: string) => invoke<Secret>("get_secret", { id }),
 
-  list: (campaignId: string) => invoke<Secret[]>("list_secrets", { campaignId }),
+  list: (input: ListByCampaignInput) => invoke<Secret[]>("list_secrets", input),
 
   update: (data: {
     id: string;
@@ -357,11 +361,11 @@ export const relationships = {
 
   get: (id: string) => invoke<Relationship>("get_relationship", { id }),
 
-  list: (campaignId: string) =>
-    invoke<Relationship[]>("list_relationships", { campaignId }),
+  list: (input: ListByCampaignInput) =>
+    invoke<Relationship[]>("list_relationships", input),
 
-  getForEntity: (entityType: EntityType, entityId: string) =>
-    invoke<Relationship[]>("get_entity_relationships", { entityType, entityId }),
+  getForEntity: (input: EntityScopedInput) =>
+    invoke<Relationship[]>("get_entity_relationships", input),
 
   update: (data: {
     id: string;
@@ -381,7 +385,7 @@ export const tags = {
 
   get: (id: string) => invoke<Tag>("get_tag", { id }),
 
-  list: (campaignId: string) => invoke<Tag[]>("list_tags", { campaignId }),
+  list: (input: ListByCampaignInput) => invoke<Tag[]>("list_tags", input),
 
   delete: (id: string) => invoke<boolean>("delete_tag", { id }),
 
@@ -397,16 +401,12 @@ export const tags = {
     entity_id: string;
   }) => invoke<boolean>("remove_entity_tag", data),
 
-  getForEntity: (entityType: EntityType, entityId: string) =>
-    invoke<Tag[]>("get_entity_tags", { entityType, entityId }),
+  getForEntity: (input: EntityScopedInput) =>
+    invoke<Tag[]>("get_entity_tags", input),
 };
 
 // Search commands
 export const search = {
-  entities: (data: {
-    campaignId: string;
-    query: string;
-    entityTypes?: EntityType[];
-    limit?: number;
-  }) => invoke<SearchResult[]>("search_entities", data),
+  entities: (input: SearchInput) =>
+    invoke<SearchResult[]>("search_entities", input),
 };

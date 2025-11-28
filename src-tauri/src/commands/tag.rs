@@ -143,7 +143,7 @@ pub async fn get_entity_tags_impl(
 
 // ============ Tauri command wrappers ============
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn create_tag(
     state: State<'_, AppState>,
     campaign_id: String,
@@ -153,12 +153,12 @@ pub async fn create_tag(
     create_tag_impl(&state.db, campaign_id, name, color).await
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn get_tag(state: State<'_, AppState>, id: String) -> Result<TagResponse, AppError> {
     get_tag_impl(&state.db, id).await
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn list_tags(
     state: State<'_, AppState>,
     campaign_id: String,
@@ -166,12 +166,12 @@ pub async fn list_tags(
     list_tags_impl(&state.db, campaign_id).await
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn delete_tag(state: State<'_, AppState>, id: String) -> Result<bool, AppError> {
     delete_tag_impl(&state.db, id).await
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn add_entity_tag(
     state: State<'_, AppState>,
     tag_id: String,
@@ -181,7 +181,7 @@ pub async fn add_entity_tag(
     add_entity_tag_impl(&state.db, tag_id, entity_type, entity_id).await
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn remove_entity_tag(
     state: State<'_, AppState>,
     tag_id: String,
@@ -191,7 +191,7 @@ pub async fn remove_entity_tag(
     remove_entity_tag_impl(&state.db, tag_id, entity_type, entity_id).await
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn get_entity_tags(
     state: State<'_, AppState>,
     entity_type: String,

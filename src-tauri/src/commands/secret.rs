@@ -38,7 +38,7 @@ impl From<secrets::Model> for SecretResponse {
     }
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn create_secret(
     state: State<'_, AppState>,
     campaign_id: String,
@@ -68,7 +68,7 @@ pub async fn create_secret(
     Ok(result.into())
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn get_secret(
     state: State<'_, AppState>,
     id: String,
@@ -81,7 +81,7 @@ pub async fn get_secret(
     Ok(secret.into())
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn list_secrets(
     state: State<'_, AppState>,
     campaign_id: String,
@@ -95,7 +95,7 @@ pub async fn list_secrets(
     Ok(secrets.into_iter().map(|s| s.into()).collect())
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn update_secret(
     state: State<'_, AppState>,
     id: String,
@@ -141,8 +141,9 @@ pub async fn update_secret(
     Ok(result.into())
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn delete_secret(state: State<'_, AppState>, id: String) -> Result<bool, AppError> {
     let result = Secret::delete_by_id(&id).exec(&state.db).await?;
     Ok(result.rows_affected > 0)
 }
+

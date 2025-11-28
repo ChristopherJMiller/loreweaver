@@ -42,7 +42,7 @@ impl From<quests::Model> for QuestResponse {
     }
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn create_quest(
     state: State<'_, AppState>,
     campaign_id: String,
@@ -74,7 +74,7 @@ pub async fn create_quest(
     Ok(result.into())
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn get_quest(
     state: State<'_, AppState>,
     id: String,
@@ -87,7 +87,7 @@ pub async fn get_quest(
     Ok(quest.into())
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn list_quests(
     state: State<'_, AppState>,
     campaign_id: String,
@@ -101,7 +101,7 @@ pub async fn list_quests(
     Ok(quests.into_iter().map(|q| q.into()).collect())
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn update_quest(
     state: State<'_, AppState>,
     id: String,
@@ -155,8 +155,9 @@ pub async fn update_quest(
     Ok(result.into())
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn delete_quest(state: State<'_, AppState>, id: String) -> Result<bool, AppError> {
     let result = Quest::delete_by_id(&id).exec(&state.db).await?;
     Ok(result.rows_affected > 0)
 }
+

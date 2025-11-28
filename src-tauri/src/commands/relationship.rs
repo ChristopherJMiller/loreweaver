@@ -178,7 +178,7 @@ pub async fn delete_relationship_impl(
 
 // ============ Tauri command wrappers ============
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn create_relationship(
     state: State<'_, AppState>,
     campaign_id: String,
@@ -197,7 +197,7 @@ pub async fn create_relationship(
     ).await
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn get_relationship(
     state: State<'_, AppState>,
     id: String,
@@ -205,7 +205,7 @@ pub async fn get_relationship(
     get_relationship_impl(&state.db, id).await
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn list_relationships(
     state: State<'_, AppState>,
     campaign_id: String,
@@ -213,7 +213,7 @@ pub async fn list_relationships(
     list_relationships_impl(&state.db, campaign_id).await
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn get_entity_relationships(
     state: State<'_, AppState>,
     entity_type: String,
@@ -222,7 +222,7 @@ pub async fn get_entity_relationships(
     get_entity_relationships_impl(&state.db, entity_type, entity_id).await
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn update_relationship(
     state: State<'_, AppState>,
     id: String,
@@ -235,7 +235,7 @@ pub async fn update_relationship(
     update_relationship_impl(&state.db, id, relationship_type, description, is_bidirectional, strength, is_public).await
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn delete_relationship(state: State<'_, AppState>, id: String) -> Result<bool, AppError> {
     delete_relationship_impl(&state.db, id).await
 }

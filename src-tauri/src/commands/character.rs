@@ -171,7 +171,7 @@ pub async fn delete_character_impl(
 
 // ============ Tauri command wrappers ============
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn create_character(
     state: State<'_, AppState>,
     campaign_id: String,
@@ -183,7 +183,7 @@ pub async fn create_character(
     create_character_impl(&state.db, campaign_id, name, lineage, occupation, description).await
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn get_character(
     state: State<'_, AppState>,
     id: String,
@@ -191,7 +191,7 @@ pub async fn get_character(
     get_character_impl(&state.db, id).await
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn list_characters(
     state: State<'_, AppState>,
     campaign_id: String,
@@ -199,7 +199,7 @@ pub async fn list_characters(
     list_characters_impl(&state.db, campaign_id).await
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn update_character(
     state: State<'_, AppState>,
     id: String,
@@ -220,7 +220,7 @@ pub async fn update_character(
     ).await
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn delete_character(state: State<'_, AppState>, id: String) -> Result<bool, AppError> {
     delete_character_impl(&state.db, id).await
 }

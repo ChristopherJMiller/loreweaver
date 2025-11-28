@@ -42,7 +42,7 @@ impl From<heroes::Model> for HeroResponse {
     }
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn create_hero(
     state: State<'_, AppState>,
     campaign_id: String,
@@ -75,7 +75,7 @@ pub async fn create_hero(
     Ok(result.into())
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn get_hero(
     state: State<'_, AppState>,
     id: String,
@@ -88,7 +88,7 @@ pub async fn get_hero(
     Ok(hero.into())
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn list_heroes(
     state: State<'_, AppState>,
     campaign_id: String,
@@ -102,7 +102,7 @@ pub async fn list_heroes(
     Ok(heroes.into_iter().map(|h| h.into()).collect())
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn update_hero(
     state: State<'_, AppState>,
     id: String,
@@ -156,8 +156,9 @@ pub async fn update_hero(
     Ok(result.into())
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn delete_hero(state: State<'_, AppState>, id: String) -> Result<bool, AppError> {
     let result = Hero::delete_by_id(&id).exec(&state.db).await?;
     Ok(result.rows_affected > 0)
 }
+

@@ -36,7 +36,7 @@ impl From<timeline_events::Model> for TimelineEventResponse {
     }
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn create_timeline_event(
     state: State<'_, AppState>,
     campaign_id: String,
@@ -66,7 +66,7 @@ pub async fn create_timeline_event(
     Ok(result.into())
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn get_timeline_event(
     state: State<'_, AppState>,
     id: String,
@@ -79,7 +79,7 @@ pub async fn get_timeline_event(
     Ok(event.into())
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn list_timeline_events(
     state: State<'_, AppState>,
     campaign_id: String,
@@ -93,7 +93,7 @@ pub async fn list_timeline_events(
     Ok(events.into_iter().map(|e| e.into()).collect())
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn update_timeline_event(
     state: State<'_, AppState>,
     id: String,
@@ -135,8 +135,9 @@ pub async fn update_timeline_event(
     Ok(result.into())
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn delete_timeline_event(state: State<'_, AppState>, id: String) -> Result<bool, AppError> {
     let result = TimelineEvent::delete_by_id(&id).exec(&state.db).await?;
     Ok(result.rows_affected > 0)
 }
+

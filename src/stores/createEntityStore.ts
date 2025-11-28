@@ -1,5 +1,6 @@
 import { create, type StateCreator } from "zustand";
 import { invoke } from "@tauri-apps/api/core";
+import type { ListByCampaignInput } from "@/types";
 
 export interface BaseEntity {
   id: string;
@@ -41,7 +42,8 @@ export function createEntityStore<T extends BaseEntity>(
     fetchAll: async (campaignId: string) => {
       set({ isLoading: true, error: null });
       try {
-        const entities = await invoke<T[]>(`list_${plural}`, { campaignId });
+        const input: ListByCampaignInput = { campaign_id: campaignId };
+        const entities = await invoke<T[]>(`list_${plural}`, input);
         set({ entities, isLoading: false });
       } catch (e) {
         set({ error: String(e), isLoading: false });

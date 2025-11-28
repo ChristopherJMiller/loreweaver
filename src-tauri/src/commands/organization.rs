@@ -40,7 +40,7 @@ impl From<organizations::Model> for OrganizationResponse {
     }
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn create_organization(
     state: State<'_, AppState>,
     campaign_id: String,
@@ -70,7 +70,7 @@ pub async fn create_organization(
     Ok(result.into())
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn get_organization(
     state: State<'_, AppState>,
     id: String,
@@ -83,7 +83,7 @@ pub async fn get_organization(
     Ok(org.into())
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn list_organizations(
     state: State<'_, AppState>,
     campaign_id: String,
@@ -97,7 +97,7 @@ pub async fn list_organizations(
     Ok(orgs.into_iter().map(|o| o.into()).collect())
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn update_organization(
     state: State<'_, AppState>,
     id: String,
@@ -147,8 +147,9 @@ pub async fn update_organization(
     Ok(result.into())
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn delete_organization(state: State<'_, AppState>, id: String) -> Result<bool, AppError> {
     let result = Organization::delete_by_id(&id).exec(&state.db).await?;
     Ok(result.rows_affected > 0)
 }
+

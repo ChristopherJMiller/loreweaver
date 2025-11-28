@@ -38,7 +38,7 @@ impl From<sessions::Model> for SessionResponse {
     }
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn create_session(
     state: State<'_, AppState>,
     campaign_id: String,
@@ -69,7 +69,7 @@ pub async fn create_session(
     Ok(result.into())
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn get_session(
     state: State<'_, AppState>,
     id: String,
@@ -82,7 +82,7 @@ pub async fn get_session(
     Ok(session.into())
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn list_sessions(
     state: State<'_, AppState>,
     campaign_id: String,
@@ -96,7 +96,7 @@ pub async fn list_sessions(
     Ok(sessions.into_iter().map(|s| s.into()).collect())
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn update_session(
     state: State<'_, AppState>,
     id: String,
@@ -143,8 +143,9 @@ pub async fn update_session(
     Ok(result.into())
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn delete_session(state: State<'_, AppState>, id: String) -> Result<bool, AppError> {
     let result = Session::delete_by_id(&id).exec(&state.db).await?;
     Ok(result.rows_affected > 0)
 }
+

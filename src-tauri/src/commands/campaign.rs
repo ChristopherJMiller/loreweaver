@@ -121,7 +121,7 @@ pub async fn delete_campaign_impl(
 
 // ============ Tauri command wrappers ============
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn create_campaign(
     state: State<'_, AppState>,
     name: String,
@@ -131,7 +131,7 @@ pub async fn create_campaign(
     create_campaign_impl(&state.db, name, description, system).await
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn get_campaign(
     state: State<'_, AppState>,
     id: String,
@@ -139,12 +139,12 @@ pub async fn get_campaign(
     get_campaign_impl(&state.db, id).await
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn list_campaigns(state: State<'_, AppState>) -> Result<Vec<CampaignResponse>, AppError> {
     list_campaigns_impl(&state.db).await
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn update_campaign(
     state: State<'_, AppState>,
     id: String,
@@ -156,7 +156,7 @@ pub async fn update_campaign(
     update_campaign_impl(&state.db, id, name, description, system, settings_json).await
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn delete_campaign(state: State<'_, AppState>, id: String) -> Result<bool, AppError> {
     delete_campaign_impl(&state.db, id).await
 }

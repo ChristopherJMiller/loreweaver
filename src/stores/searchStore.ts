@@ -33,9 +33,9 @@ export const useSearchStore = create<SearchState>((set, get) => ({
     set({ isSearching: true });
     try {
       const results = await search.entities({
-        campaignId,
+        campaign_id: campaignId,
         query,
-        entityTypes: entityTypeFilter.length > 0 ? entityTypeFilter : undefined,
+        entity_types: entityTypeFilter.length > 0 ? entityTypeFilter : null,
         limit: 50,
       });
       set({ results, isSearching: false });

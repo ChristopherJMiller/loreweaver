@@ -32,7 +32,7 @@ impl From<players::Model> for PlayerResponse {
     }
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn create_player(
     state: State<'_, AppState>,
     campaign_id: String,
@@ -58,7 +58,7 @@ pub async fn create_player(
     Ok(result.into())
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn get_player(
     state: State<'_, AppState>,
     id: String,
@@ -71,7 +71,7 @@ pub async fn get_player(
     Ok(player.into())
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn list_players(
     state: State<'_, AppState>,
     campaign_id: String,
@@ -85,7 +85,7 @@ pub async fn list_players(
     Ok(players.into_iter().map(|p| p.into()).collect())
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn update_player(
     state: State<'_, AppState>,
     id: String,
@@ -119,8 +119,9 @@ pub async fn update_player(
     Ok(result.into())
 }
 
-#[tauri::command]
+#[tauri::command(rename_all = "snake_case")]
 pub async fn delete_player(state: State<'_, AppState>, id: String) -> Result<bool, AppError> {
     let result = Player::delete_by_id(&id).exec(&state.db).await?;
     Ok(result.rows_affected > 0)
 }
+
