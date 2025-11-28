@@ -27,14 +27,13 @@ interface LocationEntity extends BaseEntity {
 // Organization entity
 interface OrganizationEntity extends BaseEntity {
   name: string;
-  org_type: string | null;
+  org_type: string;
   description: string | null;
   goals: string | null;
   resources: string | null;
-  headquarters_id: string | null;
-  leader_id: string | null;
-  is_public: boolean;
-  influence_level: number;
+  reputation: string | null;
+  secrets: string | null;
+  is_active: boolean;
 }
 
 // Quest entity
@@ -53,20 +52,20 @@ interface QuestEntity extends BaseEntity {
 
 // Hero entity
 interface HeroEntity extends BaseEntity {
-  player_id: string;
+  player_id: string | null;
   name: string;
-  character_class: string | null;
-  level: number;
+  lineage: string | null;
+  classes: string | null;
+  description: string | null;
   backstory: string | null;
-  character_sheet_json: string | null;
-  notes: string | null;
+  goals: string | null;
+  bonds: string | null;
   is_active: boolean;
 }
 
 // Player entity
 interface PlayerEntity extends BaseEntity {
   name: string;
-  email: string | null;
   preferences: string | null;
   boundaries: string | null;
   notes: string | null;
@@ -75,13 +74,12 @@ interface PlayerEntity extends BaseEntity {
 // Session entity
 interface SessionEntity extends BaseEntity {
   session_number: number;
+  date: string | null;
   title: string | null;
-  scheduled_date: string | null;
-  actual_date: string | null;
-  status: string | null;
-  summary: string | null;
+  planned_content: string | null;
   notes: string | null;
-  duration_minutes: number | null;
+  summary: string | null;
+  highlights: string | null;
 }
 
 // Timeline event entity

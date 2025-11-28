@@ -7,6 +7,14 @@ import {
   CharacterDetailPage,
   LocationsPage,
   LocationDetailPage,
+  OrganizationsPage,
+  OrganizationDetailPage,
+  HeroesPage,
+  HeroDetailPage,
+  PlayersPage,
+  PlayerDetailPage,
+  SessionsPage,
+  SessionDetailPage,
   PlaceholderPage,
 } from "@/pages";
 
@@ -28,24 +36,8 @@ function App() {
           <Route path="/locations" element={<LocationsPage />} />
           <Route path="/locations/:id" element={<LocationDetailPage />} />
 
-          <Route
-            path="/organizations"
-            element={
-              <PlaceholderPage
-                title="Organizations"
-                description="Factions and groups"
-              />
-            }
-          />
-          <Route
-            path="/organizations/:id"
-            element={
-              <PlaceholderPage
-                title="Organization Details"
-                description="View organization"
-              />
-            }
-          />
+          <Route path="/organizations" element={<OrganizationsPage />} />
+          <Route path="/organizations/:id" element={<OrganizationDetailPage />} />
 
           <Route
             path="/quests"
@@ -66,56 +58,14 @@ function App() {
             }
           />
 
-          <Route
-            path="/heroes"
-            element={
-              <PlaceholderPage
-                title="Heroes"
-                description="Player characters"
-              />
-            }
-          />
-          <Route
-            path="/heroes/:id"
-            element={
-              <PlaceholderPage title="Hero Details" description="View hero" />
-            }
-          />
+          <Route path="/heroes" element={<HeroesPage />} />
+          <Route path="/heroes/:id" element={<HeroDetailPage />} />
 
-          <Route
-            path="/players"
-            element={
-              <PlaceholderPage
-                title="Players"
-                description="Real-world players"
-              />
-            }
-          />
-          <Route
-            path="/players/:id"
-            element={
-              <PlaceholderPage
-                title="Player Details"
-                description="View player"
-              />
-            }
-          />
+          <Route path="/players" element={<PlayersPage />} />
+          <Route path="/players/:id" element={<PlayerDetailPage />} />
 
-          <Route
-            path="/sessions"
-            element={
-              <PlaceholderPage title="Sessions" description="Game sessions" />
-            }
-          />
-          <Route
-            path="/sessions/:id"
-            element={
-              <PlaceholderPage
-                title="Session Details"
-                description="View session"
-              />
-            }
-          />
+          <Route path="/sessions" element={<SessionsPage />} />
+          <Route path="/sessions/:id" element={<SessionDetailPage />} />
 
           <Route
             path="/timeline"

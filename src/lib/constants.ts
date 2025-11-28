@@ -17,3 +17,23 @@ export type LocationTypeValue = (typeof LOCATION_TYPES)[number]["value"];
 export function getLocationTypeLabel(type: string): string {
   return LOCATION_TYPES.find((t) => t.value === type)?.label || type;
 }
+
+// Organization type constants
+export const ORG_TYPES = [
+  { value: "government", label: "Government" },
+  { value: "guild", label: "Guild" },
+  { value: "religion", label: "Religion" },
+  { value: "military", label: "Military" },
+  { value: "criminal", label: "Criminal" },
+  { value: "mercantile", label: "Mercantile" },
+  { value: "academic", label: "Academic" },
+  { value: "secret_society", label: "Secret Society" },
+  { value: "family", label: "Family" },
+  { value: "other", label: "Other" },
+] as const;
+
+export type OrgTypeValue = (typeof ORG_TYPES)[number]["value"];
+
+export function getOrgTypeLabel(type: string): string {
+  return ORG_TYPES.find((t) => t.value === type)?.label || type;
+}
