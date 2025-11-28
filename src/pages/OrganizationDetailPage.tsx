@@ -10,7 +10,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import {
   Select,
@@ -22,13 +21,16 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { LoadingState, DeleteDialog } from "@/components/common";
-import { useOrganizationStore } from "@/stores";
+import { Editor } from "@/components/editor";
+import { RelationshipList } from "@/components/relationship";
+import { useOrganizationStore, useCampaignStore } from "@/stores";
 import { ORG_TYPES, getOrgTypeLabel } from "@/lib/constants";
 
 export function OrganizationDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { entities, isLoading, fetchOne, update, remove } = useOrganizationStore();
+  const { activeCampaignId } = useCampaignStore();
 
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -186,6 +188,7 @@ export function OrganizationDetailPage() {
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="details">Details</TabsTrigger>
+          <TabsTrigger value="relationships">Relationships</TabsTrigger>
           <TabsTrigger value="secrets">GM Secrets</TabsTrigger>
         </TabsList>
 
@@ -226,20 +229,15 @@ export function OrganizationDetailPage() {
               <CardTitle>Description</CardTitle>
             </CardHeader>
             <CardContent>
-              {isEditing ? (
-                <Textarea
-                  value={editForm.description}
-                  onChange={(e) =>
-                    setEditForm({ ...editForm, description: e.target.value })
-                  }
-                  placeholder="Describe this organization..."
-                  rows={6}
-                />
-              ) : (
-                <p className="whitespace-pre-wrap">
-                  {org.description || "No description yet."}
-                </p>
-              )}
+              <Editor
+                content={editForm.description}
+                onChange={(content) =>
+                  setEditForm({ ...editForm, description: content })
+                }
+                placeholder="Describe this organization..."
+                readOnly={!isEditing}
+                campaignId={activeCampaignId || undefined}
+              />
             </CardContent>
           </Card>
 
@@ -251,20 +249,15 @@ export function OrganizationDetailPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {isEditing ? (
-                <Textarea
-                  value={editForm.reputation}
-                  onChange={(e) =>
-                    setEditForm({ ...editForm, reputation: e.target.value })
-                  }
-                  placeholder="Public perception, rumors, reputation..."
-                  rows={4}
-                />
-              ) : (
-                <p className="whitespace-pre-wrap">
-                  {org.reputation || "No reputation notes yet."}
-                </p>
-              )}
+              <Editor
+                content={editForm.reputation}
+                onChange={(content) =>
+                  setEditForm({ ...editForm, reputation: content })
+                }
+                placeholder="Public perception, rumors, reputation..."
+                readOnly={!isEditing}
+                campaignId={activeCampaignId || undefined}
+              />
             </CardContent>
           </Card>
         </TabsContent>
@@ -278,20 +271,15 @@ export function OrganizationDetailPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {isEditing ? (
-                <Textarea
-                  value={editForm.goals}
-                  onChange={(e) =>
-                    setEditForm({ ...editForm, goals: e.target.value })
-                  }
-                  placeholder="Short-term and long-term objectives..."
-                  rows={4}
-                />
-              ) : (
-                <p className="whitespace-pre-wrap">
-                  {org.goals || "No goals recorded."}
-                </p>
-              )}
+              <Editor
+                content={editForm.goals}
+                onChange={(content) =>
+                  setEditForm({ ...editForm, goals: content })
+                }
+                placeholder="Short-term and long-term objectives..."
+                readOnly={!isEditing}
+                campaignId={activeCampaignId || undefined}
+              />
             </CardContent>
           </Card>
 
@@ -303,22 +291,27 @@ export function OrganizationDetailPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {isEditing ? (
-                <Textarea
-                  value={editForm.resources}
-                  onChange={(e) =>
-                    setEditForm({ ...editForm, resources: e.target.value })
-                  }
-                  placeholder="Members, wealth, territory, influence..."
-                  rows={4}
-                />
-              ) : (
-                <p className="whitespace-pre-wrap">
-                  {org.resources || "No resources recorded."}
-                </p>
-              )}
+              <Editor
+                content={editForm.resources}
+                onChange={(content) =>
+                  setEditForm({ ...editForm, resources: content })
+                }
+                placeholder="Members, wealth, territory, influence..."
+                readOnly={!isEditing}
+                campaignId={activeCampaignId || undefined}
+              />
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="relationships" className="space-y-4">
+          {id && org && (
+            <RelationshipList
+              entityType="organization"
+              entityId={id}
+              entityName={org.name}
+            />
+          )}
         </TabsContent>
 
         <TabsContent value="secrets" className="space-y-4">
@@ -330,20 +323,15 @@ export function OrganizationDetailPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {isEditing ? (
-                <Textarea
-                  value={editForm.secrets}
-                  onChange={(e) =>
-                    setEditForm({ ...editForm, secrets: e.target.value })
-                  }
-                  placeholder="True motives, hidden agendas, secret members..."
-                  rows={8}
-                />
-              ) : (
-                <p className="whitespace-pre-wrap">
-                  {org.secrets || "No secrets recorded."}
-                </p>
-              )}
+              <Editor
+                content={editForm.secrets}
+                onChange={(content) =>
+                  setEditForm({ ...editForm, secrets: content })
+                }
+                placeholder="True motives, hidden agendas, secret members..."
+                readOnly={!isEditing}
+                campaignId={activeCampaignId || undefined}
+              />
             </CardContent>
           </Card>
         </TabsContent>

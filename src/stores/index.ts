@@ -1,6 +1,7 @@
 export { useCampaignStore } from "./campaignStore";
 export { useUIStore } from "./uiStore";
 export { useSearchStore } from "./searchStore";
+export { useRelationshipStore } from "./relationshipStore";
 export {
   useCharacterStore,
   useLocationStore,

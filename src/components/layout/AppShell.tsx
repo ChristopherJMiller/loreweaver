@@ -4,6 +4,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { Header } from "./Header";
 import { Sidebar } from "./Sidebar";
 import { CommandPalette } from "./CommandPalette";
+import { WorldNavigator } from "./WorldNavigator";
 import { useCampaignStore } from "@/stores";
 
 export function AppShell() {
@@ -26,6 +27,7 @@ export function AppShell() {
           <main className="flex-1 overflow-auto bg-background p-6">
             <Outlet />
           </main>
+          <WorldNavigator />
         </div>
         <CommandPalette />
       </div>

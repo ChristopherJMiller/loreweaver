@@ -5,6 +5,7 @@ type ViewMode = "list" | "grid";
 interface UIState {
   sidebarCollapsed: boolean;
   commandPaletteOpen: boolean;
+  worldNavigatorOpen: boolean;
   viewMode: ViewMode;
   createDialogOpen: string | null; // entity type or null
 
@@ -14,6 +15,8 @@ interface UIState {
   openCommandPalette: () => void;
   closeCommandPalette: () => void;
   toggleCommandPalette: () => void;
+  toggleWorldNavigator: () => void;
+  setWorldNavigatorOpen: (open: boolean) => void;
   setViewMode: (mode: ViewMode) => void;
   openCreateDialog: (entityType: string) => void;
   closeCreateDialog: () => void;
@@ -22,6 +25,7 @@ interface UIState {
 export const useUIStore = create<UIState>((set) => ({
   sidebarCollapsed: false,
   commandPaletteOpen: false,
+  worldNavigatorOpen: true, // Default open
   viewMode: "list",
   createDialogOpen: null,
 
@@ -32,6 +36,9 @@ export const useUIStore = create<UIState>((set) => ({
   closeCommandPalette: () => set({ commandPaletteOpen: false }),
   toggleCommandPalette: () =>
     set((state) => ({ commandPaletteOpen: !state.commandPaletteOpen })),
+  toggleWorldNavigator: () =>
+    set((state) => ({ worldNavigatorOpen: !state.worldNavigatorOpen })),
+  setWorldNavigatorOpen: (open) => set({ worldNavigatorOpen: open }),
   setViewMode: (mode) => set({ viewMode: mode }),
   openCreateDialog: (entityType) => set({ createDialogOpen: entityType }),
   closeCreateDialog: () => set({ createDialogOpen: null }),

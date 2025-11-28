@@ -19,17 +19,19 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { LoadingState, DeleteDialog } from "@/components/common";
-import { useCharacterStore } from "@/stores";
+import { Editor } from "@/components/editor";
+import { RelationshipList } from "@/components/relationship";
+import { useCharacterStore, useCampaignStore } from "@/stores";
 
 export function CharacterDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { entities, isLoading, fetchOne, update, remove } = useCharacterStore();
+  const { activeCampaignId } = useCampaignStore();
 
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -188,6 +190,7 @@ export function CharacterDetailPage() {
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="personality">Personality</TabsTrigger>
+          <TabsTrigger value="relationships">Relationships</TabsTrigger>
           <TabsTrigger value="secrets">GM Notes</TabsTrigger>
         </TabsList>
 
@@ -244,20 +247,15 @@ export function CharacterDetailPage() {
               <CardTitle>Description</CardTitle>
             </CardHeader>
             <CardContent>
-              {isEditing ? (
-                <Textarea
-                  value={editForm.description}
-                  onChange={(e) =>
-                    setEditForm({ ...editForm, description: e.target.value })
-                  }
-                  placeholder="Physical appearance, mannerisms, notable features..."
-                  rows={6}
-                />
-              ) : (
-                <p className="whitespace-pre-wrap">
-                  {character.description || "No description yet."}
-                </p>
-              )}
+              <Editor
+                content={editForm.description}
+                onChange={(content) =>
+                  setEditForm({ ...editForm, description: content })
+                }
+                placeholder="Physical appearance, mannerisms, notable features..."
+                readOnly={!isEditing}
+                campaignId={activeCampaignId || undefined}
+              />
             </CardContent>
           </Card>
         </TabsContent>
@@ -271,20 +269,15 @@ export function CharacterDetailPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {isEditing ? (
-                <Textarea
-                  value={editForm.personality}
-                  onChange={(e) =>
-                    setEditForm({ ...editForm, personality: e.target.value })
-                  }
-                  placeholder="Personality traits, quirks, behaviors..."
-                  rows={4}
-                />
-              ) : (
-                <p className="whitespace-pre-wrap">
-                  {character.personality || "No personality notes yet."}
-                </p>
-              )}
+              <Editor
+                content={editForm.personality}
+                onChange={(content) =>
+                  setEditForm({ ...editForm, personality: content })
+                }
+                placeholder="Personality traits, quirks, behaviors..."
+                readOnly={!isEditing}
+                campaignId={activeCampaignId || undefined}
+              />
             </CardContent>
           </Card>
 
@@ -294,20 +287,15 @@ export function CharacterDetailPage() {
               <CardDescription>What drives this character</CardDescription>
             </CardHeader>
             <CardContent>
-              {isEditing ? (
-                <Textarea
-                  value={editForm.motivations}
-                  onChange={(e) =>
-                    setEditForm({ ...editForm, motivations: e.target.value })
-                  }
-                  placeholder="Goals, desires, fears..."
-                  rows={4}
-                />
-              ) : (
-                <p className="whitespace-pre-wrap">
-                  {character.motivations || "No motivations noted yet."}
-                </p>
-              )}
+              <Editor
+                content={editForm.motivations}
+                onChange={(content) =>
+                  setEditForm({ ...editForm, motivations: content })
+                }
+                placeholder="Goals, desires, fears..."
+                readOnly={!isEditing}
+                campaignId={activeCampaignId || undefined}
+              />
             </CardContent>
           </Card>
 
@@ -319,22 +307,27 @@ export function CharacterDetailPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {isEditing ? (
-                <Textarea
-                  value={editForm.voice_notes}
-                  onChange={(e) =>
-                    setEditForm({ ...editForm, voice_notes: e.target.value })
-                  }
-                  placeholder="Accent, catch phrases, mannerisms..."
-                  rows={4}
-                />
-              ) : (
-                <p className="whitespace-pre-wrap">
-                  {character.voice_notes || "No voice notes yet."}
-                </p>
-              )}
+              <Editor
+                content={editForm.voice_notes}
+                onChange={(content) =>
+                  setEditForm({ ...editForm, voice_notes: content })
+                }
+                placeholder="Accent, catch phrases, mannerisms..."
+                readOnly={!isEditing}
+                campaignId={activeCampaignId || undefined}
+              />
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="relationships" className="space-y-4">
+          {id && character && (
+            <RelationshipList
+              entityType="character"
+              entityId={id}
+              entityName={character.name}
+            />
+          )}
         </TabsContent>
 
         <TabsContent value="secrets" className="space-y-4">
@@ -344,20 +337,15 @@ export function CharacterDetailPage() {
               <CardDescription>GM-only information</CardDescription>
             </CardHeader>
             <CardContent>
-              {isEditing ? (
-                <Textarea
-                  value={editForm.secrets}
-                  onChange={(e) =>
-                    setEditForm({ ...editForm, secrets: e.target.value })
-                  }
-                  placeholder="Hidden information, plot hooks, true identity..."
-                  rows={6}
-                />
-              ) : (
-                <p className="whitespace-pre-wrap">
-                  {character.secrets || "No secrets recorded."}
-                </p>
-              )}
+              <Editor
+                content={editForm.secrets}
+                onChange={(content) =>
+                  setEditForm({ ...editForm, secrets: content })
+                }
+                placeholder="Hidden information, plot hooks, true identity..."
+                readOnly={!isEditing}
+                campaignId={activeCampaignId || undefined}
+              />
             </CardContent>
           </Card>
         </TabsContent>

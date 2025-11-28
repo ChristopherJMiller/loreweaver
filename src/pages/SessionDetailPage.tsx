@@ -11,16 +11,17 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { LoadingState, DeleteDialog } from "@/components/common";
-import { useSessionStore } from "@/stores";
+import { Editor } from "@/components/editor";
+import { useSessionStore, useCampaignStore } from "@/stores";
 
 export function SessionDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { entities, isLoading, fetchOne, update, remove } = useSessionStore();
+  const { activeCampaignId } = useCampaignStore();
 
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -235,20 +236,15 @@ export function SessionDetailPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {isEditing ? (
-                <Textarea
-                  value={editForm.planned_content}
-                  onChange={(e) =>
-                    setEditForm({ ...editForm, planned_content: e.target.value })
-                  }
-                  placeholder="Encounters, story beats, locations to visit..."
-                  rows={8}
-                />
-              ) : (
-                <p className="whitespace-pre-wrap">
-                  {session.planned_content || "No planned content yet."}
-                </p>
-              )}
+              <Editor
+                content={editForm.planned_content}
+                onChange={(content) =>
+                  setEditForm({ ...editForm, planned_content: content })
+                }
+                placeholder="Encounters, story beats, locations to visit..."
+                readOnly={!isEditing}
+                campaignId={activeCampaignId || undefined}
+              />
             </CardContent>
           </Card>
         </TabsContent>
@@ -262,20 +258,15 @@ export function SessionDetailPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {isEditing ? (
-                <Textarea
-                  value={editForm.notes}
-                  onChange={(e) =>
-                    setEditForm({ ...editForm, notes: e.target.value })
-                  }
-                  placeholder="What happened, player actions, important decisions..."
-                  rows={12}
-                />
-              ) : (
-                <p className="whitespace-pre-wrap">
-                  {session.notes || "No notes yet."}
-                </p>
-              )}
+              <Editor
+                content={editForm.notes}
+                onChange={(content) =>
+                  setEditForm({ ...editForm, notes: content })
+                }
+                placeholder="What happened, player actions, important decisions..."
+                readOnly={!isEditing}
+                campaignId={activeCampaignId || undefined}
+              />
             </CardContent>
           </Card>
         </TabsContent>
@@ -289,20 +280,15 @@ export function SessionDetailPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {isEditing ? (
-                <Textarea
-                  value={editForm.summary}
-                  onChange={(e) =>
-                    setEditForm({ ...editForm, summary: e.target.value })
-                  }
-                  placeholder="A concise summary of the session..."
-                  rows={6}
-                />
-              ) : (
-                <p className="whitespace-pre-wrap">
-                  {session.summary || "No summary yet."}
-                </p>
-              )}
+              <Editor
+                content={editForm.summary}
+                onChange={(content) =>
+                  setEditForm({ ...editForm, summary: content })
+                }
+                placeholder="A concise summary of the session..."
+                readOnly={!isEditing}
+                campaignId={activeCampaignId || undefined}
+              />
             </CardContent>
           </Card>
 
@@ -314,20 +300,15 @@ export function SessionDetailPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {isEditing ? (
-                <Textarea
-                  value={editForm.highlights}
-                  onChange={(e) =>
-                    setEditForm({ ...editForm, highlights: e.target.value })
-                  }
-                  placeholder="Epic moments, funny quotes, dramatic reveals..."
-                  rows={6}
-                />
-              ) : (
-                <p className="whitespace-pre-wrap">
-                  {session.highlights || "No highlights recorded."}
-                </p>
-              )}
+              <Editor
+                content={editForm.highlights}
+                onChange={(content) =>
+                  setEditForm({ ...editForm, highlights: content })
+                }
+                placeholder="Epic moments, funny quotes, dramatic reveals..."
+                readOnly={!isEditing}
+                campaignId={activeCampaignId || undefined}
+              />
             </CardContent>
           </Card>
         </TabsContent>

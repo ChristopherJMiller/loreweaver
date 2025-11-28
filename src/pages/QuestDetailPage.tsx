@@ -10,7 +10,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import {
   Select,
@@ -22,7 +21,9 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { LoadingState, DeleteDialog } from "@/components/common";
-import { useQuestStore } from "@/stores";
+import { Editor } from "@/components/editor";
+import { RelationshipList } from "@/components/relationship";
+import { useQuestStore, useCampaignStore } from "@/stores";
 import {
   QUEST_STATUS,
   PLOT_TYPES,
@@ -49,6 +50,7 @@ export function QuestDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { entities, isLoading, fetchOne, update, remove } = useQuestStore();
+  const { activeCampaignId } = useCampaignStore();
 
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -212,6 +214,7 @@ export function QuestDetailPage() {
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="details">Quest Details</TabsTrigger>
+          <TabsTrigger value="relationships">Relationships</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-4">
@@ -270,20 +273,15 @@ export function QuestDetailPage() {
               <CardTitle>Description</CardTitle>
             </CardHeader>
             <CardContent>
-              {isEditing ? (
-                <Textarea
-                  value={editForm.description}
-                  onChange={(e) =>
-                    setEditForm({ ...editForm, description: e.target.value })
-                  }
-                  placeholder="Describe this quest..."
-                  rows={6}
-                />
-              ) : (
-                <p className="whitespace-pre-wrap">
-                  {quest.description || "No description yet."}
-                </p>
-              )}
+              <Editor
+                content={editForm.description}
+                onChange={(content) =>
+                  setEditForm({ ...editForm, description: content })
+                }
+                placeholder="Describe this quest..."
+                readOnly={!isEditing}
+                campaignId={activeCampaignId || undefined}
+              />
             </CardContent>
           </Card>
 
@@ -295,20 +293,15 @@ export function QuestDetailPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {isEditing ? (
-                <Textarea
-                  value={editForm.hook}
-                  onChange={(e) =>
-                    setEditForm({ ...editForm, hook: e.target.value })
-                  }
-                  placeholder="The party discovers a mysterious letter..."
-                  rows={4}
-                />
-              ) : (
-                <p className="whitespace-pre-wrap">
-                  {quest.hook || "No hook defined yet."}
-                </p>
-              )}
+              <Editor
+                content={editForm.hook}
+                onChange={(content) =>
+                  setEditForm({ ...editForm, hook: content })
+                }
+                placeholder="The party discovers a mysterious letter..."
+                readOnly={!isEditing}
+                campaignId={activeCampaignId || undefined}
+              />
             </CardContent>
           </Card>
         </TabsContent>
@@ -322,20 +315,15 @@ export function QuestDetailPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {isEditing ? (
-                <Textarea
-                  value={editForm.objectives}
-                  onChange={(e) =>
-                    setEditForm({ ...editForm, objectives: e.target.value })
-                  }
-                  placeholder="1. Find the lost artifact\n2. Return it to the temple..."
-                  rows={6}
-                />
-              ) : (
-                <p className="whitespace-pre-wrap">
-                  {quest.objectives || "No objectives defined."}
-                </p>
-              )}
+              <Editor
+                content={editForm.objectives}
+                onChange={(content) =>
+                  setEditForm({ ...editForm, objectives: content })
+                }
+                placeholder="1. Find the lost artifact\n2. Return it to the temple..."
+                readOnly={!isEditing}
+                campaignId={activeCampaignId || undefined}
+              />
             </CardContent>
           </Card>
 
@@ -347,20 +335,15 @@ export function QuestDetailPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {isEditing ? (
-                <Textarea
-                  value={editForm.complications}
-                  onChange={(e) =>
-                    setEditForm({ ...editForm, complications: e.target.value })
-                  }
-                  placeholder="The artifact is guarded by ancient traps..."
-                  rows={4}
-                />
-              ) : (
-                <p className="whitespace-pre-wrap">
-                  {quest.complications || "No complications recorded."}
-                </p>
-              )}
+              <Editor
+                content={editForm.complications}
+                onChange={(content) =>
+                  setEditForm({ ...editForm, complications: content })
+                }
+                placeholder="The artifact is guarded by ancient traps..."
+                readOnly={!isEditing}
+                campaignId={activeCampaignId || undefined}
+              />
             </CardContent>
           </Card>
 
@@ -372,20 +355,15 @@ export function QuestDetailPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {isEditing ? (
-                <Textarea
-                  value={editForm.resolution}
-                  onChange={(e) =>
-                    setEditForm({ ...editForm, resolution: e.target.value })
-                  }
-                  placeholder="Success: The artifact is returned and the curse lifted..."
-                  rows={4}
-                />
-              ) : (
-                <p className="whitespace-pre-wrap">
-                  {quest.resolution || "No resolution defined."}
-                </p>
-              )}
+              <Editor
+                content={editForm.resolution}
+                onChange={(content) =>
+                  setEditForm({ ...editForm, resolution: content })
+                }
+                placeholder="Success: The artifact is returned and the curse lifted..."
+                readOnly={!isEditing}
+                campaignId={activeCampaignId || undefined}
+              />
             </CardContent>
           </Card>
 
@@ -397,22 +375,27 @@ export function QuestDetailPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {isEditing ? (
-                <Textarea
-                  value={editForm.reward}
-                  onChange={(e) =>
-                    setEditForm({ ...editForm, reward: e.target.value })
-                  }
-                  placeholder="500 gold pieces, a magical sword..."
-                  rows={4}
-                />
-              ) : (
-                <p className="whitespace-pre-wrap">
-                  {quest.reward || "No rewards defined."}
-                </p>
-              )}
+              <Editor
+                content={editForm.reward}
+                onChange={(content) =>
+                  setEditForm({ ...editForm, reward: content })
+                }
+                placeholder="500 gold pieces, a magical sword..."
+                readOnly={!isEditing}
+                campaignId={activeCampaignId || undefined}
+              />
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="relationships" className="space-y-4">
+          {id && quest && (
+            <RelationshipList
+              entityType="quest"
+              entityId={id}
+              entityName={quest.name}
+            />
+          )}
         </TabsContent>
       </Tabs>
 

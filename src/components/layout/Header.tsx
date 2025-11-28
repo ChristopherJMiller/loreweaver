@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { BookOpen, Search, ChevronDown, Plus } from "lucide-react";
+import { BookOpen, Search, ChevronDown, Plus, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -15,7 +15,7 @@ export function Header() {
   const navigate = useNavigate();
   const { campaigns, activeCampaignId, setActiveCampaign, fetchCampaigns } =
     useCampaignStore();
-  const { openCommandPalette } = useUIStore();
+  const { openCommandPalette, worldNavigatorOpen, toggleWorldNavigator } = useUIStore();
 
   const activeCampaign = campaigns.find((c) => c.id === activeCampaignId);
 
@@ -90,6 +90,14 @@ export function Header() {
           onClick={openCommandPalette}
         >
           <Search className="h-4 w-4" />
+        </Button>
+        <Button
+          variant={worldNavigatorOpen ? "default" : "outline"}
+          size="icon"
+          onClick={toggleWorldNavigator}
+          title={worldNavigatorOpen ? "Hide World Navigator" : "Show World Navigator"}
+        >
+          <Globe className="h-4 w-4" />
         </Button>
       </div>
     </header>

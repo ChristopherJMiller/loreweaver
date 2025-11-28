@@ -11,7 +11,6 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import {
   Select,
@@ -23,13 +22,18 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { LoadingState, DeleteDialog } from "@/components/common";
-import { useLocationStore } from "@/stores";
+import { Editor } from "@/components/editor";
+import { RelationshipList } from "@/components/relationship";
+import { DetailLevelBar, LocationBreadcrumb } from "@/components/location";
+import { useLocationStore, useCampaignStore, useRelationshipStore } from "@/stores";
 import { LOCATION_TYPES, getLocationTypeLabel } from "@/lib/constants";
 
 export function LocationDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { entities, isLoading, fetchOne, update, remove } = useLocationStore();
+  const { activeCampaignId } = useCampaignStore();
+  const { relationships, fetchForEntity } = useRelationshipStore();
 
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -54,6 +58,12 @@ export function LocationDetailPage() {
       fetchOne(id);
     }
   }, [id, location, fetchOne]);
+
+  useEffect(() => {
+    if (id) {
+      fetchForEntity("location", id);
+    }
+  }, [id, fetchForEntity]);
 
   useEffect(() => {
     if (location) {
@@ -98,6 +108,9 @@ export function LocationDetailPage() {
 
   return (
     <div className="space-y-6">
+      {/* Breadcrumb */}
+      <LocationBreadcrumb location={location} allLocations={entities} />
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
@@ -137,10 +150,13 @@ export function LocationDetailPage() {
         </div>
 
         <div className="flex items-center gap-2">
-          <Badge variant="outline" className="gap-1">
-            <MapPin className="h-3 w-3" />
-            {location.detail_level}% detailed
-          </Badge>
+          <div className="w-32">
+            <DetailLevelBar
+              location={location}
+              relationships={relationships}
+              childCount={childLocations.length}
+            />
+          </div>
 
           {isEditing ? (
             <>
@@ -183,6 +199,7 @@ export function LocationDetailPage() {
           <TabsTrigger value="places">
             Places ({childLocations.length})
           </TabsTrigger>
+          <TabsTrigger value="relationships">Relationships</TabsTrigger>
           <TabsTrigger value="gm-notes">GM Notes</TabsTrigger>
         </TabsList>
 
@@ -240,22 +257,6 @@ export function LocationDetailPage() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="space-y-2">
-                    <Label>Detail Level ({editForm.detail_level}%)</Label>
-                    <Input
-                      type="range"
-                      min={0}
-                      max={100}
-                      value={editForm.detail_level}
-                      onChange={(e) =>
-                        setEditForm({
-                          ...editForm,
-                          detail_level: parseInt(e.target.value),
-                        })
-                      }
-                      className="cursor-pointer"
-                    />
-                  </div>
                 </div>
               ) : (
                 <div className="grid gap-4 sm:grid-cols-2">
@@ -284,15 +285,13 @@ export function LocationDetailPage() {
                     <span className="text-sm text-muted-foreground">
                       Detail Level
                     </span>
-                    <div className="flex items-center gap-2">
-                      <div className="h-2 w-24 rounded-full bg-secondary">
-                        <div
-                          className="h-2 rounded-full bg-primary"
-                          style={{ width: `${location.detail_level}%` }}
-                        />
-                      </div>
-                      <span>{location.detail_level}%</span>
-                    </div>
+                    <DetailLevelBar
+                      location={location}
+                      relationships={relationships}
+                      childCount={childLocations.length}
+                      showLabel
+                      className="mt-1 w-48"
+                    />
                   </div>
                 </div>
               )}
@@ -304,20 +303,15 @@ export function LocationDetailPage() {
               <CardTitle>Description</CardTitle>
             </CardHeader>
             <CardContent>
-              {isEditing ? (
-                <Textarea
-                  value={editForm.description}
-                  onChange={(e) =>
-                    setEditForm({ ...editForm, description: e.target.value })
-                  }
-                  placeholder="Describe this location..."
-                  rows={6}
-                />
-              ) : (
-                <p className="whitespace-pre-wrap">
-                  {location.description || "No description yet."}
-                </p>
-              )}
+              <Editor
+                content={editForm.description}
+                onChange={(content) =>
+                  setEditForm({ ...editForm, description: content })
+                }
+                placeholder="Describe this location..."
+                readOnly={!isEditing}
+                campaignId={activeCampaignId || undefined}
+              />
             </CardContent>
           </Card>
         </TabsContent>
@@ -362,6 +356,16 @@ export function LocationDetailPage() {
           </Card>
         </TabsContent>
 
+        <TabsContent value="relationships" className="space-y-4">
+          {id && location && (
+            <RelationshipList
+              entityType="location"
+              entityId={id}
+              entityName={location.name}
+            />
+          )}
+        </TabsContent>
+
         <TabsContent value="gm-notes" className="space-y-4">
           <Card>
             <CardHeader>
@@ -369,20 +373,15 @@ export function LocationDetailPage() {
               <CardDescription>Private notes only visible to you</CardDescription>
             </CardHeader>
             <CardContent>
-              {isEditing ? (
-                <Textarea
-                  value={editForm.gm_notes}
-                  onChange={(e) =>
-                    setEditForm({ ...editForm, gm_notes: e.target.value })
-                  }
-                  placeholder="Hidden information, plot hooks, secrets about this location..."
-                  rows={8}
-                />
-              ) : (
-                <p className="whitespace-pre-wrap">
-                  {location.gm_notes || "No GM notes yet."}
-                </p>
-              )}
+              <Editor
+                content={editForm.gm_notes}
+                onChange={(content) =>
+                  setEditForm({ ...editForm, gm_notes: content })
+                }
+                placeholder="Hidden information, plot hooks, secrets about this location..."
+                readOnly={!isEditing}
+                campaignId={activeCampaignId || undefined}
+              />
             </CardContent>
           </Card>
         </TabsContent>
