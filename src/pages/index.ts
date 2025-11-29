@@ -17,4 +17,5 @@ export { QuestDetailPage } from "./QuestDetailPage";
 export { TimelinePage } from "./TimelinePage";
 export { TimelineEventDetailPage } from "./TimelineEventDetailPage";
 export { SearchPage } from "./SearchPage";
+export { SettingsPage } from "./SettingsPage";
 export { PlaceholderPage } from "./PlaceholderPage";

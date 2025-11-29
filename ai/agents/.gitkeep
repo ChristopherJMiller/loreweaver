@@ -1,0 +1,7 @@
+# Placeholder for M6: AI Agents
+#
+# This directory will contain agent implementations:
+# - generator.ts - Create new entities
+# - expander.ts - Expand brief notes to prose
+# - consistency-checker.ts - Validate against lore
+# - session-processor.ts - Extract updates from session notes

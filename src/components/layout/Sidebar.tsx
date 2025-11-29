@@ -12,6 +12,7 @@ import {
   Search,
   ChevronLeft,
   Home,
+  Settings,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -146,7 +147,11 @@ export function Sidebar() {
         ))}
       </ScrollArea>
 
-      <div className="border-t p-2">
+      <div className="border-t p-2 space-y-1">
+        <NavItemLink
+          item={{ label: "Settings", icon: Settings, to: "/settings" }}
+          collapsed={sidebarCollapsed}
+        />
         <Button
           variant="ghost"
           size="icon"

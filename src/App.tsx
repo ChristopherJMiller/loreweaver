@@ -20,6 +20,7 @@ import {
   TimelinePage,
   TimelineEventDetailPage,
   SearchPage,
+  SettingsPage,
   PlaceholderPage,
 } from "@/pages";
 
@@ -70,6 +71,8 @@ function App() {
           />
 
           <Route path="/search" element={<SearchPage />} />
+
+          <Route path="/settings" element={<SettingsPage />} />
         </Route>
 
         {/* Fallback */}

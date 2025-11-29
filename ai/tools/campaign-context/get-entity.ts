@@ -1,0 +1,254 @@
+/**
+ * get_entity Tool
+ *
+ * Retrieves a single entity by type and ID.
+ * Formats the entity as markdown for the agent.
+ */
+
+import { invoke } from "@tauri-apps/api/core";
+import type { ToolDefinition, ToolResult, ToolContext } from "../types";
+import type {
+  Character,
+  Location,
+  Organization,
+  Quest,
+  Hero,
+  Player,
+  Session,
+  TimelineEvent,
+  Secret,
+  Campaign,
+} from "@/types";
+
+type EntityData =
+  | Character
+  | Location
+  | Organization
+  | Quest
+  | Hero
+  | Player
+  | Session
+  | TimelineEvent
+  | Secret
+  | Campaign;
+
+const ENTITY_COMMANDS: Record<string, string> = {
+  campaign: "get_campaign",
+  character: "get_character",
+  location: "get_location",
+  organization: "get_organization",
+  quest: "get_quest",
+  hero: "get_hero",
+  player: "get_player",
+  session: "get_session",
+  timeline_event: "get_timeline_event",
+  secret: "get_secret",
+};
+
+/**
+ * Format entity data as markdown with frontmatter-style metadata
+ */
+function formatEntity(type: string, entity: EntityData): string {
+  const lines: string[] = [];
+
+  // Frontmatter header
+  lines.push("---");
+  lines.push(`type: ${type}`);
+  lines.push(`id: ${entity.id}`);
+
+  // Add name if present
+  if ("name" in entity && entity.name) {
+    lines.push(`name: ${entity.name}`);
+  }
+
+  // Add type-specific metadata
+  if (type === "character") {
+    const c = entity as Character;
+    if (c.lineage) lines.push(`lineage: ${c.lineage}`);
+    if (c.occupation) lines.push(`occupation: ${c.occupation}`);
+    lines.push(`is_alive: ${c.is_alive}`);
+  } else if (type === "location") {
+    const l = entity as Location;
+    if (l.location_type) lines.push(`location_type: ${l.location_type}`);
+    if (l.parent_id) lines.push(`parent_id: ${l.parent_id}`);
+    if (l.detail_level !== null) lines.push(`detail_level: ${l.detail_level}`);
+  } else if (type === "organization") {
+    const o = entity as Organization;
+    if (o.org_type) lines.push(`org_type: ${o.org_type}`);
+    lines.push(`is_public: ${o.is_public}`);
+    if (o.influence_level !== null) lines.push(`influence_level: ${o.influence_level}`);
+  } else if (type === "quest") {
+    const q = entity as Quest;
+    if (q.quest_type) lines.push(`quest_type: ${q.quest_type}`);
+    if (q.status) lines.push(`status: ${q.status}`);
+    if (q.priority !== null) lines.push(`priority: ${q.priority}`);
+  } else if (type === "session") {
+    const s = entity as Session;
+    lines.push(`session_number: ${s.session_number}`);
+    if (s.status) lines.push(`status: ${s.status}`);
+  } else if (type === "timeline_event") {
+    const t = entity as TimelineEvent;
+    if (t.event_date) lines.push(`event_date: ${t.event_date}`);
+    lines.push(`is_public: ${t.is_public}`);
+  } else if (type === "secret") {
+    const s = entity as Secret;
+    if (s.secret_type) lines.push(`secret_type: ${s.secret_type}`);
+    lines.push(`is_revealed: ${s.is_revealed}`);
+  }
+
+  lines.push("---");
+  lines.push("");
+
+  // Main content sections
+  if ("description" in entity && entity.description) {
+    lines.push("## Description");
+    lines.push(entity.description);
+    lines.push("");
+  }
+
+  // Type-specific content
+  if (type === "character") {
+    const c = entity as Character;
+    if (c.personality) {
+      lines.push("## Personality");
+      lines.push(c.personality);
+      lines.push("");
+    }
+    if (c.motivations) {
+      lines.push("## Motivations");
+      lines.push(c.motivations);
+      lines.push("");
+    }
+    if (c.secrets) {
+      lines.push("## Secrets");
+      lines.push(c.secrets);
+      lines.push("");
+    }
+    if (c.voice_notes) {
+      lines.push("## Voice Notes");
+      lines.push(c.voice_notes);
+      lines.push("");
+    }
+  } else if (type === "location") {
+    const l = entity as Location;
+    if (l.known_for) {
+      lines.push("## Known For");
+      lines.push(l.known_for);
+      lines.push("");
+    }
+    if (l.current_state) {
+      lines.push("## Current State");
+      lines.push(l.current_state);
+      lines.push("");
+    }
+  } else if (type === "organization") {
+    const o = entity as Organization;
+    if (o.goals) {
+      lines.push("## Goals");
+      lines.push(o.goals);
+      lines.push("");
+    }
+    if (o.resources) {
+      lines.push("## Resources");
+      lines.push(o.resources);
+      lines.push("");
+    }
+  } else if (type === "quest") {
+    const q = entity as Quest;
+    if (q.objectives) {
+      lines.push("## Objectives");
+      lines.push(q.objectives);
+      lines.push("");
+    }
+    if (q.rewards) {
+      lines.push("## Rewards");
+      lines.push(q.rewards);
+      lines.push("");
+    }
+  } else if (type === "session") {
+    const s = entity as Session;
+    if (s.summary) {
+      lines.push("## Summary");
+      lines.push(s.summary);
+      lines.push("");
+    }
+    if (s.notes) {
+      lines.push("## Notes");
+      lines.push(s.notes);
+      lines.push("");
+    }
+  } else if (type === "secret") {
+    const s = entity as Secret;
+    lines.push("## Content");
+    lines.push(s.content);
+    lines.push("");
+    if (s.reveal_conditions) {
+      lines.push("## Reveal Conditions");
+      lines.push(s.reveal_conditions);
+      lines.push("");
+    }
+  }
+
+  return lines.join("\n");
+}
+
+export const getEntityTool: ToolDefinition = {
+  name: "get_entity",
+  description:
+    "Get detailed information about a specific entity. Returns all fields formatted as markdown.",
+  input_schema: {
+    type: "object",
+    properties: {
+      entity_type: {
+        type: "string",
+        enum: [
+          "campaign",
+          "character",
+          "location",
+          "organization",
+          "quest",
+          "hero",
+          "player",
+          "session",
+          "timeline_event",
+          "secret",
+        ],
+        description: "The type of entity to retrieve",
+      },
+      entity_id: {
+        type: "string",
+        description: "The entity ID",
+      },
+    },
+    required: ["entity_type", "entity_id"],
+  },
+  handler: async (input: unknown, _context: ToolContext): Promise<ToolResult> => {
+    const { entity_type, entity_id } = input as {
+      entity_type: string;
+      entity_id: string;
+    };
+
+    const command = ENTITY_COMMANDS[entity_type];
+    if (!command) {
+      return {
+        success: false,
+        content: `Unknown entity type: ${entity_type}`,
+      };
+    }
+
+    try {
+      const entity = await invoke<EntityData>(command, { id: entity_id });
+
+      return {
+        success: true,
+        content: formatEntity(entity_type, entity),
+        data: entity,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        content: `Failed to get ${entity_type}: ${error instanceof Error ? error.message : String(error)}`,
+      };
+    }
+  },
+};

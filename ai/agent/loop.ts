@@ -1,0 +1,218 @@
+/**
+ * Agent Loop
+ *
+ * Core agent execution loop that iterates until the task is complete.
+ * Handles tool calling, message accumulation, and stop conditions.
+ */
+
+import type {
+  MessageParam,
+  ContentBlock,
+  ToolUseBlock,
+  ToolResultBlockParam,
+} from "@anthropic-ai/sdk/resources/messages";
+import { createMessage } from "../client";
+import type { ToolRegistry, ToolResult } from "../tools";
+import { WorkItemTracker } from "./work-items";
+
+/**
+ * Agent configuration options
+ */
+export interface AgentConfig {
+  /** Model to use (e.g., "claude-sonnet-4-20250514") */
+  model: string;
+  /** System prompt for the agent */
+  systemPrompt: string;
+  /** Maximum iterations to prevent runaway loops */
+  maxIterations?: number;
+  /** Maximum tokens per response */
+  maxTokens?: number;
+  /** Callback for streaming intermediate results */
+  onMessage?: (message: AgentMessage) => void;
+}
+
+/**
+ * Message from the agent (for UI display)
+ */
+export interface AgentMessage {
+  role: "assistant" | "tool_result";
+  content: string;
+  toolName?: string;
+  toolInput?: unknown;
+}
+
+/**
+ * Result of an agent run
+ */
+export interface AgentResult {
+  /** Final text response from the agent */
+  response: string;
+  /** Total iterations performed */
+  iterations: number;
+  /** Token usage across all iterations */
+  usage: { inputTokens: number; outputTokens: number };
+  /** Work items tracked during the run */
+  workItems: ReturnType<WorkItemTracker["list"]>;
+  /** Whether the agent completed normally */
+  completed: boolean;
+  /** Error if the agent failed */
+  error?: string;
+}
+
+/**
+ * Extract text content from ContentBlocks
+ */
+function extractText(blocks: ContentBlock[]): string {
+  return blocks
+    .filter((b): b is ContentBlock & { type: "text" } => b.type === "text")
+    .map((b) => b.text)
+    .join("\n");
+}
+
+/**
+ * Check if response contains tool use
+ */
+function hasToolUse(blocks: ContentBlock[]): boolean {
+  return blocks.some((b) => b.type === "tool_use");
+}
+
+/**
+ * Extract tool use blocks
+ */
+function getToolUseBlocks(blocks: ContentBlock[]): ToolUseBlock[] {
+  return blocks.filter((b): b is ToolUseBlock => b.type === "tool_use");
+}
+
+/**
+ * Run the agent loop until completion or max iterations
+ */
+export async function runAgent(
+  userMessage: string,
+  toolRegistry: ToolRegistry,
+  config: AgentConfig
+): Promise<AgentResult> {
+  const maxIterations = config.maxIterations ?? 20;
+  const maxTokens = config.maxTokens ?? 4096;
+
+  const messages: MessageParam[] = [{ role: "user", content: userMessage }];
+  const workItemTracker = new WorkItemTracker();
+
+  let iterations = 0;
+  let totalInputTokens = 0;
+  let totalOutputTokens = 0;
+  let finalResponse = "";
+
+  try {
+    while (iterations < maxIterations) {
+      iterations++;
+
+      // Call Claude
+      const response = await createMessage({
+        model: config.model,
+        system: config.systemPrompt,
+        messages,
+        tools: toolRegistry.tools,
+        maxTokens,
+      });
+
+      totalInputTokens += response.usage.input_tokens;
+      totalOutputTokens += response.usage.output_tokens;
+
+      // Extract and store text response
+      const textContent = extractText(response.content);
+      if (textContent) {
+        finalResponse = textContent;
+        config.onMessage?.({
+          role: "assistant",
+          content: textContent,
+        });
+      }
+
+      // Add assistant message to history
+      messages.push({
+        role: "assistant",
+        content: response.content,
+      });
+
+      // Check stop condition
+      if (response.stop_reason === "end_turn" && !hasToolUse(response.content)) {
+        // Agent finished naturally
+        return {
+          response: finalResponse,
+          iterations,
+          usage: { inputTokens: totalInputTokens, outputTokens: totalOutputTokens },
+          workItems: workItemTracker.list(),
+          completed: true,
+        };
+      }
+
+      // Handle tool calls
+      if (hasToolUse(response.content)) {
+        const toolBlocks = getToolUseBlocks(response.content);
+        const toolResults: ToolResultBlockParam[] = [];
+
+        for (const toolBlock of toolBlocks) {
+          config.onMessage?.({
+            role: "assistant",
+            content: `Using tool: ${toolBlock.name}`,
+            toolName: toolBlock.name,
+            toolInput: toolBlock.input,
+          });
+
+          // Execute the tool
+          const result: ToolResult = await toolRegistry.execute(
+            toolBlock.name,
+            toolBlock.input
+          );
+
+          config.onMessage?.({
+            role: "tool_result",
+            content: result.content,
+            toolName: toolBlock.name,
+          });
+
+          toolResults.push({
+            type: "tool_result",
+            tool_use_id: toolBlock.id,
+            content: result.content,
+            is_error: !result.success,
+          });
+        }
+
+        // Add tool results to messages
+        messages.push({
+          role: "user",
+          content: toolResults,
+        });
+      } else if (response.stop_reason === "end_turn") {
+        // No tool use and end_turn - we're done
+        return {
+          response: finalResponse,
+          iterations,
+          usage: { inputTokens: totalInputTokens, outputTokens: totalOutputTokens },
+          workItems: workItemTracker.list(),
+          completed: true,
+        };
+      }
+    }
+
+    // Reached max iterations
+    return {
+      response: finalResponse,
+      iterations,
+      usage: { inputTokens: totalInputTokens, outputTokens: totalOutputTokens },
+      workItems: workItemTracker.list(),
+      completed: false,
+      error: `Reached maximum iterations (${maxIterations})`,
+    };
+  } catch (error) {
+    return {
+      response: finalResponse,
+      iterations,
+      usage: { inputTokens: totalInputTokens, outputTokens: totalOutputTokens },
+      workItems: workItemTracker.list(),
+      completed: false,
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
