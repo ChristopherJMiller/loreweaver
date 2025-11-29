@@ -48,6 +48,8 @@ import {
   PageHeader,
   DeleteDialog,
 } from "@/components/common";
+import { GenerateButton, GenerationPreview } from "@/components/ai";
+import { useGenerator } from "@/hooks";
 import { useCampaignStore, useLocationStore, useUIStore } from "@/stores";
 import { LOCATION_TYPES, getLocationTypeLabel, getValidParentTypes } from "@/lib/constants";
 
@@ -58,6 +60,16 @@ export function LocationsPage() {
   const { viewMode } = useUIStore();
 
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+
+  // AI Generation
+  const generator = useGenerator({
+    campaignId: activeCampaignId ?? "",
+    entityType: "location",
+    onCreated: (id) => {
+      fetchAll(activeCampaignId!);
+      navigate(`/locations/${id}`);
+    },
+  });
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [newLocation, setNewLocation] = useState({
@@ -134,6 +146,15 @@ export function LocationsPage() {
         count={entities.length}
         onCreateClick={() => setCreateDialogOpen(true)}
         createLabel="New Location"
+        actions={
+          <GenerateButton
+            entityType="location"
+            onGenerate={generator.generate}
+            isLoading={generator.isLoading}
+          >
+            Generate
+          </GenerateButton>
+        }
       />
 
       {isLoading ? (
@@ -367,6 +388,19 @@ export function LocationsPage() {
         title="Delete Location"
         description="Are you sure you want to delete this location? This action cannot be undone."
         onConfirm={handleDelete}
+      />
+
+      {/* Generation Preview */}
+      <GenerationPreview
+        open={generator.isPreviewOpen}
+        onOpenChange={generator.closePreview}
+        entityType="location"
+        isLoading={generator.isLoading}
+        result={generator.result}
+        onAccept={generator.accept}
+        onRegenerate={generator.regenerate}
+        isCreating={generator.isCreating}
+        createError={generator.createError}
       />
     </div>
   );

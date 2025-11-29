@@ -142,7 +142,7 @@ export const getCampaignContextTool: ToolDefinition = {
         lines.push(
           heroes
             .map(
-              (h) => `- ${h.name}${h.character_class ? ` (${h.character_class})` : ""}`
+              (h) => `- ${h.name}${h.classes ? ` (${h.classes})` : ""}`
             )
             .join("\n")
         );

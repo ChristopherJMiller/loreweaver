@@ -7,6 +7,9 @@
 
 import type { ModelTier, QualityPreference } from "./config";
 
+// Re-export for convenience
+export type { ModelTier, QualityPreference } from "./config";
+
 // ============================================================================
 // Client Types
 // ============================================================================

@@ -46,6 +46,8 @@ import {
   PageHeader,
   DeleteDialog,
 } from "@/components/common";
+import { GenerateButton, GenerationPreview } from "@/components/ai";
+import { useGenerator } from "@/hooks";
 import { useCampaignStore, useQuestStore, useUIStore } from "@/stores";
 import {
   QUEST_STATUS,
@@ -76,6 +78,16 @@ export function QuestsPage() {
   const { viewMode } = useUIStore();
 
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
+
+  // AI Generation
+  const generator = useGenerator({
+    campaignId: activeCampaignId ?? "",
+    entityType: "quest",
+    onCreated: (id) => {
+      fetchAll(activeCampaignId!);
+      navigate(`/quests/${id}`);
+    },
+  });
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [newQuest, setNewQuest] = useState({
@@ -141,6 +153,15 @@ export function QuestsPage() {
         count={entities.length}
         onCreateClick={() => setCreateDialogOpen(true)}
         createLabel="New Quest"
+        actions={
+          <GenerateButton
+            entityType="quest"
+            onGenerate={generator.generate}
+            isLoading={generator.isLoading}
+          >
+            Generate
+          </GenerateButton>
+        }
       />
 
       {isLoading ? (
@@ -328,6 +349,19 @@ export function QuestsPage() {
         title="Delete Quest"
         description="Are you sure you want to delete this quest? This action cannot be undone."
         onConfirm={handleDelete}
+      />
+
+      {/* Generation Preview */}
+      <GenerationPreview
+        open={generator.isPreviewOpen}
+        onOpenChange={generator.closePreview}
+        entityType="quest"
+        isLoading={generator.isLoading}
+        result={generator.result}
+        onAccept={generator.accept}
+        onRegenerate={generator.regenerate}
+        isCreating={generator.isCreating}
+        createError={generator.createError}
       />
     </div>
   );

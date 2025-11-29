@@ -40,6 +40,8 @@ import {
   PageHeader,
   DeleteDialog,
 } from "@/components/common";
+import { GenerateButton, GenerationPreview } from "@/components/ai";
+import { useGenerator } from "@/hooks";
 import { useCampaignStore, useCharacterStore, useUIStore } from "@/stores";
 
 export function CharactersPage() {
@@ -57,6 +59,16 @@ export function CharactersPage() {
     occupation: "",
   });
   const [isCreating, setIsCreating] = useState(false);
+
+  // AI Generation
+  const generator = useGenerator({
+    campaignId: activeCampaignId ?? "",
+    entityType: "character",
+    onCreated: (id) => {
+      fetchAll(activeCampaignId!);
+      navigate(`/characters/${id}`);
+    },
+  });
 
   useEffect(() => {
     if (activeCampaignId) {
@@ -115,6 +127,15 @@ export function CharactersPage() {
         count={entities.length}
         onCreateClick={() => setCreateDialogOpen(true)}
         createLabel="New Character"
+        actions={
+          <GenerateButton
+            entityType="character"
+            onGenerate={generator.generate}
+            isLoading={generator.isLoading}
+          >
+            Generate
+          </GenerateButton>
+        }
       />
 
       {isLoading ? (
@@ -287,6 +308,19 @@ export function CharactersPage() {
         title="Delete Character"
         description="Are you sure you want to delete this character? This action cannot be undone."
         onConfirm={handleDelete}
+      />
+
+      {/* Generation Preview */}
+      <GenerationPreview
+        open={generator.isPreviewOpen}
+        onOpenChange={generator.closePreview}
+        entityType="character"
+        isLoading={generator.isLoading}
+        result={generator.result}
+        onAccept={generator.accept}
+        onRegenerate={generator.regenerate}
+        isCreating={generator.isCreating}
+        createError={generator.createError}
       />
     </div>
   );

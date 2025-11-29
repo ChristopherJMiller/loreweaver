@@ -20,11 +20,11 @@ export interface ToolRegistry {
   tools: Tool[];
   /** Map of tool name to handler function */
   handlers: Map<string, ToolDefinition["handler"]>;
-  /** Execute a tool by name */
+  /** Execute a tool by name (context is optional, uses default if not provided) */
   execute: (
     name: string,
     input: unknown,
-    context: ToolContext
+    context?: ToolContext
   ) => Promise<ToolResult>;
 }
 

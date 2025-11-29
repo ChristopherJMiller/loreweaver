@@ -2,6 +2,8 @@ export { useCampaignStore } from "./campaignStore";
 export { useUIStore } from "./uiStore";
 export { useSearchStore } from "./searchStore";
 export { useRelationshipStore } from "./relationshipStore";
+export { useChatStore } from "./chatStore";
+export type { ChatMessage } from "./chatStore";
 export {
   useCharacterStore,
   useLocationStore,

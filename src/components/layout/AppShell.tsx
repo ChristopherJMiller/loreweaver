@@ -5,6 +5,7 @@ import { Header } from "./Header";
 import { Sidebar } from "./Sidebar";
 import { CommandPalette } from "./CommandPalette";
 import { WorldNavigator } from "./WorldNavigator";
+import { AIChatPanel } from "@/components/ai/AIChatPanel";
 import { useCampaignStore } from "@/stores";
 
 export function AppShell() {
@@ -28,6 +29,7 @@ export function AppShell() {
             <Outlet />
           </main>
           <WorldNavigator />
+          <AIChatPanel />
         </div>
         <CommandPalette />
       </div>

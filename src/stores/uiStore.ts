@@ -6,6 +6,7 @@ interface UIState {
   sidebarCollapsed: boolean;
   commandPaletteOpen: boolean;
   worldNavigatorOpen: boolean;
+  aiChatOpen: boolean;
   viewMode: ViewMode;
   createDialogOpen: string | null; // entity type or null
 
@@ -17,6 +18,8 @@ interface UIState {
   toggleCommandPalette: () => void;
   toggleWorldNavigator: () => void;
   setWorldNavigatorOpen: (open: boolean) => void;
+  toggleAIChat: () => void;
+  setAIChatOpen: (open: boolean) => void;
   setViewMode: (mode: ViewMode) => void;
   openCreateDialog: (entityType: string) => void;
   closeCreateDialog: () => void;
@@ -26,6 +29,7 @@ export const useUIStore = create<UIState>((set) => ({
   sidebarCollapsed: false,
   commandPaletteOpen: false,
   worldNavigatorOpen: true, // Default open
+  aiChatOpen: false, // Default closed
   viewMode: "list",
   createDialogOpen: null,
 
@@ -39,6 +43,8 @@ export const useUIStore = create<UIState>((set) => ({
   toggleWorldNavigator: () =>
     set((state) => ({ worldNavigatorOpen: !state.worldNavigatorOpen })),
   setWorldNavigatorOpen: (open) => set({ worldNavigatorOpen: open }),
+  toggleAIChat: () => set((state) => ({ aiChatOpen: !state.aiChatOpen })),
+  setAIChatOpen: (open) => set({ aiChatOpen: open }),
   setViewMode: (mode) => set({ viewMode: mode }),
   openCreateDialog: (entityType) => set({ createDialogOpen: entityType }),
   closeCreateDialog: () => set({ createDialogOpen: null }),

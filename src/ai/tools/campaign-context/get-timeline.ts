@@ -43,13 +43,8 @@ export const getTimelineTool: ToolDefinition = {
         events = events.filter((e) => e.is_public);
       }
 
-      // Sort by event_date (nulls last)
-      events.sort((a, b) => {
-        if (!a.event_date && !b.event_date) return 0;
-        if (!a.event_date) return 1;
-        if (!b.event_date) return -1;
-        return a.event_date.localeCompare(b.event_date);
-      });
+      // Sort by sort_order
+      events.sort((a, b) => Number(a.sort_order) - Number(b.sort_order));
 
       // Apply limit
       if (limit && limit > 0) {
@@ -66,14 +61,11 @@ export const getTimelineTool: ToolDefinition = {
 
       const formatted = events
         .map((e) => {
-          const date = e.event_date || "Unknown date";
-          const precision = e.date_precision ? ` (${e.date_precision})` : "";
-          const visibility = e.is_public ? "" : " 🔒";
-          const significance =
-            e.significance !== null ? ` [importance: ${e.significance}]` : "";
+          const visibility = e.is_public ? "" : " [SECRET]";
+          const significance = e.significance ? ` [${e.significance}]` : "";
 
-          let line = `### ${e.name}${visibility}`;
-          line += `\n**Date:** ${date}${precision}${significance}`;
+          let line = `### ${e.title}${visibility}`;
+          line += `\n**Date:** ${e.date_display}${significance}`;
           if (e.description) {
             line += `\n\n${e.description}`;
           }
