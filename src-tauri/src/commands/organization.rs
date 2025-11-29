@@ -1,9 +1,11 @@
+use crate::commands::validation::CreateOrganizationInput;
 use crate::db::AppState;
 use crate::error::AppError;
 use ::entity::organizations::{self, Entity as Organization};
 use sea_orm::*;
 use serde::{Deserialize, Serialize};
 use tauri::State;
+use validator::Validate;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct OrganizationResponse {
@@ -40,25 +42,24 @@ impl From<organizations::Model> for OrganizationResponse {
     }
 }
 
-#[tauri::command(rename_all = "snake_case")]
-pub async fn create_organization(
-    state: State<'_, AppState>,
-    campaign_id: String,
-    name: String,
-    org_type: Option<String>,
-    description: Option<String>,
+pub async fn create_organization_impl(
+    db: &DatabaseConnection,
+    input: CreateOrganizationInput,
 ) -> Result<OrganizationResponse, AppError> {
+    // Validate input
+    input.validate()?;
+
     let id = uuid::Uuid::new_v4().to_string();
     let now = chrono::Utc::now();
 
     let model = organizations::ActiveModel {
         id: Set(id),
-        campaign_id: Set(campaign_id),
-        name: Set(name),
-        org_type: Set(org_type.unwrap_or_else(|| "other".to_string())),
-        description: Set(description),
-        goals: Set(None),
-        resources: Set(None),
+        campaign_id: Set(input.campaign_id),
+        name: Set(input.name),
+        org_type: Set(input.org_type),
+        description: Set(input.description),
+        goals: Set(input.goals),
+        resources: Set(input.resources),
         reputation: Set(None),
         secrets: Set(None),
         is_active: Set(true),
@@ -66,8 +67,29 @@ pub async fn create_organization(
         updated_at: Set(now),
     };
 
-    let result = model.insert(&state.db).await?;
+    let result = model.insert(db).await?;
     Ok(result.into())
+}
+
+#[tauri::command(rename_all = "snake_case")]
+pub async fn create_organization(
+    state: State<'_, AppState>,
+    campaign_id: String,
+    name: String,
+    org_type: Option<String>,
+    description: Option<String>,
+    goals: Option<String>,
+    resources: Option<String>,
+) -> Result<OrganizationResponse, AppError> {
+    let input = CreateOrganizationInput {
+        campaign_id,
+        name,
+        org_type: org_type.unwrap_or_else(|| "other".to_string()),
+        description,
+        goals,
+        resources,
+    };
+    create_organization_impl(&state.db, input).await
 }
 
 #[tauri::command(rename_all = "snake_case")]

@@ -51,23 +51,70 @@ const LOCATION_PROMPT = `
 
 Create a vivid, useful location that players will want to explore.
 
-### Required Elements
+### Required Fields
 - **name**: An evocative name that hints at the location's nature
-- **location_type**: Category (city, tavern, dungeon, forest, etc.)
+- **location_type**: One of: world, continent, region, territory, settlement, district, building, room, landmark, wilderness
 
-### Description
-- **description**: Sensory details - sights, sounds, smells
-- Focus on what makes it unique and memorable
-- Include atmosphere and mood
+### Description (Main Content)
+The **description** is your primary output. It should be a rich, multi-paragraph narrative that includes:
+- Sensory details (sights, sounds, smells, textures)
+- What the place is KNOWN FOR
+- Its CURRENT STATE and any ongoing events or tensions
+- Atmosphere and mood
+- Practical details for gameplay
 
-### Practical Elements
-- **known_for**: What's notable about this place? What draws people here?
-- **current_state**: What's happening here NOW? Any tensions or events?
+### Location-Type Specific Content
 
-### Hooks
-- Include secrets or mysteries to discover
-- Suggest interesting NPCs who might be found here
-- Consider what makes this location useful for adventures
+Include these elements based on the location type:
+
+**World / Continent / Region**:
+- Geographic scope and notable features
+- Major cultures, peoples, or factions
+- Historical significance and defining events
+- Current political tensions or threats
+
+**Territory / Settlement**:
+- Governance and social structure
+- Economy and trade (what it produces or imports)
+- Notable landmarks and districts
+- Current mood and concerns of inhabitants
+
+**District**:
+- Character and vibe of the area
+- Typical businesses and services
+- Social class and who lives/works here
+- Day vs night atmosphere
+
+**Building**:
+- Architectural style and construction
+- Purpose and typical activities
+- Who owns/operates it and current patrons
+- Sensory atmosphere (lighting, smells, sounds)
+
+**Room**:
+- Immediate sensory details on entry
+- Contents and notable objects
+- Signs of recent activity or use
+- Mood and lighting
+
+**Landmark**:
+- Physical description and scale
+- Legends, myths, or history
+- How locals view it (sacred, feared, ignored)
+- What makes it significant
+
+**Wilderness**:
+- Terrain and natural hazards
+- Flora, fauna, and ecosystem
+- What travelers encounter
+- Hidden locations or secrets within
+
+### Story Hooks
+Weave into the description:
+- Secrets or mysteries to discover
+- NPCs who might be encountered
+- Potential conflicts or opportunities
+- Connections to broader campaign elements
 `;
 
 const ORGANIZATION_PROMPT = `

@@ -1,9 +1,11 @@
+use crate::commands::validation::CreateQuestInput;
 use crate::db::AppState;
 use crate::error::AppError;
 use ::entity::quests::{self, Entity as Quest};
 use sea_orm::*;
 use serde::{Deserialize, Serialize};
 use tauri::State;
+use validator::Validate;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct QuestResponse {
@@ -42,27 +44,25 @@ impl From<quests::Model> for QuestResponse {
     }
 }
 
-#[tauri::command(rename_all = "snake_case")]
-pub async fn create_quest(
-    state: State<'_, AppState>,
-    campaign_id: String,
-    name: String,
-    plot_type: Option<String>,
-    description: Option<String>,
-    hook: Option<String>,
+pub async fn create_quest_impl(
+    db: &DatabaseConnection,
+    input: CreateQuestInput,
 ) -> Result<QuestResponse, AppError> {
+    // Validate input
+    input.validate()?;
+
     let id = uuid::Uuid::new_v4().to_string();
     let now = chrono::Utc::now();
 
     let model = quests::ActiveModel {
         id: Set(id),
-        campaign_id: Set(campaign_id),
-        name: Set(name),
-        status: Set("planned".to_string()),
-        plot_type: Set(plot_type.unwrap_or_else(|| "side".to_string())),
-        description: Set(description),
-        hook: Set(hook),
-        objectives: Set(None),
+        campaign_id: Set(input.campaign_id),
+        name: Set(input.name),
+        status: Set(input.status),
+        plot_type: Set(input.plot_type),
+        description: Set(input.description),
+        hook: Set(input.hook),
+        objectives: Set(input.objectives),
         complications: Set(None),
         resolution: Set(None),
         reward: Set(None),
@@ -70,8 +70,31 @@ pub async fn create_quest(
         updated_at: Set(now),
     };
 
-    let result = model.insert(&state.db).await?;
+    let result = model.insert(db).await?;
     Ok(result.into())
+}
+
+#[tauri::command(rename_all = "snake_case")]
+pub async fn create_quest(
+    state: State<'_, AppState>,
+    campaign_id: String,
+    name: String,
+    plot_type: Option<String>,
+    status: Option<String>,
+    description: Option<String>,
+    hook: Option<String>,
+    objectives: Option<String>,
+) -> Result<QuestResponse, AppError> {
+    let input = CreateQuestInput {
+        campaign_id,
+        name,
+        plot_type: plot_type.unwrap_or_else(|| "side".to_string()),
+        status: status.unwrap_or_else(|| "planned".to_string()),
+        description,
+        hook,
+        objectives,
+    };
+    create_quest_impl(&state.db, input).await
 }
 
 #[tauri::command(rename_all = "snake_case")]

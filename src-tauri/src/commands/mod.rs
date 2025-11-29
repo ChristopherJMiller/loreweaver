@@ -12,5 +12,7 @@ pub mod session;
 pub mod tag;
 pub mod timeline;
 pub mod types;
+pub mod validation;
 
 pub use types::*;
+pub use validation::*;

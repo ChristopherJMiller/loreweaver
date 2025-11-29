@@ -1,9 +1,11 @@
+use crate::commands::validation::CreateCharacterInput;
 use crate::db::AppState;
 use crate::error::AppError;
 use ::entity::characters::{self, Entity as Character};
 use sea_orm::*;
 use serde::{Deserialize, Serialize};
 use tauri::State;
+use validator::Validate;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct CharacterResponse {
@@ -48,27 +50,26 @@ impl From<characters::Model> for CharacterResponse {
 
 pub async fn create_character_impl(
     db: &DatabaseConnection,
-    campaign_id: String,
-    name: String,
-    lineage: Option<String>,
-    occupation: Option<String>,
-    description: Option<String>,
+    input: CreateCharacterInput,
 ) -> Result<CharacterResponse, AppError> {
+    // Validate input
+    input.validate()?;
+
     let id = uuid::Uuid::new_v4().to_string();
     let now = chrono::Utc::now();
 
     let model = characters::ActiveModel {
         id: Set(id),
-        campaign_id: Set(campaign_id),
-        name: Set(name),
-        lineage: Set(lineage),
-        occupation: Set(occupation),
+        campaign_id: Set(input.campaign_id),
+        name: Set(input.name),
+        lineage: Set(input.lineage),
+        occupation: Set(input.occupation),
         is_alive: Set(true),
-        description: Set(description),
-        personality: Set(None),
-        motivations: Set(None),
-        secrets: Set(None),
-        voice_notes: Set(None),
+        description: Set(input.description),
+        personality: Set(input.personality),
+        motivations: Set(input.motivations),
+        secrets: Set(input.secrets),
+        voice_notes: Set(input.voice_notes),
         stat_block_json: Set(None),
         created_at: Set(now),
         updated_at: Set(now),
@@ -176,16 +177,23 @@ pub async fn create_character(
     lineage: Option<String>,
     occupation: Option<String>,
     description: Option<String>,
+    personality: Option<String>,
+    motivations: Option<String>,
+    secrets: Option<String>,
+    voice_notes: Option<String>,
 ) -> Result<CharacterResponse, AppError> {
-    create_character_impl(
-        &state.db,
+    let input = CreateCharacterInput {
         campaign_id,
         name,
         lineage,
         occupation,
         description,
-    )
-    .await
+        personality,
+        motivations,
+        secrets,
+        voice_notes,
+    };
+    create_character_impl(&state.db, input).await
 }
 
 #[tauri::command(rename_all = "snake_case")]

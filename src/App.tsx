@@ -1,5 +1,7 @@
+import { useEffect } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AppShell } from "@/components/layout";
+import { useAIStore } from "@/stores";
 import {
   DashboardPage,
   CampaignsPage,
@@ -25,6 +27,13 @@ import {
 } from "@/pages";
 
 function App() {
+  const initialize = useAIStore((state) => state.initialize);
+
+  // Initialize AI store on app startup to load stored API key
+  useEffect(() => {
+    initialize();
+  }, [initialize]);
+
   return (
     <BrowserRouter>
       <Routes>

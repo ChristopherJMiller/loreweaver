@@ -29,6 +29,9 @@ export interface GenerationRequest {
 
   /** Quality level (affects model choice and detail) */
   quality: GenerationQuality;
+
+  /** Parent location ID (for location entities) */
+  parentId?: string;
 }
 
 /**
@@ -79,6 +82,9 @@ export interface GenerationResult {
   /** Error message if failed */
   error?: string;
 
+  /** Number of generation attempts made */
+  attempts?: number;
+
   /** Token usage for cost tracking */
   usage?: {
     inputTokens: number;
@@ -88,7 +94,9 @@ export interface GenerationResult {
 
 /**
  * Entity field schemas for each entity type
- * Used for prompting and validation
+ * Used for prompting and validation.
+ *
+ * These should match the Zod schemas in src/ai/schemas/index.ts
  */
 export const ENTITY_FIELDS: Partial<Record<EntityType, string[]>> = {
   character: [
@@ -105,8 +113,6 @@ export const ENTITY_FIELDS: Partial<Record<EntityType, string[]>> = {
     "name",
     "location_type",
     "description",
-    "known_for",
-    "current_state",
   ],
   organization: [
     "name",
@@ -120,8 +126,8 @@ export const ENTITY_FIELDS: Partial<Record<EntityType, string[]>> = {
     "plot_type",
     "status",
     "description",
+    "hook",
     "objectives",
-    "rewards",
   ],
   hero: [
     "name",

@@ -10,6 +10,7 @@
 
 import { useState, useCallback } from "react";
 import { generateEntity } from "@/ai/agents";
+import { initializeClient, isClientInitialized } from "@/ai/client";
 import { invalidateCampaignSummary } from "@/ai/context";
 import type {
   GenerationRequest,
@@ -23,7 +24,25 @@ import {
   locations,
   organizations,
   quests,
+  relationships,
+  search,
 } from "@/lib/tauri";
+import { useAIStore, type ModelPreference } from "@/stores/aiStore";
+
+/**
+ * Map model preference from settings to generation quality
+ */
+function preferenceToQuality(pref: ModelPreference): GenerationQuality {
+  switch (pref) {
+    case "speed":
+      return "quick";
+    case "quality":
+      return "detailed";
+    case "balanced":
+    default:
+      return "balanced";
+  }
+}
 
 interface UseGeneratorOptions {
   /** Campaign ID to generate for */
@@ -52,8 +71,8 @@ interface UseGeneratorReturn {
   /** Current generation result */
   result: GenerationResult | null;
 
-  /** Trigger generation with context and quality */
-  generate: (context: string, quality: GenerationQuality) => Promise<void>;
+  /** Trigger generation with context and optional parentId (for locations) */
+  generate: (context: string, parentId?: string) => Promise<void>;
 
   /** Accept the generation and create the entity */
   accept: (data: {
@@ -73,13 +92,92 @@ interface UseGeneratorReturn {
 }
 
 /**
+ * Try to find an existing entity by name and type
+ * Returns the entity ID if found, null otherwise
+ */
+async function findEntityByName(
+  campaignId: string,
+  entityType: string,
+  name: string
+): Promise<string | null> {
+  try {
+    // Search for exact name match
+    const results = await search.entities({
+      campaign_id: campaignId,
+      query: name,
+      entity_types: [entityType as EntityType],
+      limit: 10,
+    });
+
+    // Find exact match (case-insensitive)
+    const exactMatch = results.find(
+      (r) => r.name.toLowerCase() === name.toLowerCase()
+    );
+
+    return exactMatch?.entity_id ?? null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Create relationships for a newly created entity
+ * Silently skips relationships where target entity cannot be found
+ */
+async function createRelationships(
+  campaignId: string,
+  sourceType: EntityType,
+  sourceId: string,
+  suggestedRelationships: SuggestedRelationship[]
+): Promise<void> {
+  for (const rel of suggestedRelationships) {
+    // Skip if marked as new entity (we don't auto-create entities)
+    if (rel.isNewEntity) {
+      continue;
+    }
+
+    // Try to find the target entity
+    const targetId = await findEntityByName(
+      campaignId,
+      rel.targetType,
+      rel.targetName
+    );
+
+    if (!targetId) {
+      // Target not found, skip this relationship
+      console.log(
+        `Skipping relationship: ${rel.targetType} "${rel.targetName}" not found`
+      );
+      continue;
+    }
+
+    try {
+      await relationships.create({
+        campaign_id: campaignId,
+        source_type: sourceType,
+        source_id: sourceId,
+        target_type: rel.targetType as EntityType,
+        target_id: targetId,
+        relationship_type: rel.relationshipType,
+        description: rel.description,
+        is_bidirectional: true,
+      });
+    } catch (error) {
+      // Log but don't fail the whole operation
+      console.error(`Failed to create relationship to ${rel.targetName}:`, error);
+    }
+  }
+}
+
+/**
  * Create entity using the appropriate Tauri command
  */
 async function createEntity(
   entityType: EntityType,
   campaignId: string,
   name: string,
-  fields: Record<string, string>
+  fields: Record<string, string>,
+  parentId?: string
 ): Promise<string> {
   const baseData = { campaign_id: campaignId, name, ...fields };
 
@@ -89,7 +187,10 @@ async function createEntity(
       return char.id;
 
     case "location":
-      const loc = await locations.create(baseData);
+      const loc = await locations.create({
+        ...baseData,
+        parent_id: parentId,
+      });
       return loc.id;
 
     case "organization":
@@ -110,6 +211,8 @@ export function useGenerator({
   entityType,
   onCreated,
 }: UseGeneratorOptions): UseGeneratorReturn {
+  const apiKey = useAIStore((state) => state.apiKey);
+  const modelPreference = useAIStore((state) => state.modelPreference);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
@@ -119,16 +222,24 @@ export function useGenerator({
   // Store last generation request for regeneration
   const [lastRequest, setLastRequest] = useState<{
     context: string;
-    quality: GenerationQuality;
+    parentId?: string;
   } | null>(null);
 
   const generate = useCallback(
-    async (context: string, quality: GenerationQuality) => {
+    async (context: string, parentId?: string) => {
       setIsLoading(true);
       setResult(null);
       setCreateError(null);
       setIsPreviewOpen(true);
-      setLastRequest({ context, quality });
+      setLastRequest({ context, parentId });
+
+      // Initialize client if needed
+      if (!isClientInitialized() && apiKey) {
+        initializeClient(apiKey);
+      }
+
+      // Get quality from settings
+      const quality = preferenceToQuality(modelPreference);
 
       try {
         const request: GenerationRequest = {
@@ -136,6 +247,7 @@ export function useGenerator({
           entityType,
           context: context || undefined,
           quality,
+          parentId,
         };
 
         const generationResult = await generateEntity(request);
@@ -149,12 +261,12 @@ export function useGenerator({
         setIsLoading(false);
       }
     },
-    [campaignId, entityType]
+    [campaignId, entityType, modelPreference, apiKey]
   );
 
   const regenerate = useCallback(async () => {
     if (lastRequest) {
-      await generate(lastRequest.context, lastRequest.quality);
+      await generate(lastRequest.context, lastRequest.parentId);
     }
   }, [lastRequest, generate]);
 
@@ -168,17 +280,24 @@ export function useGenerator({
       setCreateError(null);
 
       try {
-        // Create the entity
+        // Create the entity (pass parentId for locations)
         const entityId = await createEntity(
           entityType,
           campaignId,
           data.name,
-          data.fields
+          data.fields,
+          lastRequest?.parentId
         );
 
-        // TODO: Create relationships if any
-        // This would require looking up target entities by name
-        // and creating relationship records
+        // Create relationships if any were suggested
+        if (data.relationships && data.relationships.length > 0) {
+          await createRelationships(
+            campaignId,
+            entityType,
+            entityId,
+            data.relationships
+          );
+        }
 
         // Invalidate campaign summary cache
         invalidateCampaignSummary(campaignId);
@@ -195,7 +314,7 @@ export function useGenerator({
         setIsCreating(false);
       }
     },
-    [campaignId, entityType, onCreated]
+    [campaignId, entityType, onCreated, lastRequest?.parentId]
   );
 
   return {

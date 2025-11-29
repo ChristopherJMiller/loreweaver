@@ -5,6 +5,7 @@ use loreweaver_lib::commands::character::{
     create_character_impl, delete_character_impl, get_character_impl, list_characters_impl,
     update_character_impl,
 };
+use loreweaver_lib::commands::validation::CreateCharacterInput;
 
 #[tokio::test]
 async fn test_create_character() {
@@ -15,16 +16,20 @@ async fn test_create_character() {
         .await
         .expect("Failed to create campaign");
 
-    let character = create_character_impl(
-        &db,
-        campaign.id.clone(),
-        "Gandalf".to_string(),
-        Some("Maiar".to_string()),
-        Some("Wizard".to_string()),
-        Some("A wise wizard".to_string()),
-    )
-    .await
-    .expect("Failed to create character");
+    let input = CreateCharacterInput {
+        campaign_id: campaign.id.clone(),
+        name: "Gandalf".to_string(),
+        lineage: Some("Maiar".to_string()),
+        occupation: Some("Wizard".to_string()),
+        description: Some("A wise wizard".to_string()),
+        personality: None,
+        motivations: None,
+        secrets: None,
+        voice_notes: None,
+    };
+    let character = create_character_impl(&db, input)
+        .await
+        .expect("Failed to create character");
 
     assert_eq!(character.name, "Gandalf");
     assert_eq!(character.campaign_id, campaign.id);
@@ -42,16 +47,20 @@ async fn test_create_character_minimal() {
         .await
         .expect("Failed to create campaign");
 
-    let character = create_character_impl(
-        &db,
-        campaign.id.clone(),
-        "Simple NPC".to_string(),
-        None,
-        None,
-        None,
-    )
-    .await
-    .expect("Failed to create character");
+    let input = CreateCharacterInput {
+        campaign_id: campaign.id.clone(),
+        name: "Simple NPC".to_string(),
+        lineage: None,
+        occupation: None,
+        description: None,
+        personality: None,
+        motivations: None,
+        secrets: None,
+        voice_notes: None,
+    };
+    let character = create_character_impl(&db, input)
+        .await
+        .expect("Failed to create character");
 
     assert_eq!(character.name, "Simple NPC");
     assert_eq!(character.lineage, None);
@@ -68,16 +77,20 @@ async fn test_get_character() {
         .await
         .expect("Failed to create campaign");
 
-    let created = create_character_impl(
-        &db,
-        campaign.id.clone(),
-        "Test Character".to_string(),
-        None,
-        None,
-        None,
-    )
-    .await
-    .expect("Failed to create character");
+    let input = CreateCharacterInput {
+        campaign_id: campaign.id.clone(),
+        name: "Test Character".to_string(),
+        lineage: None,
+        occupation: None,
+        description: None,
+        personality: None,
+        motivations: None,
+        secrets: None,
+        voice_notes: None,
+    };
+    let created = create_character_impl(&db, input)
+        .await
+        .expect("Failed to create character");
 
     let retrieved = get_character_impl(&db, created.id.clone())
         .await
@@ -114,38 +127,51 @@ async fn test_list_characters_by_campaign() {
         .expect("Failed to create campaign 2");
 
     // Create characters in campaign 1
-    create_character_impl(
-        &db,
-        campaign1.id.clone(),
-        "Frodo".to_string(),
-        None,
-        None,
-        None,
-    )
-    .await
-    .expect("Failed to create Frodo");
-    create_character_impl(
-        &db,
-        campaign1.id.clone(),
-        "Sam".to_string(),
-        None,
-        None,
-        None,
-    )
-    .await
-    .expect("Failed to create Sam");
+    let input1 = CreateCharacterInput {
+        campaign_id: campaign1.id.clone(),
+        name: "Frodo".to_string(),
+        lineage: None,
+        occupation: None,
+        description: None,
+        personality: None,
+        motivations: None,
+        secrets: None,
+        voice_notes: None,
+    };
+    create_character_impl(&db, input1)
+        .await
+        .expect("Failed to create Frodo");
+
+    let input2 = CreateCharacterInput {
+        campaign_id: campaign1.id.clone(),
+        name: "Sam".to_string(),
+        lineage: None,
+        occupation: None,
+        description: None,
+        personality: None,
+        motivations: None,
+        secrets: None,
+        voice_notes: None,
+    };
+    create_character_impl(&db, input2)
+        .await
+        .expect("Failed to create Sam");
 
     // Create character in campaign 2
-    create_character_impl(
-        &db,
-        campaign2.id.clone(),
-        "Aragorn".to_string(),
-        None,
-        None,
-        None,
-    )
-    .await
-    .expect("Failed to create Aragorn");
+    let input3 = CreateCharacterInput {
+        campaign_id: campaign2.id.clone(),
+        name: "Aragorn".to_string(),
+        lineage: None,
+        occupation: None,
+        description: None,
+        personality: None,
+        motivations: None,
+        secrets: None,
+        voice_notes: None,
+    };
+    create_character_impl(&db, input3)
+        .await
+        .expect("Failed to create Aragorn");
 
     // List should only return characters from the specified campaign
     let campaign1_chars = list_characters_impl(&db, campaign1.id.clone())
@@ -170,36 +196,22 @@ async fn test_list_characters_ordered_by_name() {
         .expect("Failed to create campaign");
 
     // Create in non-alphabetical order
-    create_character_impl(
-        &db,
-        campaign.id.clone(),
-        "Zorro".to_string(),
-        None,
-        None,
-        None,
-    )
-    .await
-    .expect("Failed to create Zorro");
-    create_character_impl(
-        &db,
-        campaign.id.clone(),
-        "Alice".to_string(),
-        None,
-        None,
-        None,
-    )
-    .await
-    .expect("Failed to create Alice");
-    create_character_impl(
-        &db,
-        campaign.id.clone(),
-        "Bob".to_string(),
-        None,
-        None,
-        None,
-    )
-    .await
-    .expect("Failed to create Bob");
+    for name in ["Zorro", "Alice", "Bob"] {
+        let input = CreateCharacterInput {
+            campaign_id: campaign.id.clone(),
+            name: name.to_string(),
+            lineage: None,
+            occupation: None,
+            description: None,
+            personality: None,
+            motivations: None,
+            secrets: None,
+            voice_notes: None,
+        };
+        create_character_impl(&db, input)
+            .await
+            .expect(&format!("Failed to create {}", name));
+    }
 
     let characters = list_characters_impl(&db, campaign.id.clone())
         .await
@@ -220,16 +232,20 @@ async fn test_update_character() {
         .await
         .expect("Failed to create campaign");
 
-    let created = create_character_impl(
-        &db,
-        campaign.id.clone(),
-        "Original Name".to_string(),
-        None,
-        None,
-        None,
-    )
-    .await
-    .expect("Failed to create character");
+    let input = CreateCharacterInput {
+        campaign_id: campaign.id.clone(),
+        name: "Original Name".to_string(),
+        lineage: None,
+        occupation: None,
+        description: None,
+        personality: None,
+        motivations: None,
+        secrets: None,
+        voice_notes: None,
+    };
+    let created = create_character_impl(&db, input)
+        .await
+        .expect("Failed to create character");
 
     let updated = update_character_impl(
         &db,
@@ -268,16 +284,20 @@ async fn test_update_character_is_alive_toggle() {
         .await
         .expect("Failed to create campaign");
 
-    let created = create_character_impl(
-        &db,
-        campaign.id.clone(),
-        "Mortal Character".to_string(),
-        None,
-        None,
-        None,
-    )
-    .await
-    .expect("Failed to create character");
+    let input = CreateCharacterInput {
+        campaign_id: campaign.id.clone(),
+        name: "Mortal Character".to_string(),
+        lineage: None,
+        occupation: None,
+        description: None,
+        personality: None,
+        motivations: None,
+        secrets: None,
+        voice_notes: None,
+    };
+    let created = create_character_impl(&db, input)
+        .await
+        .expect("Failed to create character");
 
     assert!(created.is_alive);
 
@@ -331,16 +351,20 @@ async fn test_delete_character() {
         .await
         .expect("Failed to create campaign");
 
-    let created = create_character_impl(
-        &db,
-        campaign.id.clone(),
-        "To Delete".to_string(),
-        None,
-        None,
-        None,
-    )
-    .await
-    .expect("Failed to create character");
+    let input = CreateCharacterInput {
+        campaign_id: campaign.id.clone(),
+        name: "To Delete".to_string(),
+        lineage: None,
+        occupation: None,
+        description: None,
+        personality: None,
+        motivations: None,
+        secrets: None,
+        voice_notes: None,
+    };
+    let created = create_character_impl(&db, input)
+        .await
+        .expect("Failed to create character");
 
     let deleted = delete_character_impl(&db, created.id.clone())
         .await
@@ -363,16 +387,20 @@ async fn test_character_crud_lifecycle() {
         .expect("Failed to create campaign");
 
     // Create
-    let character = create_character_impl(
-        &db,
-        campaign.id.clone(),
-        "Lifecycle Character".to_string(),
-        Some("Dwarf".to_string()),
-        Some("Blacksmith".to_string()),
-        Some("A stout dwarf".to_string()),
-    )
-    .await
-    .expect("Create failed");
+    let input = CreateCharacterInput {
+        campaign_id: campaign.id.clone(),
+        name: "Lifecycle Character".to_string(),
+        lineage: Some("Dwarf".to_string()),
+        occupation: Some("Blacksmith".to_string()),
+        description: Some("A stout dwarf".to_string()),
+        personality: None,
+        motivations: None,
+        secrets: None,
+        voice_notes: None,
+    };
+    let character = create_character_impl(&db, input)
+        .await
+        .expect("Create failed");
 
     // Read
     let read = get_character_impl(&db, character.id.clone())
@@ -416,4 +444,31 @@ async fn test_character_crud_lifecycle() {
         .await
         .expect("List after delete failed");
     assert!(list_after.is_empty());
+}
+
+#[tokio::test]
+async fn test_create_character_validation_empty_name() {
+    let db = setup_test_db()
+        .await
+        .expect("Failed to setup test database");
+    let campaign = create_test_campaign(&db, "Test Campaign")
+        .await
+        .expect("Failed to create campaign");
+
+    let input = CreateCharacterInput {
+        campaign_id: campaign.id.clone(),
+        name: "".to_string(), // Empty name should fail validation
+        lineage: None,
+        occupation: None,
+        description: None,
+        personality: None,
+        motivations: None,
+        secrets: None,
+        voice_notes: None,
+    };
+    let result = create_character_impl(&db, input).await;
+
+    assert!(result.is_err());
+    let err = result.unwrap_err();
+    assert!(err.to_string().contains("Validation"));
 }

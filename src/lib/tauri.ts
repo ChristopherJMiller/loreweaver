@@ -87,9 +87,6 @@ export const locations = {
     parent_id?: string;
     location_type?: string;
     description?: string;
-    known_for?: string;
-    current_state?: string;
-    detail_level?: number;
   }) => invoke<Location>("create_location", data),
 
   get: (id: string) => invoke<Location>("get_location", { id }),
@@ -106,9 +103,8 @@ export const locations = {
     parent_id?: string;
     location_type?: string;
     description?: string;
-    known_for?: string;
-    current_state?: string;
     detail_level?: number;
+    gm_notes?: string;
   }) => invoke<Location>("update_location", data),
 
   delete: (id: string) => invoke<boolean>("delete_location", { id }),
@@ -155,15 +151,11 @@ export const quests = {
   create: (data: {
     campaign_id: string;
     name: string;
-    quest_type?: string;
+    plot_type?: string;
     status?: string;
     description?: string;
+    hook?: string;
     objectives?: string;
-    rewards?: string;
-    giver_id?: string;
-    target_id?: string;
-    deadline?: string;
-    priority?: number;
   }) => invoke<Quest>("create_quest", data),
 
   get: (id: string) => invoke<Quest>("get_quest", { id }),
@@ -173,15 +165,14 @@ export const quests = {
   update: (data: {
     id: string;
     name?: string;
-    quest_type?: string;
+    plot_type?: string;
     status?: string;
     description?: string;
+    hook?: string;
     objectives?: string;
-    rewards?: string;
-    giver_id?: string;
-    target_id?: string;
-    deadline?: string;
-    priority?: number;
+    complications?: string;
+    resolution?: string;
+    reward?: string;
   }) => invoke<Quest>("update_quest", data),
 
   delete: (id: string) => invoke<boolean>("delete_quest", { id }),

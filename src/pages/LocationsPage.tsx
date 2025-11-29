@@ -151,6 +151,7 @@ export function LocationsPage() {
             entityType="location"
             onGenerate={generator.generate}
             isLoading={generator.isLoading}
+            locations={entities}
           >
             Generate
           </GenerateButton>

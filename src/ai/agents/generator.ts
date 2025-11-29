@@ -2,97 +2,39 @@
  * Generator Agent
  *
  * Creates new entities using AI with structured output.
- * Uses transactional mode: single request → structured response → preview.
+ * Uses Anthropic's structured outputs beta for guaranteed JSON format,
+ * with Zod validation for semantic correctness.
  */
 
-import { createMessage, type Tool } from "../client";
+import { z } from "zod";
+import { createStructuredMessage, type MessageParam } from "../client";
 import { getCampaignSummary, formatCampaignSummary } from "../context";
-import { selectModel } from "../model-selector";
 import type {
   GenerationRequest,
   GenerationResult,
-  SuggestedRelationship,
   GenerationQuality,
 } from "./types";
 import { ENTITY_FIELDS } from "./types";
 import { getEntityPrompt } from "./generator/prompts";
+import {
+  getSchemaForEntityType,
+  type EntityOutput,
+} from "../schemas";
 import type { EntityType } from "@/types";
-import type { TaskContext, QualityPreference } from "../types";
+
+/** Maximum validation retries (2 retries = 3 total attempts) */
+const MAX_VALIDATION_RETRIES = 2;
 
 /**
- * Tool for structured entity output
+ * Get model for structured output generation.
+ *
+ * Note: Always uses Sonnet because Haiku doesn't support structured outputs
+ * (output_format) yet. When Haiku gains support, we can restore quality-based
+ * model selection.
  */
-const SUBMIT_ENTITY_TOOL: Tool = {
-  name: "submit_entity",
-  description:
-    "Submit the generated entity. You MUST call this tool to complete the generation.",
-  input_schema: {
-    type: "object" as const,
-    properties: {
-      name: {
-        type: "string",
-        description: "The entity's name",
-      },
-      fields: {
-        type: "object",
-        description:
-          "Entity-specific fields. Keys should match the entity type schema.",
-        additionalProperties: { type: "string" },
-      },
-      relationships: {
-        type: "array",
-        description: "Suggested relationships to other entities",
-        items: {
-          type: "object",
-          properties: {
-            targetType: {
-              type: "string",
-              description: "Type of the target entity",
-            },
-            targetName: {
-              type: "string",
-              description: "Name of the target entity",
-            },
-            relationshipType: {
-              type: "string",
-              description: "Type of relationship (e.g., ally, enemy, works_for)",
-            },
-            description: {
-              type: "string",
-              description: "Description of the relationship",
-            },
-            isNewEntity: {
-              type: "boolean",
-              description: "Whether this is a new entity suggestion",
-            },
-          },
-          required: ["targetType", "targetName", "relationshipType"],
-        },
-      },
-      reasoning: {
-        type: "string",
-        description: "Brief explanation of your creative choices",
-      },
-    },
-    required: ["name", "fields", "reasoning"],
-  },
-};
-
-/**
- * Map quality to model and detail level
- */
-function getModelForQuality(quality: GenerationQuality): string {
-  const userPreference: QualityPreference =
-    quality === "quick" ? "speed" : quality === "detailed" ? "quality" : "balanced";
-
-  const context: TaskContext = {
-    taskType: "generate",
-    contentLength: quality === "detailed" ? "long" : "medium",
-    requiresReasoning: false,
-    userPreference,
-  };
-
-  return selectModel(context);
+function getModelForStructuredOutput(): string {
+  // Haiku doesn't support output_format yet, always use Sonnet
+  return "claude-sonnet-4-5-20250929";
 }
 
 /**
@@ -129,9 +71,12 @@ ${entityGuidance}
 3. **Specificity** - Be concrete, not generic. Give unique details.
 4. **${detailLevel}**
 
-## Output
-You MUST call the submit_entity tool to provide your generated entity.
-Do NOT explain yourself in text - put everything in the tool call.
+## Output Format
+Respond with a JSON object containing:
+- name: The entity's name (1-200 characters)
+- fields: Entity-specific fields matching the schema
+- relationships: Optional array of suggested relationships to other entities
+- reasoning: Brief explanation of your creative choices
 `;
 }
 
@@ -166,25 +111,46 @@ function buildUserPrompt(
   const fields = ENTITY_FIELDS[entityType] || [];
   lines.push(fields.join(", "));
 
-  lines.push("");
-  lines.push("Call submit_entity with your generated content.");
-
   return lines.join("\n");
 }
 
 /**
+ * Format Zod validation errors for retry feedback
+ */
+function formatZodError(error: z.ZodError): string {
+  const issues = error.issues
+    .map((issue) => `- ${issue.path.join(".")}: ${issue.message}`)
+    .join("\n");
+
+  return `Your output has validation errors:\n${issues}\n\nPlease fix these issues and try again.`;
+}
+
+/**
  * Generate a new entity using AI
+ *
+ * Uses Anthropic's structured outputs for guaranteed JSON format,
+ * with Zod validation for semantic correctness (enum values, field lengths).
+ * Includes automatic retry loop if validation fails.
  */
 export async function generateEntity(
   request: GenerationRequest
 ): Promise<GenerationResult> {
   try {
+    // Get the Zod schema for this entity type
+    const schema = getSchemaForEntityType(request.entityType);
+    if (!schema) {
+      return {
+        success: false,
+        error: `Unsupported entity type for generation: ${request.entityType}`,
+      };
+    }
+
     // Get campaign context for injection
     const campaignSummary = await getCampaignSummary(request.campaignId);
     const campaignContext = formatCampaignSummary(campaignSummary);
 
-    // Select model based on quality
-    const model = getModelForQuality(request.quality);
+    // Select model for structured output (always Sonnet for now)
+    const model = getModelForStructuredOutput();
 
     // Build prompts
     const systemPrompt = buildSystemPrompt(
@@ -198,64 +164,96 @@ export async function generateEntity(
       request.relatedTo
     );
 
-    // Call Claude with tool
-    const response = await createMessage({
-      model,
-      system: systemPrompt,
-      messages: [{ role: "user", content: userPrompt }],
-      tools: [SUBMIT_ENTITY_TOOL],
-      maxTokens: 2048,
-    });
+    // Track token usage across attempts
+    let totalInputTokens = 0;
+    let totalOutputTokens = 0;
 
-    // Extract tool call
-    const toolUse = response.content.find((block) => block.type === "tool_use");
-    if (!toolUse || toolUse.type !== "tool_use") {
-      return {
-        success: false,
-        error: "AI did not provide structured output",
-        usage: {
-          inputTokens: response.usage.input_tokens,
-          outputTokens: response.usage.output_tokens,
-        },
-      };
+    // Build message history for multi-turn retry
+    let messages: MessageParam[] = [{ role: "user", content: userPrompt }];
+    let attempts = 0;
+    let lastRawOutput = "";
+
+    // Retry loop with validation
+    while (attempts < MAX_VALIDATION_RETRIES + 1) {
+      attempts++;
+
+      try {
+        // Call Claude with structured output
+        const response = await createStructuredMessage({
+          model,
+          system: systemPrompt,
+          messages,
+          schema,
+          maxTokens: 2048,
+        });
+
+        // Accumulate token usage
+        totalInputTokens += response.usage.input_tokens;
+        totalOutputTokens += response.usage.output_tokens;
+
+        // Zod validation passed - build success result
+        const data = response.data as EntityOutput;
+
+        return {
+          success: true,
+          entity: {
+            type: request.entityType,
+            name: data.name,
+            fields: data.fields as Record<string, string>,
+          },
+          suggestedRelationships: data.relationships?.map((rel) => ({
+            targetType: rel.targetType,
+            targetName: rel.targetName,
+            relationshipType: rel.relationshipType,
+            description: rel.description,
+            isNewEntity: rel.isNewEntity,
+          })),
+          reasoning: data.reasoning,
+          attempts,
+          usage: {
+            inputTokens: totalInputTokens,
+            outputTokens: totalOutputTokens,
+          },
+        };
+      } catch (error) {
+        if (error instanceof z.ZodError) {
+          // Zod validation failed - retry with feedback
+          if (attempts >= MAX_VALIDATION_RETRIES + 1) {
+            // Max retries exceeded
+            return {
+              success: false,
+              error: `Validation failed after ${attempts} attempts: ${error.issues.map((i) => i.message).join(", ")}`,
+              attempts,
+              usage: {
+                inputTokens: totalInputTokens,
+                outputTokens: totalOutputTokens,
+              },
+            };
+          }
+
+          // Build retry messages with validation feedback
+          const feedback = formatZodError(error);
+          messages = [
+            ...messages,
+            { role: "assistant", content: lastRawOutput || "{}" },
+            { role: "user", content: feedback },
+          ];
+          continue;
+        }
+
+        // Re-throw non-Zod errors
+        throw error;
+      }
     }
 
-    // Parse tool input
-    const input = toolUse.input as {
-      name: string;
-      fields: Record<string, string>;
-      relationships?: Array<{
-        targetType: string;
-        targetName: string;
-        relationshipType: string;
-        description?: string;
-        isNewEntity?: boolean;
-      }>;
-      reasoning: string;
-    };
-
-    // Build result
-    const suggestedRelationships: SuggestedRelationship[] =
-      input.relationships?.map((rel) => ({
-        targetType: rel.targetType,
-        targetName: rel.targetName,
-        relationshipType: rel.relationshipType,
-        description: rel.description,
-        isNewEntity: rel.isNewEntity,
-      })) ?? [];
-
+    // Should not reach here, but handle edge case
     return {
-      success: true,
-      entity: {
-        type: request.entityType,
-        name: input.name,
-        fields: input.fields,
-      },
-      suggestedRelationships,
-      reasoning: input.reasoning,
+      success: false,
+      error: `Generation failed after ${attempts} attempts`,
+      attempts,
       usage: {
-        inputTokens: response.usage.input_tokens,
-        outputTokens: response.usage.output_tokens,
+        inputTokens: totalInputTokens,
+        outputTokens: totalOutputTokens,
       },
     };
   } catch (error) {

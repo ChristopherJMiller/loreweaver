@@ -5,6 +5,24 @@ use loreweaver_lib::commands::location::{
     create_location_impl, delete_location_impl, get_location_children_impl, get_location_impl,
     list_locations_impl, update_location_impl,
 };
+use loreweaver_lib::commands::validation::CreateLocationInput;
+
+/// Helper to create a test location
+fn make_location_input(
+    campaign_id: String,
+    name: &str,
+    location_type: &str,
+    parent_id: Option<String>,
+    description: Option<&str>,
+) -> CreateLocationInput {
+    CreateLocationInput {
+        campaign_id,
+        name: name.to_string(),
+        location_type: location_type.to_string(),
+        parent_id,
+        description: description.map(|s| s.to_string()),
+    }
+}
 
 #[tokio::test]
 async fn test_create_location() {
@@ -15,45 +33,22 @@ async fn test_create_location() {
         .await
         .expect("Failed to create campaign");
 
-    let location = create_location_impl(
-        &db,
+    let input = make_location_input(
         campaign.id.clone(),
-        "The Shire".to_string(),
-        Some("region".to_string()),
+        "The Shire",
+        "region",
         None,
-        Some("A peaceful land".to_string()),
-    )
-    .await
-    .expect("Failed to create location");
+        Some("A peaceful land"),
+    );
+    let location = create_location_impl(&db, input)
+        .await
+        .expect("Failed to create location");
 
     assert_eq!(location.name, "The Shire");
     assert_eq!(location.campaign_id, campaign.id);
     assert_eq!(location.location_type, "region");
     assert_eq!(location.parent_id, None);
     assert_eq!(location.description, Some("A peaceful land".to_string()));
-}
-
-#[tokio::test]
-async fn test_create_location_default_type() {
-    let db = setup_test_db()
-        .await
-        .expect("Failed to setup test database");
-    let campaign = create_test_campaign(&db, "Test Campaign")
-        .await
-        .expect("Failed to create campaign");
-
-    let location = create_location_impl(
-        &db,
-        campaign.id.clone(),
-        "Hobbiton".to_string(),
-        None, // No type specified
-        None,
-        None,
-    )
-    .await
-    .expect("Failed to create location");
-
-    assert_eq!(location.location_type, "settlement");
 }
 
 #[tokio::test]
@@ -66,28 +61,22 @@ async fn test_create_location_with_parent() {
         .expect("Failed to create campaign");
 
     // Create parent location
-    let parent = create_location_impl(
-        &db,
-        campaign.id.clone(),
-        "The Shire".to_string(),
-        Some("region".to_string()),
-        None,
-        None,
-    )
-    .await
-    .expect("Failed to create parent");
+    let parent_input = make_location_input(campaign.id.clone(), "The Shire", "region", None, None);
+    let parent = create_location_impl(&db, parent_input)
+        .await
+        .expect("Failed to create parent");
 
     // Create child location
-    let child = create_location_impl(
-        &db,
+    let child_input = make_location_input(
         campaign.id.clone(),
-        "Hobbiton".to_string(),
-        Some("village".to_string()),
+        "Hobbiton",
+        "settlement",
         Some(parent.id.clone()),
         None,
-    )
-    .await
-    .expect("Failed to create child");
+    );
+    let child = create_location_impl(&db, child_input)
+        .await
+        .expect("Failed to create child");
 
     assert_eq!(child.parent_id, Some(parent.id));
 }
@@ -101,16 +90,10 @@ async fn test_get_location() {
         .await
         .expect("Failed to create campaign");
 
-    let created = create_location_impl(
-        &db,
-        campaign.id.clone(),
-        "Test Location".to_string(),
-        None,
-        None,
-        None,
-    )
-    .await
-    .expect("Failed to create location");
+    let input = make_location_input(campaign.id.clone(), "Test Location", "settlement", None, None);
+    let created = create_location_impl(&db, input)
+        .await
+        .expect("Failed to create location");
 
     let retrieved = get_location_impl(&db, created.id.clone())
         .await
@@ -147,38 +130,18 @@ async fn test_list_locations_by_campaign() {
         .expect("Failed to create campaign 2");
 
     // Create locations in campaign 1
-    create_location_impl(
-        &db,
-        campaign1.id.clone(),
-        "Location A".to_string(),
-        None,
-        None,
-        None,
-    )
-    .await
-    .expect("Failed to create location");
-    create_location_impl(
-        &db,
-        campaign1.id.clone(),
-        "Location B".to_string(),
-        None,
-        None,
-        None,
-    )
-    .await
-    .expect("Failed to create location");
+    for name in ["Location A", "Location B"] {
+        let input = make_location_input(campaign1.id.clone(), name, "settlement", None, None);
+        create_location_impl(&db, input)
+            .await
+            .expect("Failed to create location");
+    }
 
     // Create location in campaign 2
-    create_location_impl(
-        &db,
-        campaign2.id.clone(),
-        "Location C".to_string(),
-        None,
-        None,
-        None,
-    )
-    .await
-    .expect("Failed to create location");
+    let input = make_location_input(campaign2.id.clone(), "Location C", "settlement", None, None);
+    create_location_impl(&db, input)
+        .await
+        .expect("Failed to create location");
 
     let campaign1_locs = list_locations_impl(&db, campaign1.id.clone())
         .await
@@ -201,36 +164,12 @@ async fn test_list_locations_ordered_by_name() {
         .expect("Failed to create campaign");
 
     // Create in non-alphabetical order
-    create_location_impl(
-        &db,
-        campaign.id.clone(),
-        "Zephyr City".to_string(),
-        None,
-        None,
-        None,
-    )
-    .await
-    .expect("Failed to create location");
-    create_location_impl(
-        &db,
-        campaign.id.clone(),
-        "Alpha Town".to_string(),
-        None,
-        None,
-        None,
-    )
-    .await
-    .expect("Failed to create location");
-    create_location_impl(
-        &db,
-        campaign.id.clone(),
-        "Beta Village".to_string(),
-        None,
-        None,
-        None,
-    )
-    .await
-    .expect("Failed to create location");
+    for name in ["Zephyr City", "Alpha Town", "Beta Village"] {
+        let input = make_location_input(campaign.id.clone(), name, "settlement", None, None);
+        create_location_impl(&db, input)
+            .await
+            .expect("Failed to create location");
+    }
 
     let locations = list_locations_impl(&db, campaign.id.clone())
         .await
@@ -252,51 +191,40 @@ async fn test_get_location_children() {
         .expect("Failed to create campaign");
 
     // Create parent
-    let parent = create_location_impl(
-        &db,
-        campaign.id.clone(),
-        "Kingdom".to_string(),
-        Some("kingdom".to_string()),
-        None,
-        None,
-    )
-    .await
-    .expect("Failed to create parent");
+    let parent_input = make_location_input(campaign.id.clone(), "Kingdom", "territory", None, None);
+    let parent = create_location_impl(&db, parent_input)
+        .await
+        .expect("Failed to create parent");
 
     // Create children
-    create_location_impl(
-        &db,
+    let child1_input = make_location_input(
         campaign.id.clone(),
-        "Northern Province".to_string(),
-        Some("province".to_string()),
+        "Northern Province",
+        "region",
         Some(parent.id.clone()),
         None,
-    )
-    .await
-    .expect("Failed to create child 1");
+    );
+    create_location_impl(&db, child1_input)
+        .await
+        .expect("Failed to create child 1");
 
-    create_location_impl(
-        &db,
+    let child2_input = make_location_input(
         campaign.id.clone(),
-        "Southern Province".to_string(),
-        Some("province".to_string()),
+        "Southern Province",
+        "region",
         Some(parent.id.clone()),
         None,
-    )
-    .await
-    .expect("Failed to create child 2");
+    );
+    create_location_impl(&db, child2_input)
+        .await
+        .expect("Failed to create child 2");
 
     // Create sibling (no parent)
-    create_location_impl(
-        &db,
-        campaign.id.clone(),
-        "Independent City".to_string(),
-        None,
-        None,
-        None,
-    )
-    .await
-    .expect("Failed to create sibling");
+    let sibling_input =
+        make_location_input(campaign.id.clone(), "Independent City", "settlement", None, None);
+    create_location_impl(&db, sibling_input)
+        .await
+        .expect("Failed to create sibling");
 
     let children = get_location_children_impl(&db, parent.id.clone())
         .await
@@ -318,40 +246,35 @@ async fn test_location_hierarchy_three_levels() {
         .expect("Failed to create campaign");
 
     // Create continent
-    let continent = create_location_impl(
-        &db,
-        campaign.id.clone(),
-        "Middle-earth".to_string(),
-        Some("continent".to_string()),
-        None,
-        None,
-    )
-    .await
-    .expect("Failed to create continent");
+    let continent_input =
+        make_location_input(campaign.id.clone(), "Middle-earth", "continent", None, None);
+    let continent = create_location_impl(&db, continent_input)
+        .await
+        .expect("Failed to create continent");
 
     // Create region under continent
-    let region = create_location_impl(
-        &db,
+    let region_input = make_location_input(
         campaign.id.clone(),
-        "The Shire".to_string(),
-        Some("region".to_string()),
+        "The Shire",
+        "region",
         Some(continent.id.clone()),
         None,
-    )
-    .await
-    .expect("Failed to create region");
+    );
+    let region = create_location_impl(&db, region_input)
+        .await
+        .expect("Failed to create region");
 
-    // Create village under region
-    let village = create_location_impl(
-        &db,
+    // Create settlement under region
+    let village_input = make_location_input(
         campaign.id.clone(),
-        "Hobbiton".to_string(),
-        Some("village".to_string()),
+        "Hobbiton",
+        "settlement",
         Some(region.id.clone()),
         None,
-    )
-    .await
-    .expect("Failed to create village");
+    );
+    let village = create_location_impl(&db, village_input)
+        .await
+        .expect("Failed to create village");
 
     // Verify hierarchy
     let continent_children = get_location_children_impl(&db, continent.id.clone())
@@ -381,22 +304,16 @@ async fn test_update_location() {
         .await
         .expect("Failed to create campaign");
 
-    let created = create_location_impl(
-        &db,
-        campaign.id.clone(),
-        "Original".to_string(),
-        None,
-        None,
-        None,
-    )
-    .await
-    .expect("Failed to create location");
+    let input = make_location_input(campaign.id.clone(), "Original", "settlement", None, None);
+    let created = create_location_impl(&db, input)
+        .await
+        .expect("Failed to create location");
 
     let updated = update_location_impl(
         &db,
         created.id.clone(),
         Some("Updated Name".to_string()),
-        Some("fortress".to_string()),
+        Some("landmark".to_string()),
         None,
         Some("A mighty fortress".to_string()),
         Some(5),
@@ -406,7 +323,7 @@ async fn test_update_location() {
     .expect("Failed to update location");
 
     assert_eq!(updated.name, "Updated Name");
-    assert_eq!(updated.location_type, "fortress");
+    assert_eq!(updated.location_type, "landmark");
     assert_eq!(updated.description, Some("A mighty fortress".to_string()));
     assert_eq!(updated.detail_level, 5);
     assert_eq!(
@@ -425,39 +342,29 @@ async fn test_update_location_reparent() {
         .expect("Failed to create campaign");
 
     // Create two potential parents
-    let parent1 = create_location_impl(
-        &db,
-        campaign.id.clone(),
-        "Parent 1".to_string(),
-        None,
-        None,
-        None,
-    )
-    .await
-    .expect("Failed to create parent 1");
+    let parent1_input =
+        make_location_input(campaign.id.clone(), "Parent 1", "region", None, None);
+    let parent1 = create_location_impl(&db, parent1_input)
+        .await
+        .expect("Failed to create parent 1");
 
-    let parent2 = create_location_impl(
-        &db,
-        campaign.id.clone(),
-        "Parent 2".to_string(),
-        None,
-        None,
-        None,
-    )
-    .await
-    .expect("Failed to create parent 2");
+    let parent2_input =
+        make_location_input(campaign.id.clone(), "Parent 2", "region", None, None);
+    let parent2 = create_location_impl(&db, parent2_input)
+        .await
+        .expect("Failed to create parent 2");
 
     // Create child under parent 1
-    let child = create_location_impl(
-        &db,
+    let child_input = make_location_input(
         campaign.id.clone(),
-        "Child".to_string(),
-        None,
+        "Child",
+        "settlement",
         Some(parent1.id.clone()),
         None,
-    )
-    .await
-    .expect("Failed to create child");
+    );
+    let child = create_location_impl(&db, child_input)
+        .await
+        .expect("Failed to create child");
 
     assert_eq!(child.parent_id, Some(parent1.id.clone()));
 
@@ -500,16 +407,10 @@ async fn test_delete_location() {
         .await
         .expect("Failed to create campaign");
 
-    let created = create_location_impl(
-        &db,
-        campaign.id.clone(),
-        "To Delete".to_string(),
-        None,
-        None,
-        None,
-    )
-    .await
-    .expect("Failed to create location");
+    let input = make_location_input(campaign.id.clone(), "To Delete", "settlement", None, None);
+    let created = create_location_impl(&db, input)
+        .await
+        .expect("Failed to create location");
 
     let deleted = delete_location_impl(&db, created.id.clone())
         .await
@@ -531,16 +432,16 @@ async fn test_location_crud_lifecycle() {
         .expect("Failed to create campaign");
 
     // Create
-    let location = create_location_impl(
-        &db,
+    let input = make_location_input(
         campaign.id.clone(),
-        "Lifecycle Location".to_string(),
-        Some("dungeon".to_string()),
+        "Lifecycle Location",
+        "building",
         None,
-        Some("A dark dungeon".to_string()),
-    )
-    .await
-    .expect("Create failed");
+        Some("A dark dungeon"),
+    );
+    let location = create_location_impl(&db, input)
+        .await
+        .expect("Create failed");
 
     // Read
     let read = get_location_impl(&db, location.id.clone())
@@ -580,4 +481,50 @@ async fn test_location_crud_lifecycle() {
         .await
         .expect("List after delete failed");
     assert!(list_after.is_empty());
+}
+
+#[tokio::test]
+async fn test_create_location_validation_empty_name() {
+    let db = setup_test_db()
+        .await
+        .expect("Failed to setup test database");
+    let campaign = create_test_campaign(&db, "Test Campaign")
+        .await
+        .expect("Failed to create campaign");
+
+    let input = CreateLocationInput {
+        campaign_id: campaign.id.clone(),
+        name: "".to_string(), // Empty name should fail
+        location_type: "settlement".to_string(),
+        parent_id: None,
+        description: None,
+    };
+    let result = create_location_impl(&db, input).await;
+
+    assert!(result.is_err());
+    let err = result.unwrap_err();
+    assert!(err.to_string().contains("Validation"));
+}
+
+#[tokio::test]
+async fn test_create_location_validation_invalid_type() {
+    let db = setup_test_db()
+        .await
+        .expect("Failed to setup test database");
+    let campaign = create_test_campaign(&db, "Test Campaign")
+        .await
+        .expect("Failed to create campaign");
+
+    let input = CreateLocationInput {
+        campaign_id: campaign.id.clone(),
+        name: "Test".to_string(),
+        location_type: "invalid_type".to_string(), // Invalid type should fail
+        parent_id: None,
+        description: None,
+    };
+    let result = create_location_impl(&db, input).await;
+
+    assert!(result.is_err());
+    let err = result.unwrap_err();
+    assert!(err.to_string().contains("Validation"));
 }

@@ -1,9 +1,11 @@
+use crate::commands::validation::CreateLocationInput;
 use crate::db::AppState;
 use crate::error::AppError;
 use ::entity::locations::{self, Entity as Location};
 use sea_orm::*;
 use serde::{Deserialize, Serialize};
 use tauri::State;
+use validator::Validate;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct LocationResponse {
@@ -40,22 +42,21 @@ impl From<locations::Model> for LocationResponse {
 
 pub async fn create_location_impl(
     db: &DatabaseConnection,
-    campaign_id: String,
-    name: String,
-    location_type: Option<String>,
-    parent_id: Option<String>,
-    description: Option<String>,
+    input: CreateLocationInput,
 ) -> Result<LocationResponse, AppError> {
+    // Validate input
+    input.validate()?;
+
     let id = uuid::Uuid::new_v4().to_string();
     let now = chrono::Utc::now();
 
     let model = locations::ActiveModel {
         id: Set(id),
-        campaign_id: Set(campaign_id),
-        parent_id: Set(parent_id),
-        name: Set(name),
-        location_type: Set(location_type.unwrap_or_else(|| "settlement".to_string())),
-        description: Set(description),
+        campaign_id: Set(input.campaign_id),
+        parent_id: Set(input.parent_id),
+        name: Set(input.name),
+        location_type: Set(input.location_type),
+        description: Set(input.description),
         detail_level: Set(0),
         gm_notes: Set(None),
         created_at: Set(now),
@@ -162,15 +163,14 @@ pub async fn create_location(
     parent_id: Option<String>,
     description: Option<String>,
 ) -> Result<LocationResponse, AppError> {
-    create_location_impl(
-        &state.db,
+    let input = CreateLocationInput {
         campaign_id,
         name,
-        location_type,
+        location_type: location_type.unwrap_or_else(|| "settlement".to_string()),
         parent_id,
         description,
-    )
-    .await
+    };
+    create_location_impl(&state.db, input).await
 }
 
 #[tauri::command(rename_all = "snake_case")]

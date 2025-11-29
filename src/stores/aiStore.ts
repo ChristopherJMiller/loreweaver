@@ -157,6 +157,7 @@ export const useAIStore = create<AIState>()((set, get) => ({
  * Check if AI features are available (API key is configured and valid)
  */
 export function useAIAvailable(): boolean {
-  const { apiKey, isApiKeyValid } = useAIStore();
+  const apiKey = useAIStore((state) => state.apiKey);
+  const isApiKeyValid = useAIStore((state) => state.isApiKeyValid);
   return apiKey !== null && isApiKeyValid === true;
 }
