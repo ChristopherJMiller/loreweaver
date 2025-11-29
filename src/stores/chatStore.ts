@@ -14,6 +14,8 @@ export interface ChatMessage {
   content: string;
   toolName?: string;
   toolInput?: unknown;
+  /** Structured data from tool result (for rich rendering) */
+  toolData?: unknown;
   timestamp: Date;
   /** Proposal data for proposal messages */
   proposal?: EntityProposal;
@@ -28,16 +30,29 @@ interface ChatState {
   streamingMessageId: string | null;
   /** AbortController for cancelling the current operation */
   abortController: AbortController | null;
+  /** Session token usage tracking */
+  sessionInputTokens: number;
+  sessionOutputTokens: number;
+  /** Session cache token tracking */
+  sessionCacheReadTokens: number;
+  sessionCacheCreationTokens: number;
 
   // Actions
   addUserMessage: (content: string) => string;
   addAssistantMessage: (content: string, toolName?: string) => string;
-  addToolResult: (content: string, toolName: string) => string;
+  addToolResult: (content: string, toolName: string, toolData?: unknown) => string;
   addError: (error: string) => string;
   updateMessage: (id: string, content: string) => void;
   setRunning: (running: boolean) => void;
   clearMessages: () => void;
   clearError: () => void;
+  /** Add token usage from an agent run (includes cache metrics) */
+  addTokenUsage: (usage: {
+    inputTokens: number;
+    outputTokens: number;
+    cacheReadTokens: number;
+    cacheCreationTokens: number;
+  }) => void;
 
   // Streaming actions
   /** Start streaming a new assistant message, returns the message ID */
@@ -71,12 +86,20 @@ function generateId(): string {
   return `msg_${Date.now()}_${++messageCounter}`;
 }
 
+// Streaming buffer for batching updates
+let streamingBuffer = "";
+let streamingRafId: number | null = null;
+
 export const useChatStore = create<ChatState>((set, get) => ({
   messages: [],
   isRunning: false,
   error: null,
   streamingMessageId: null,
   abortController: null,
+  sessionInputTokens: 0,
+  sessionOutputTokens: 0,
+  sessionCacheReadTokens: 0,
+  sessionCacheCreationTokens: 0,
 
   addUserMessage: (content: string) => {
     const id = generateId();
@@ -112,7 +135,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
     return id;
   },
 
-  addToolResult: (content: string, toolName: string) => {
+  addToolResult: (content: string, toolName: string, toolData?: unknown) => {
     const id = generateId();
     set((state) => ({
       messages: [
@@ -122,6 +145,7 @@ export const useChatStore = create<ChatState>((set, get) => ({
           role: "tool",
           content,
           toolName,
+          toolData,
           timestamp: new Date(),
         },
       ],
@@ -160,11 +184,20 @@ export const useChatStore = create<ChatState>((set, get) => ({
   },
 
   clearMessages: () => {
-    set({ messages: [], error: null });
+    set({ messages: [], error: null, sessionInputTokens: 0, sessionOutputTokens: 0, sessionCacheReadTokens: 0, sessionCacheCreationTokens: 0 });
   },
 
   clearError: () => {
     set({ error: null });
+  },
+
+  addTokenUsage: (usage) => {
+    set((state) => ({
+      sessionInputTokens: state.sessionInputTokens + usage.inputTokens,
+      sessionOutputTokens: state.sessionOutputTokens + usage.outputTokens,
+      sessionCacheReadTokens: state.sessionCacheReadTokens + usage.cacheReadTokens,
+      sessionCacheCreationTokens: state.sessionCacheCreationTokens + usage.cacheCreationTokens,
+    }));
   },
 
   startStreaming: () => {
@@ -188,16 +221,54 @@ export const useChatStore = create<ChatState>((set, get) => ({
     const { streamingMessageId } = get();
     if (!streamingMessageId) return;
 
-    set((state) => ({
-      messages: state.messages.map((msg) =>
-        msg.id === streamingMessageId
-          ? { ...msg, content: msg.content + delta }
-          : msg
-      ),
-    }));
+    // Buffer the delta and batch updates using requestAnimationFrame
+    streamingBuffer += delta;
+
+    if (streamingRafId === null) {
+      streamingRafId = requestAnimationFrame(() => {
+        const bufferedContent = streamingBuffer;
+        streamingBuffer = "";
+        streamingRafId = null;
+
+        const { streamingMessageId: currentId } = get();
+        if (!currentId) return;
+
+        set((state) => ({
+          messages: state.messages.map((msg) =>
+            msg.id === currentId
+              ? { ...msg, content: msg.content + bufferedContent }
+              : msg
+          ),
+        }));
+      });
+    }
   },
 
   finishStreaming: () => {
+    // Flush any remaining buffered content
+    if (streamingRafId !== null) {
+      cancelAnimationFrame(streamingRafId);
+      streamingRafId = null;
+    }
+
+    if (streamingBuffer) {
+      const { streamingMessageId } = get();
+      if (streamingMessageId) {
+        const bufferedContent = streamingBuffer;
+        streamingBuffer = "";
+        set((state) => ({
+          messages: state.messages.map((msg) =>
+            msg.id === streamingMessageId
+              ? { ...msg, content: msg.content + bufferedContent }
+              : msg
+          ),
+          streamingMessageId: null,
+        }));
+        return;
+      }
+    }
+
+    streamingBuffer = "";
     set({ streamingMessageId: null });
   },
 

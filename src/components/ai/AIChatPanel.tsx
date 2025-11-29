@@ -6,18 +6,18 @@
  */
 
 import { useState, useRef, useEffect, useCallback } from "react";
-import { marked } from "marked";
 import {
   Bot,
   Send,
   PanelRightClose,
   Trash2,
   Loader2,
-  Wrench,
   AlertCircle,
   Sparkles,
   Square,
 } from "lucide-react";
+import { MessageContent } from "./MessageContent";
+import { ToolResultCard } from "./ToolResultCard";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -28,8 +28,10 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { useUIStore, useChatStore, useCampaignStore } from "@/stores";
-import { useAIAvailable } from "@/stores/aiStore";
+import { useAIAvailable, useAIStore } from "@/stores/aiStore";
 import { useAgentChat } from "@/hooks/useAgentChat";
+import { calculateCostWithCache, formatCost, formatTokens } from "@/ai/pricing";
+import { selectModel } from "@/ai";
 import { useProposalHandler } from "@/hooks/useProposalHandler";
 import { ProposalCard } from "./ProposalCard";
 import { ProposalEditDialog } from "./ProposalEditDialog";
@@ -58,6 +60,7 @@ function MessageBubble({
   const isTool = message.role === "tool";
   const isError = message.role === "error";
   const isProposal = message.role === "proposal";
+  const isAssistant = message.role === "assistant";
 
   // Render proposal card for proposal messages
   if (isProposal && message.proposal) {
@@ -69,6 +72,19 @@ function MessageBubble({
           onReject={onRejectProposal ?? (() => {})}
           onEdit={onEditProposal ?? (() => {})}
           isProcessing={isProcessingProposal}
+        />
+      </div>
+    );
+  }
+
+  // Render tool result with smart card display
+  if (isTool && message.toolName) {
+    return (
+      <div className="w-full">
+        <ToolResultCard
+          toolName={message.toolName}
+          content={message.content}
+          data={message.toolData}
         />
       </div>
     );
@@ -88,17 +104,13 @@ function MessageBubble({
             ? "bg-primary text-primary-foreground"
             : isError
               ? "bg-destructive text-destructive-foreground"
-              : isTool
-                ? "bg-muted text-muted-foreground"
-                : "bg-accent text-accent-foreground"
+              : "bg-accent text-accent-foreground"
         )}
       >
         {isUser ? (
           <span className="text-xs font-medium">You</span>
         ) : isError ? (
           <AlertCircle className="h-3 w-3" />
-        ) : isTool ? (
-          <Wrench className="h-3 w-3" />
         ) : (
           <Bot className="h-3 w-3" />
         )}
@@ -111,25 +123,18 @@ function MessageBubble({
             ? "bg-primary text-primary-foreground"
             : isError
               ? "bg-destructive/10 text-destructive border border-destructive/20"
-              : isTool
-                ? "bg-muted/50 border border-border"
-                : "bg-muted"
+              : "bg-muted"
         )}
       >
-        {isTool && message.toolName && (
-          <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
-            {message.toolName}
-          </span>
-        )}
-        {isUser || isTool || isError ? (
+        {isUser || isError ? (
           <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-        ) : (
-          <div
+        ) : isAssistant ? (
+          <MessageContent
+            content={message.content}
             className="prose prose-sm dark:prose-invert max-w-none prose-p:my-1 prose-headings:my-2 prose-ul:my-1 prose-ol:my-1 prose-li:my-0 prose-pre:my-2"
-            dangerouslySetInnerHTML={{
-              __html: marked.parse(message.content) as string,
-            }}
           />
+        ) : (
+          <p className="text-sm whitespace-pre-wrap">{message.content}</p>
         )}
         {isStreaming && (
           <span className="inline-block w-2 h-4 ml-0.5 bg-foreground/70 animate-pulse" />
@@ -141,8 +146,19 @@ function MessageBubble({
 
 export function AIChatPanel() {
   const { aiChatOpen, toggleAIChat } = useUIStore();
-  const { messages, isRunning, clearMessages, streamingMessageId, updateProposalStatus, cancelOperation } =
-    useChatStore();
+  const {
+    messages,
+    isRunning,
+    clearMessages,
+    streamingMessageId,
+    updateProposalStatus,
+    cancelOperation,
+    sessionInputTokens,
+    sessionOutputTokens,
+    sessionCacheReadTokens,
+    sessionCacheCreationTokens,
+  } = useChatStore();
+  const { modelPreference } = useAIStore();
   const { activeCampaignId } = useCampaignStore();
   const isAvailable = useAIAvailable();
   const { sendMessage } = useAgentChat();
@@ -355,6 +371,45 @@ export function AIChatPanel() {
           </p>
         )}
       </form>
+
+      {/* Cost Footer */}
+      {(sessionInputTokens > 0 || sessionOutputTokens > 0 || sessionCacheReadTokens > 0) && (() => {
+        const totalInputTokens = sessionInputTokens + sessionCacheReadTokens + sessionCacheCreationTokens;
+        const cacheEfficiency = sessionCacheReadTokens > 0
+          ? Math.round((sessionCacheReadTokens / totalInputTokens) * 100)
+          : 0;
+        const cost = calculateCostWithCache(
+          selectModel(modelPreference),
+          sessionInputTokens,
+          sessionOutputTokens,
+          sessionCacheReadTokens,
+          sessionCacheCreationTokens
+        );
+
+        return (
+          <div className="border-t px-3 py-1.5 text-xs text-muted-foreground">
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <span className="cursor-help">
+                  {formatTokens(totalInputTokens)} in
+                  {cacheEfficiency > 0 && (
+                    <span className="text-green-600 dark:text-green-400"> ({cacheEfficiency}% cached)</span>
+                  )}
+                  {" / "}{formatTokens(sessionOutputTokens)} out | ~{formatCost(cost)}
+                </span>
+              </TooltipTrigger>
+              <TooltipContent>
+                <div className="text-xs">
+                  <div>Input: {formatTokens(sessionInputTokens)} tokens</div>
+                  <div>Cached: {formatTokens(sessionCacheReadTokens)} tokens</div>
+                  <div>Cache writes: {formatTokens(sessionCacheCreationTokens)} tokens</div>
+                  <div>Output: {formatTokens(sessionOutputTokens)} tokens</div>
+                </div>
+              </TooltipContent>
+            </Tooltip>
+          </div>
+        );
+      })()}
 
       {/* Proposal Edit Dialog */}
       <ProposalEditDialog

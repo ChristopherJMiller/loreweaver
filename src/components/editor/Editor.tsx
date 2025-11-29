@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { EditorToolbar } from "./EditorToolbar";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { createMentionExtension } from "./MentionExtension";
+import { createCitationExtension } from "./CitationExtension";
 
 export interface EditorProps {
   content: string;
@@ -99,9 +100,10 @@ export function Editor({
       }),
     ];
 
-    // Add mention extension if campaignId is provided (enables @mentions)
+    // Add mention and citation extensions if campaignId is provided
     if (campaignId) {
       baseExtensions.push(createMentionExtension({ campaignId }));
+      baseExtensions.push(createCitationExtension({ campaignId }));
     }
 
     return baseExtensions;

@@ -44,6 +44,18 @@ export interface AgentMessage {
   content: string;
   toolName?: string;
   toolInput?: unknown;
+  /** Structured data from tool result (for rich rendering) */
+  toolData?: unknown;
+}
+
+/**
+ * Token usage with cache metrics
+ */
+export interface AgentUsage {
+  inputTokens: number;
+  outputTokens: number;
+  cacheReadTokens: number;
+  cacheCreationTokens: number;
 }
 
 /**
@@ -54,8 +66,8 @@ export interface AgentResult {
   response: string;
   /** Total iterations performed */
   iterations: number;
-  /** Token usage across all iterations */
-  usage: { inputTokens: number; outputTokens: number };
+  /** Token usage across all iterations (includes cache metrics) */
+  usage: AgentUsage;
   /** Work items tracked during the run */
   workItems: ReturnType<WorkItemTracker["list"]>;
   /** Whether the agent completed normally */
@@ -108,6 +120,8 @@ export async function runAgent(
   let iterations = 0;
   let totalInputTokens = 0;
   let totalOutputTokens = 0;
+  let totalCacheReadTokens = 0;
+  let totalCacheCreationTokens = 0;
   let finalResponse = "";
 
   try {
@@ -117,7 +131,7 @@ export async function runAgent(
         return {
           response: finalResponse,
           iterations,
-          usage: { inputTokens: totalInputTokens, outputTokens: totalOutputTokens },
+          usage: { inputTokens: totalInputTokens, outputTokens: totalOutputTokens, cacheReadTokens: totalCacheReadTokens, cacheCreationTokens: totalCacheCreationTokens },
           workItems: workItemTracker.list(),
           completed: false,
           cancelled: true,
@@ -126,13 +140,15 @@ export async function runAgent(
 
       iterations++;
 
-      // Create streaming message
+      // Create streaming message with prompt caching enabled
       const stream = createMessageStream({
         model: config.model,
         system: config.systemPrompt,
         messages,
         tools: toolRegistry.tools,
         maxTokens,
+        cacheSystem: true,
+        cacheTools: true,
       });
 
       // Track text content as it streams
@@ -165,7 +181,7 @@ export async function runAgent(
           return {
             response: finalResponse || iterationTextContent,
             iterations,
-            usage: { inputTokens: totalInputTokens, outputTokens: totalOutputTokens },
+            usage: { inputTokens: totalInputTokens, outputTokens: totalOutputTokens, cacheReadTokens: totalCacheReadTokens, cacheCreationTokens: totalCacheCreationTokens },
             workItems: workItemTracker.list(),
             completed: false,
             cancelled: true,
@@ -176,6 +192,15 @@ export async function runAgent(
 
       totalInputTokens += response.usage.input_tokens;
       totalOutputTokens += response.usage.output_tokens;
+      // Capture cache metrics (cast needed as SDK types may not include these yet)
+      const usage = response.usage as {
+        input_tokens: number;
+        output_tokens: number;
+        cache_read_input_tokens?: number;
+        cache_creation_input_tokens?: number;
+      };
+      totalCacheReadTokens += usage.cache_read_input_tokens ?? 0;
+      totalCacheCreationTokens += usage.cache_creation_input_tokens ?? 0;
 
       // Store text response (use streamed content or extract from blocks)
       const textContent = iterationTextContent || extractText(response.content);
@@ -200,7 +225,7 @@ export async function runAgent(
         return {
           response: finalResponse,
           iterations,
-          usage: { inputTokens: totalInputTokens, outputTokens: totalOutputTokens },
+          usage: { inputTokens: totalInputTokens, outputTokens: totalOutputTokens, cacheReadTokens: totalCacheReadTokens, cacheCreationTokens: totalCacheCreationTokens },
           workItems: workItemTracker.list(),
           completed: true,
         };
@@ -217,7 +242,7 @@ export async function runAgent(
             return {
               response: finalResponse,
               iterations,
-              usage: { inputTokens: totalInputTokens, outputTokens: totalOutputTokens },
+              usage: { inputTokens: totalInputTokens, outputTokens: totalOutputTokens, cacheReadTokens: totalCacheReadTokens, cacheCreationTokens: totalCacheCreationTokens },
               workItems: workItemTracker.list(),
               completed: false,
               cancelled: true,
@@ -241,6 +266,7 @@ export async function runAgent(
             role: "tool_result",
             content: result.content,
             toolName: toolBlock.name,
+            toolData: result.data,
           });
 
           toolResults.push({
@@ -261,7 +287,7 @@ export async function runAgent(
         return {
           response: finalResponse,
           iterations,
-          usage: { inputTokens: totalInputTokens, outputTokens: totalOutputTokens },
+          usage: { inputTokens: totalInputTokens, outputTokens: totalOutputTokens, cacheReadTokens: totalCacheReadTokens, cacheCreationTokens: totalCacheCreationTokens },
           workItems: workItemTracker.list(),
           completed: true,
         };
@@ -272,7 +298,7 @@ export async function runAgent(
     return {
       response: finalResponse,
       iterations,
-      usage: { inputTokens: totalInputTokens, outputTokens: totalOutputTokens },
+      usage: { inputTokens: totalInputTokens, outputTokens: totalOutputTokens, cacheReadTokens: totalCacheReadTokens, cacheCreationTokens: totalCacheCreationTokens },
       workItems: workItemTracker.list(),
       completed: false,
       error: `Reached maximum iterations (${maxIterations})`,
@@ -281,7 +307,7 @@ export async function runAgent(
     return {
       response: finalResponse,
       iterations,
-      usage: { inputTokens: totalInputTokens, outputTokens: totalOutputTokens },
+      usage: { inputTokens: totalInputTokens, outputTokens: totalOutputTokens, cacheReadTokens: totalCacheReadTokens, cacheCreationTokens: totalCacheCreationTokens },
       workItems: workItemTracker.list(),
       completed: false,
       error: error instanceof Error ? error.message : String(error),

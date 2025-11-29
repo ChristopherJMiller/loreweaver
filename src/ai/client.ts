@@ -20,6 +20,33 @@ import { z } from "zod";
 /** Beta flag for structured outputs */
 const STRUCTURED_OUTPUT_BETA = "structured-outputs-2025-11-13";
 
+/**
+ * Cache control marker for prompt caching
+ * Ephemeral caches have a 5-minute TTL by default
+ */
+interface CacheControl {
+  type: "ephemeral";
+}
+
+/**
+ * System content block with optional cache control
+ */
+interface SystemContentBlock {
+  type: "text";
+  text: string;
+  cache_control?: CacheControl;
+}
+
+/**
+ * Extended usage including cache metrics
+ */
+export interface UsageWithCache {
+  input_tokens: number;
+  output_tokens: number;
+  cache_read_input_tokens?: number;
+  cache_creation_input_tokens?: number;
+}
+
 let clientInstance: Anthropic | null = null;
 
 /**
@@ -161,6 +188,9 @@ export interface StreamingCallbacks {
  * Returns a MessageStream that can be used to listen for events.
  * The stream emits 'text' events for each text delta and provides
  * finalMessage() for the complete response.
+ *
+ * @param options.cacheSystem - If true, adds cache_control to system prompt
+ * @param options.cacheTools - If true, adds cache_control to the last tool definition
  */
 export function createMessageStream(options: {
   model: string;
@@ -168,14 +198,34 @@ export function createMessageStream(options: {
   messages: MessageParam[];
   tools?: Tool[];
   maxTokens?: number;
+  cacheSystem?: boolean;
+  cacheTools?: boolean;
 }): MessageStream {
   const client = getClient();
 
+  // Convert system string to content block array with optional caching
+  const systemBlocks: SystemContentBlock[] = [
+    {
+      type: "text",
+      text: options.system,
+      ...(options.cacheSystem && { cache_control: { type: "ephemeral" as const } }),
+    },
+  ];
+
+  // Add cache_control to the last tool if caching is enabled
+  // The SDK's Tool type already supports cache_control
+  const tools = options.tools?.map((tool, i, arr) => {
+    if (options.cacheTools && i === arr.length - 1) {
+      return { ...tool, cache_control: { type: "ephemeral" as const } };
+    }
+    return tool;
+  });
+
   return client.messages.stream({
     model: options.model,
-    system: options.system,
+    system: systemBlocks,
     messages: options.messages,
-    tools: options.tools,
+    tools,
     max_tokens: options.maxTokens ?? 4096,
   });
 }

@@ -34,6 +34,7 @@ export function useAgentChat() {
     finishStreaming,
     addProposal,
     setAbortController,
+    addTokenUsage,
   } = useChatStore();
   const { apiKey, modelPreference } = useAIStore();
 
@@ -121,7 +122,7 @@ export function useAgentChat() {
                 msg.content.length > 500
                   ? msg.content.slice(0, 500) + "..."
                   : msg.content;
-              addToolResult(displayContent, msg.toolName);
+              addToolResult(displayContent, msg.toolName, msg.toolData);
             }
           },
         });
@@ -130,6 +131,11 @@ export function useAgentChat() {
         if (isStreamingRef.current) {
           finishStreaming();
           isStreamingRef.current = false;
+        }
+
+        // Track token usage including cache metrics (always, even on cancellation/error)
+        if (result.usage) {
+          addTokenUsage(result.usage);
         }
 
         // Handle cancellation gracefully (don't show error)
@@ -166,6 +172,7 @@ export function useAgentChat() {
       finishStreaming,
       addProposal,
       setAbortController,
+      addTokenUsage,
     ]
   );
 

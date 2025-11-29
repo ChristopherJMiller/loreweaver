@@ -46,6 +46,16 @@
   @apply bg-primary/20;
 }
 
+/* Tiptap editor citation pill styles */
+.citation-pill {
+  @apply bg-accent/15 rounded px-1.5 py-0.5 text-accent-foreground font-medium cursor-pointer;
+  @apply inline-flex items-center gap-1;
+}
+
+.citation-pill:hover {
+  @apply bg-accent/25;
+}
+
 /* Tiptap placeholder styles */
 .tiptap p.is-editor-empty:first-child::before {
   @apply text-muted-foreground float-left h-0 pointer-events-none;
