@@ -3,6 +3,7 @@
  *
  * Core agent execution loop that iterates until the task is complete.
  * Handles tool calling, message accumulation, and stop conditions.
+ * Supports streaming for real-time text output.
  */
 
 import type {
@@ -11,7 +12,7 @@ import type {
   ToolUseBlock,
   ToolResultBlockParam,
 } from "@anthropic-ai/sdk/resources/messages";
-import { createMessage } from "../client";
+import { createMessageStream } from "../client";
 import type { ToolRegistry, ToolResult } from "../tools";
 import { WorkItemTracker } from "./work-items";
 
@@ -27,7 +28,9 @@ export interface AgentConfig {
   maxIterations?: number;
   /** Maximum tokens per response */
   maxTokens?: number;
-  /** Callback for streaming intermediate results */
+  /** Callback for streaming text deltas (real-time character-by-character) */
+  onTextDelta?: (delta: string) => void;
+  /** Callback for complete messages (tool calls, tool results, final text) */
   onMessage?: (message: AgentMessage) => void;
 }
 
@@ -85,6 +88,7 @@ function getToolUseBlocks(blocks: ContentBlock[]): ToolUseBlock[] {
 
 /**
  * Run the agent loop until completion or max iterations
+ * Uses streaming for real-time text output via onTextDelta callback
  */
 export async function runAgent(
   userMessage: string,
@@ -106,8 +110,8 @@ export async function runAgent(
     while (iterations < maxIterations) {
       iterations++;
 
-      // Call Claude
-      const response = await createMessage({
+      // Create streaming message
+      const stream = createMessageStream({
         model: config.model,
         system: config.systemPrompt,
         messages,
@@ -115,13 +119,26 @@ export async function runAgent(
         maxTokens,
       });
 
+      // Track text content as it streams
+      let iterationTextContent = "";
+
+      // Stream text deltas to callback
+      stream.on("text", (textDelta: string) => {
+        iterationTextContent += textDelta;
+        config.onTextDelta?.(textDelta);
+      });
+
+      // Wait for stream to complete and get final message
+      const response = await stream.finalMessage();
+
       totalInputTokens += response.usage.input_tokens;
       totalOutputTokens += response.usage.output_tokens;
 
-      // Extract and store text response
-      const textContent = extractText(response.content);
+      // Store text response (use streamed content or extract from blocks)
+      const textContent = iterationTextContent || extractText(response.content);
       if (textContent) {
         finalResponse = textContent;
+        // Notify that the complete text is ready (for non-streaming consumers)
         config.onMessage?.({
           role: "assistant",
           content: textContent,

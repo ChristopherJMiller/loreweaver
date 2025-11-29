@@ -358,6 +358,7 @@ export function QuestsPage() {
         entityType="quest"
         isLoading={generator.isLoading}
         result={generator.result}
+        partialEntity={generator.partialEntity}
         onAccept={generator.accept}
         onRegenerate={generator.regenerate}
         isCreating={generator.isCreating}

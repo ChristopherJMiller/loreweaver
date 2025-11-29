@@ -3,9 +3,10 @@
  *
  * Connects the chat UI to the AI agent loop.
  * Manages message flow and agent execution.
+ * Supports streaming for real-time text output.
  */
 
-import { useCallback } from "react";
+import { useCallback, useRef } from "react";
 import { useChatStore } from "@/stores";
 import { useAIStore } from "@/stores/aiStore";
 import {
@@ -20,9 +21,20 @@ import {
 } from "@/ai";
 
 export function useAgentChat() {
-  const { addUserMessage, addAssistantMessage, addToolResult, addError, setRunning } =
-    useChatStore();
+  const {
+    addUserMessage,
+    addAssistantMessage,
+    addToolResult,
+    addError,
+    setRunning,
+    startStreaming,
+    appendToStreaming,
+    finishStreaming,
+  } = useChatStore();
   const { apiKey, modelPreference } = useAIStore();
+
+  // Track if we've started streaming for the current iteration
+  const isStreamingRef = useRef(false);
 
   const sendMessage = useCallback(
     async (content: string, campaignId: string) => {
@@ -34,6 +46,7 @@ export function useAgentChat() {
       // Add user message to chat
       addUserMessage(content);
       setRunning(true);
+      isStreamingRef.current = false;
 
       try {
         // Initialize client if needed
@@ -54,20 +67,33 @@ export function useAgentChat() {
         // Select model based on preference
         const model = selectModel(modelPreference);
 
-        // Run the agent
+        // Run the agent with streaming
         const result = await runAgent(content, toolRegistry, {
           model,
           systemPrompt,
           maxIterations: 15,
+          onTextDelta: (delta) => {
+            // Start streaming message on first delta
+            if (!isStreamingRef.current) {
+              startStreaming();
+              isStreamingRef.current = true;
+            }
+            appendToStreaming(delta);
+          },
           onMessage: (msg) => {
+            // Finish current streaming message before adding new messages
+            if (isStreamingRef.current) {
+              finishStreaming();
+              isStreamingRef.current = false;
+            }
+
             if (msg.role === "assistant") {
               if (msg.toolName) {
                 // Tool call announcement
                 addAssistantMessage(`Using ${msg.toolName}...`, msg.toolName);
-              } else if (msg.content) {
-                // Regular assistant message
-                addAssistantMessage(msg.content);
               }
+              // Note: Regular assistant text is now handled via streaming,
+              // so we don't add duplicate messages here
             } else if (msg.role === "tool_result" && msg.toolName) {
               // Truncate long tool results for display
               const displayContent =
@@ -79,22 +105,39 @@ export function useAgentChat() {
           },
         });
 
-        // Add final response if different from last message
-        if (result.response && result.completed) {
-          // The final response was already added via onMessage
+        // Ensure streaming is finished
+        if (isStreamingRef.current) {
+          finishStreaming();
+          isStreamingRef.current = false;
         }
 
         if (!result.completed && result.error) {
           addError(result.error);
         }
       } catch (err) {
+        // Finish streaming on error
+        if (isStreamingRef.current) {
+          finishStreaming();
+          isStreamingRef.current = false;
+        }
         const message = err instanceof Error ? err.message : "Unknown error occurred";
         addError(message);
       } finally {
         setRunning(false);
       }
     },
-    [apiKey, modelPreference, addUserMessage, addAssistantMessage, addToolResult, addError, setRunning]
+    [
+      apiKey,
+      modelPreference,
+      addUserMessage,
+      addAssistantMessage,
+      addToolResult,
+      addError,
+      setRunning,
+      startStreaming,
+      appendToStreaming,
+      finishStreaming,
+    ]
   );
 
   return { sendMessage };

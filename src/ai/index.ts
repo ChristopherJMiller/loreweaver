@@ -45,6 +45,14 @@ export {
   getClient,
   isClientInitialized,
   resetClient,
+  createMessageStream,
+  createStructuredMessageStream,
+} from "./client";
+export type {
+  StreamingCallbacks,
+  StructuredStreamResult,
+  MessageStream,
+  MessageStreamEvent,
 } from "./client";
 
 // Agent

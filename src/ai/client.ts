@@ -3,6 +3,7 @@
  *
  * Provides a configured client for interacting with Claude API.
  * Uses the standard Anthropic SDK with browser compatibility enabled.
+ * Includes both non-streaming and streaming variants for all operations.
  */
 
 import Anthropic from "@anthropic-ai/sdk";
@@ -10,7 +11,10 @@ import type {
   MessageParam,
   Tool,
   ContentBlock,
+  Message,
+  MessageStreamEvent,
 } from "@anthropic-ai/sdk/resources/messages";
+import type { MessageStream } from "@anthropic-ai/sdk/lib/MessageStream";
 import { z } from "zod";
 
 /** Beta flag for structured outputs */
@@ -139,5 +143,112 @@ export async function createStructuredMessage<T>(options: {
   };
 }
 
+/**
+ * Streaming callbacks for message creation
+ */
+export interface StreamingCallbacks {
+  /** Called with each text delta as it arrives */
+  onTextDelta?: (delta: string) => void;
+  /** Called when a content block is completed */
+  onContentBlock?: (block: ContentBlock) => void;
+  /** Called with each streaming event (for advanced use) */
+  onEvent?: (event: MessageStreamEvent) => void;
+}
+
+/**
+ * Create a streaming message using the Claude API.
+ *
+ * Returns a MessageStream that can be used to listen for events.
+ * The stream emits 'text' events for each text delta and provides
+ * finalMessage() for the complete response.
+ */
+export function createMessageStream(options: {
+  model: string;
+  system: string;
+  messages: MessageParam[];
+  tools?: Tool[];
+  maxTokens?: number;
+}): MessageStream {
+  const client = getClient();
+
+  return client.messages.stream({
+    model: options.model,
+    system: options.system,
+    messages: options.messages,
+    tools: options.tools,
+    max_tokens: options.maxTokens ?? 4096,
+  });
+}
+
+/**
+ * Streaming result for structured output
+ */
+export interface StructuredStreamResult<T> {
+  /** The validated data */
+  data: T;
+  /** The raw JSON string */
+  raw: string;
+  /** Token usage */
+  usage: { input_tokens: number; output_tokens: number };
+}
+
+/**
+ * Create a streaming message with structured JSON output.
+ *
+ * Streams text deltas via callback and returns the validated result.
+ * Use partial-json library in the callback to parse incomplete JSON.
+ */
+export async function createStructuredMessageStream<T>(options: {
+  model: string;
+  system: string;
+  messages: MessageParam[];
+  schema: z.ZodType<T>;
+  maxTokens?: number;
+  onTextDelta?: (delta: string, accumulated: string) => void;
+}): Promise<StructuredStreamResult<T>> {
+  const client = getClient();
+
+  // Convert Zod schema to JSON Schema for Anthropic API
+  const jsonSchema = z.toJSONSchema(options.schema);
+
+  const stream = client.beta.messages.stream({
+    model: options.model,
+    system: options.system,
+    messages: options.messages,
+    max_tokens: options.maxTokens ?? 4096,
+    betas: [STRUCTURED_OUTPUT_BETA],
+    output_format: {
+      type: "json_schema",
+      schema: jsonSchema,
+    },
+  });
+
+  // Accumulate text and emit deltas
+  let accumulated = "";
+  stream.on("text", (textDelta: string) => {
+    accumulated += textDelta;
+    options.onTextDelta?.(textDelta, accumulated);
+  });
+
+  // Wait for stream to complete
+  const finalMessage = await stream.finalMessage();
+
+  // Extract text content from response
+  const textBlock = finalMessage.content.find((b) => b.type === "text");
+  if (!textBlock || textBlock.type !== "text") {
+    throw new Error("No text content in structured output response");
+  }
+
+  // Parse JSON and validate with Zod
+  const parsed = JSON.parse(textBlock.text);
+  const validated = options.schema.parse(parsed);
+
+  return {
+    data: validated,
+    raw: textBlock.text,
+    usage: finalMessage.usage,
+  };
+}
+
 // Re-export useful types
-export type { MessageParam, Tool, ContentBlock };
+export type { MessageParam, Tool, ContentBlock, Message, MessageStreamEvent, MessageStream };

@@ -27,6 +27,7 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import type { GenerationResult, SuggestedRelationship } from "@/ai/agents/types";
+import type { PartialEntity } from "@/ai/agents";
 import type { EntityType } from "@/types";
 
 interface GenerationPreviewProps {
@@ -44,6 +45,9 @@ interface GenerationPreviewProps {
 
   /** Generation result (null if loading or not started) */
   result: GenerationResult | null;
+
+  /** Partial entity data during streaming (for progressive display) */
+  partialEntity?: PartialEntity | null;
 
   /** Callback when user accepts the generation */
   onAccept: (data: {
@@ -131,12 +135,44 @@ function RelationshipPreview({
   );
 }
 
+/**
+ * Read-only field display for streaming preview
+ */
+function StreamingField({
+  label,
+  value,
+  isStreaming,
+}: {
+  label: string;
+  value: string | undefined;
+  isStreaming: boolean;
+}) {
+  const displayLabel = label
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+
+  return (
+    <div className="space-y-1.5">
+      <Label className="text-muted-foreground">{displayLabel}</Label>
+      <div className="min-h-[36px] rounded-md border border-dashed bg-muted/30 px-3 py-2 text-sm">
+        {value || (
+          <span className="text-muted-foreground italic">Generating...</span>
+        )}
+        {isStreaming && value && (
+          <span className="inline-block w-2 h-4 ml-0.5 bg-foreground/70 animate-pulse" />
+        )}
+      </div>
+    </div>
+  );
+}
+
 export function GenerationPreview({
   open,
   onOpenChange,
   entityType,
   isLoading,
   result,
+  partialEntity,
   onAccept,
   onRegenerate,
   isCreating = false,
@@ -223,7 +259,34 @@ export function GenerationPreview({
         </DialogHeader>
 
         <ScrollArea className="max-h-[55vh] pr-4">
-          {isLoading ? (
+          {isLoading && partialEntity ? (
+            // Streaming preview with partial data
+            <div className="space-y-6">
+              <StreamingField
+                label="name"
+                value={partialEntity.name}
+                isStreaming={true}
+              />
+              {/* Show fields as they stream in */}
+              {partialEntity.fields &&
+                Object.entries(partialEntity.fields).map(([key, value]) => (
+                  <StreamingField
+                    key={key}
+                    label={key}
+                    value={value}
+                    isStreaming={true}
+                  />
+                ))}
+              {/* Show partial reasoning if available */}
+              {partialEntity.reasoning && (
+                <div className="text-xs text-muted-foreground mt-4 p-2 rounded bg-muted/50">
+                  <span className="font-medium">AI thinking:</span>{" "}
+                  {partialEntity.reasoning}
+                </div>
+              )}
+            </div>
+          ) : isLoading ? (
+            // Initial loading state before any data streams
             <div className="flex flex-col items-center justify-center py-12">
               <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
               <p className="text-sm text-muted-foreground">

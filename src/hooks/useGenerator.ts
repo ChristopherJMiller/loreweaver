@@ -3,13 +3,13 @@
  *
  * Manages the entity generation flow:
  * 1. User triggers generation with context
- * 2. AI generates entity
+ * 2. AI generates entity (with streaming for progressive display)
  * 3. User previews and edits
  * 4. User accepts → entity is created
  */
 
 import { useState, useCallback } from "react";
-import { generateEntity } from "@/ai/agents";
+import { generateEntity, type PartialEntity } from "@/ai/agents";
 import { initializeClient, isClientInitialized } from "@/ai/client";
 import { invalidateCampaignSummary } from "@/ai/context";
 import type {
@@ -70,6 +70,9 @@ interface UseGeneratorReturn {
 
   /** Current generation result */
   result: GenerationResult | null;
+
+  /** Partial entity data during streaming (for progressive display) */
+  partialEntity: PartialEntity | null;
 
   /** Trigger generation with context and optional parentId (for locations) */
   generate: (context: string, parentId?: string) => Promise<void>;
@@ -217,6 +220,7 @@ export function useGenerator({
   const [isLoading, setIsLoading] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [result, setResult] = useState<GenerationResult | null>(null);
+  const [partialEntity, setPartialEntity] = useState<PartialEntity | null>(null);
   const [createError, setCreateError] = useState<string | null>(null);
 
   // Store last generation request for regeneration
@@ -229,6 +233,7 @@ export function useGenerator({
     async (context: string, parentId?: string) => {
       setIsLoading(true);
       setResult(null);
+      setPartialEntity(null);
       setCreateError(null);
       setIsPreviewOpen(true);
       setLastRequest({ context, parentId });
@@ -250,8 +255,13 @@ export function useGenerator({
           parentId,
         };
 
-        const generationResult = await generateEntity(request);
+        const generationResult = await generateEntity(request, {
+          onPartialEntity: (partial) => {
+            setPartialEntity(partial);
+          },
+        });
         setResult(generationResult);
+        setPartialEntity(null); // Clear partial once we have final result
       } catch (error) {
         setResult({
           success: false,
@@ -323,9 +333,11 @@ export function useGenerator({
     closePreview: () => {
       setIsPreviewOpen(false);
       setResult(null);
+      setPartialEntity(null);
     },
     isLoading,
     result,
+    partialEntity,
     generate,
     accept,
     regenerate,

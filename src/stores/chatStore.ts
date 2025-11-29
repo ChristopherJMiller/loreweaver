@@ -21,6 +21,8 @@ interface ChatState {
   messages: ChatMessage[];
   isRunning: boolean;
   error: string | null;
+  /** ID of message currently being streamed (null if not streaming) */
+  streamingMessageId: string | null;
 
   // Actions
   addUserMessage: (content: string) => string;
@@ -31,6 +33,14 @@ interface ChatState {
   setRunning: (running: boolean) => void;
   clearMessages: () => void;
   clearError: () => void;
+
+  // Streaming actions
+  /** Start streaming a new assistant message, returns the message ID */
+  startStreaming: () => string;
+  /** Append text delta to the currently streaming message */
+  appendToStreaming: (delta: string) => void;
+  /** Finish streaming (clears streamingMessageId) */
+  finishStreaming: () => void;
 }
 
 let messageCounter = 0;
@@ -39,10 +49,11 @@ function generateId(): string {
   return `msg_${Date.now()}_${++messageCounter}`;
 }
 
-export const useChatStore = create<ChatState>((set) => ({
+export const useChatStore = create<ChatState>((set, get) => ({
   messages: [],
   isRunning: false,
   error: null,
+  streamingMessageId: null,
 
   addUserMessage: (content: string) => {
     const id = generateId();
@@ -131,5 +142,39 @@ export const useChatStore = create<ChatState>((set) => ({
 
   clearError: () => {
     set({ error: null });
+  },
+
+  startStreaming: () => {
+    const id = generateId();
+    set((state) => ({
+      messages: [
+        ...state.messages,
+        {
+          id,
+          role: "assistant",
+          content: "",
+          timestamp: new Date(),
+        },
+      ],
+      streamingMessageId: id,
+    }));
+    return id;
+  },
+
+  appendToStreaming: (delta: string) => {
+    const { streamingMessageId } = get();
+    if (!streamingMessageId) return;
+
+    set((state) => ({
+      messages: state.messages.map((msg) =>
+        msg.id === streamingMessageId
+          ? { ...msg, content: msg.content + delta }
+          : msg
+      ),
+    }));
+  },
+
+  finishStreaming: () => {
+    set({ streamingMessageId: null });
   },
 }));

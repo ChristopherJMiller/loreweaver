@@ -30,7 +30,12 @@ import { useAIAvailable } from "@/stores/aiStore";
 import { useAgentChat } from "@/hooks/useAgentChat";
 import type { ChatMessage } from "@/stores";
 
-function MessageBubble({ message }: { message: ChatMessage }) {
+interface MessageBubbleProps {
+  message: ChatMessage;
+  isStreaming?: boolean;
+}
+
+function MessageBubble({ message, isStreaming }: MessageBubbleProps) {
   const isUser = message.role === "user";
   const isTool = message.role === "tool";
   const isError = message.role === "error";
@@ -82,7 +87,12 @@ function MessageBubble({ message }: { message: ChatMessage }) {
             {message.toolName}
           </span>
         )}
-        <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+        <p className="text-sm whitespace-pre-wrap">
+          {message.content}
+          {isStreaming && (
+            <span className="inline-block w-2 h-4 ml-0.5 bg-foreground/70 animate-pulse" />
+          )}
+        </p>
       </div>
     </div>
   );
@@ -90,7 +100,7 @@ function MessageBubble({ message }: { message: ChatMessage }) {
 
 export function AIChatPanel() {
   const { aiChatOpen, toggleAIChat } = useUIStore();
-  const { messages, isRunning, clearMessages } = useChatStore();
+  const { messages, isRunning, clearMessages, streamingMessageId } = useChatStore();
   const { activeCampaignId } = useCampaignStore();
   const isAvailable = useAIAvailable();
   const { sendMessage } = useAgentChat();
@@ -188,11 +198,15 @@ export function AIChatPanel() {
             </div>
           ) : (
             messages.map((msg) => (
-              <MessageBubble key={msg.id} message={msg} />
+              <MessageBubble
+                key={msg.id}
+                message={msg}
+                isStreaming={msg.id === streamingMessageId}
+              />
             ))
           )}
 
-          {isRunning && (
+          {isRunning && !streamingMessageId && (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" />
               <span>Thinking...</span>

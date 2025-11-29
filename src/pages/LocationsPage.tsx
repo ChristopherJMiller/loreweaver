@@ -398,6 +398,7 @@ export function LocationsPage() {
         entityType="location"
         isLoading={generator.isLoading}
         result={generator.result}
+        partialEntity={generator.partialEntity}
         onAccept={generator.accept}
         onRegenerate={generator.regenerate}
         isCreating={generator.isCreating}
