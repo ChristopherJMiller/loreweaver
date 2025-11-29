@@ -8,6 +8,19 @@
 import type { EntityType } from "@/types";
 
 /**
+ * Shared markdown formatting instructions for all entity types
+ */
+const MARKDOWN_INSTRUCTIONS = `
+### Markdown Formatting
+Write text fields using Markdown for rich formatting:
+- Use **bold** for important names and key terms
+- Use *italic* for emphasis or in-world phrases
+- Use bullet lists for features or notable details
+- Use > blockquotes for quotes, sayings, or rumors
+- For longer descriptions, use ## headings to organize sections
+`;
+
+/**
  * Get entity-specific generation guidance
  */
 export function getEntityPrompt(entityType: EntityType): string {
@@ -44,7 +57,7 @@ Create a memorable, three-dimensional character that can serve multiple roles in
 - Include potential plot hooks or conflicts
 - Suggest connections to existing characters or factions
 - Consider what makes them useful to the story
-`;
+${MARKDOWN_INSTRUCTIONS}`;
 
 const LOCATION_PROMPT = `
 ## Generating a Location
@@ -115,6 +128,8 @@ Weave into the description:
 - NPCs who might be encountered
 - Potential conflicts or opportunities
 - Connections to broader campaign elements
+${MARKDOWN_INSTRUCTIONS}
+**Location descriptions benefit from section headings** like ## Atmosphere, ## Notable Features, ## Rumors.
 `;
 
 const ORGANIZATION_PROMPT = `
@@ -139,7 +154,7 @@ Create a faction with clear identity and potential for conflict or alliance.
 - Suggest relationships with other organizations
 - Consider what services or opportunities they offer to adventurers
 - Include potential quests or conflicts involving them
-`;
+${MARKDOWN_INSTRUCTIONS}`;
 
 const QUEST_PROMPT = `
 ## Generating a Quest
@@ -165,7 +180,7 @@ Create an engaging adventure hook with clear objectives and interesting complica
 - Connect to existing characters, locations, or factions
 - Consider consequences of success or failure
 - Include hooks for follow-up adventures
-`;
+${MARKDOWN_INSTRUCTIONS}`;
 
 const GENERIC_PROMPT = `
 ## Generating an Entity
@@ -177,4 +192,4 @@ Create a well-developed entity that fits the campaign world.
 - Include hooks for player engagement
 - Consider connections to existing campaign elements
 - Balance practicality with creativity
-`;
+${MARKDOWN_INSTRUCTIONS}`;

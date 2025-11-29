@@ -2,15 +2,17 @@
  * Tool Registry
  *
  * Central registry for all AI agent tools.
- * Combines work item tools with campaign context tools.
+ * Combines work item tools, campaign context tools, and proposal tools.
  */
 
 import type { Tool } from "@anthropic-ai/sdk/resources/messages";
 import type { ToolDefinition, ToolResult, ToolContext } from "./types";
 import { toAnthropicTool } from "./types";
 import type { WorkItemTracker } from "../agent/work-items";
+import type { ProposalTracker } from "../proposals/tracker";
 import { createWorkItemTools } from "./work-items";
 import { getCampaignContextTools } from "./campaign-context";
+import { createProposalTools } from "./entity-proposals";
 
 /**
  * Collection of tools with both Anthropic format and handlers
@@ -30,10 +32,15 @@ export interface ToolRegistry {
 
 /**
  * Create a tool registry for an agent session
+ *
+ * @param workItemTracker - Tracker for work items
+ * @param campaignId - Current campaign ID
+ * @param proposalTracker - Optional tracker for entity proposals
  */
 export function createToolRegistry(
   workItemTracker: WorkItemTracker,
-  campaignId: string
+  campaignId: string,
+  proposalTracker?: ProposalTracker
 ): ToolRegistry {
   const definitions: ToolDefinition[] = [
     // Work item tools for tracking research
@@ -41,6 +48,9 @@ export function createToolRegistry(
 
     // Campaign context tools for accessing campaign data
     ...getCampaignContextTools(),
+
+    // Proposal tools for creating/updating entities (if tracker provided)
+    ...(proposalTracker ? createProposalTools(proposalTracker) : []),
   ];
 
   const tools = definitions.map(toAnthropicTool);

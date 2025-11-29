@@ -101,6 +101,8 @@ ${entityGuidance}
 Respond with a JSON object containing:
 - name: The entity's name (1-200 characters)
 - fields: Entity-specific fields matching the schema
+  - For text fields (description, personality, etc.), use **Markdown formatting**
+  - Supported: **bold**, *italic*, bullet lists, > blockquotes, ## headings
 - relationships: Optional array of suggested relationships to other entities
 - reasoning: Brief explanation of your creative choices
 `;

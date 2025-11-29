@@ -252,3 +252,6 @@ export async function createStructuredMessageStream<T>(options: {
 
 // Re-export useful types
 export type { MessageParam, Tool, ContentBlock, Message, MessageStreamEvent, MessageStream };
+
+// Re-export error type for abort handling
+export { APIUserAbortError } from "@anthropic-ai/sdk";

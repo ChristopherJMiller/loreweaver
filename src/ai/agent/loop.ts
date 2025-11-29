@@ -12,7 +12,7 @@ import type {
   ToolUseBlock,
   ToolResultBlockParam,
 } from "@anthropic-ai/sdk/resources/messages";
-import { createMessageStream } from "../client";
+import { createMessageStream, APIUserAbortError } from "../client";
 import type { ToolRegistry, ToolResult } from "../tools";
 import { WorkItemTracker } from "./work-items";
 
@@ -32,6 +32,8 @@ export interface AgentConfig {
   onTextDelta?: (delta: string) => void;
   /** Callback for complete messages (tool calls, tool results, final text) */
   onMessage?: (message: AgentMessage) => void;
+  /** Optional AbortSignal to cancel the agent run */
+  signal?: AbortSignal;
 }
 
 /**
@@ -60,6 +62,8 @@ export interface AgentResult {
   completed: boolean;
   /** Error if the agent failed */
   error?: string;
+  /** Whether the agent was cancelled by user */
+  cancelled?: boolean;
 }
 
 /**
@@ -108,6 +112,18 @@ export async function runAgent(
 
   try {
     while (iterations < maxIterations) {
+      // Check if aborted before starting iteration
+      if (config.signal?.aborted) {
+        return {
+          response: finalResponse,
+          iterations,
+          usage: { inputTokens: totalInputTokens, outputTokens: totalOutputTokens },
+          workItems: workItemTracker.list(),
+          completed: false,
+          cancelled: true,
+        };
+      }
+
       iterations++;
 
       // Create streaming message
@@ -122,6 +138,14 @@ export async function runAgent(
       // Track text content as it streams
       let iterationTextContent = "";
 
+      // Listen for abort signal to cancel stream
+      if (config.signal) {
+        const abortHandler = () => {
+          stream.abort();
+        };
+        config.signal.addEventListener("abort", abortHandler, { once: true });
+      }
+
       // Stream text deltas to callback
       stream.on("text", (textDelta: string) => {
         iterationTextContent += textDelta;
@@ -129,7 +153,26 @@ export async function runAgent(
       });
 
       // Wait for stream to complete and get final message
-      const response = await stream.finalMessage();
+      let response;
+      try {
+        response = await stream.finalMessage();
+      } catch (streamError) {
+        // Check if this was an abort
+        if (
+          streamError instanceof APIUserAbortError ||
+          (streamError instanceof Error && streamError.name === "AbortError")
+        ) {
+          return {
+            response: finalResponse || iterationTextContent,
+            iterations,
+            usage: { inputTokens: totalInputTokens, outputTokens: totalOutputTokens },
+            workItems: workItemTracker.list(),
+            completed: false,
+            cancelled: true,
+          };
+        }
+        throw streamError;
+      }
 
       totalInputTokens += response.usage.input_tokens;
       totalOutputTokens += response.usage.output_tokens;
@@ -169,6 +212,18 @@ export async function runAgent(
         const toolResults: ToolResultBlockParam[] = [];
 
         for (const toolBlock of toolBlocks) {
+          // Check if aborted before executing tool
+          if (config.signal?.aborted) {
+            return {
+              response: finalResponse,
+              iterations,
+              usage: { inputTokens: totalInputTokens, outputTokens: totalOutputTokens },
+              workItems: workItemTracker.list(),
+              completed: false,
+              cancelled: true,
+            };
+          }
+
           config.onMessage?.({
             role: "assistant",
             content: `Using tool: ${toolBlock.name}`,

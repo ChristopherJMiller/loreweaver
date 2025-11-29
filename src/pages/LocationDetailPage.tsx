@@ -20,16 +20,30 @@ import {
   RelationshipsPanel,
   DocumentSection,
 } from "@/components/document";
+import { GenerateButton, GenerationPreview } from "@/components/ai";
 import { DetailLevelBar, LocationBreadcrumb } from "@/components/location";
 import { useLocationStore, useCampaignStore, useRelationshipStore } from "@/stores";
+import { useGenerator } from "@/hooks";
 import { LOCATION_TYPES, getLocationTypeLabel } from "@/lib/constants";
 
 export function LocationDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { entities, isLoading, fetchOne, update, remove } = useLocationStore();
+  const { entities, isLoading, fetchOne, fetchAll, update, remove } = useLocationStore();
   const { activeCampaignId } = useCampaignStore();
   const { relationships, fetchForEntity } = useRelationshipStore();
+
+  // Generator for creating child locations
+  const generator = useGenerator({
+    campaignId: activeCampaignId ?? "",
+    entityType: "location",
+    onCreated: (newId) => {
+      if (activeCampaignId) {
+        fetchAll(activeCampaignId);
+      }
+      navigate(`/locations/${newId}`);
+    },
+  });
 
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
@@ -176,6 +190,20 @@ export function LocationDetailPage() {
     </div>
   );
 
+  const generateChildButton = (
+    <GenerateButton
+      entityType="location"
+      onGenerate={generator.generate}
+      isLoading={generator.isLoading}
+      locations={entities.filter((l) => l.id !== id)}
+      defaultParentId={id}
+      defaultParentName={location.name}
+      parentLocked
+    >
+      Generate Child
+    </GenerateButton>
+  );
+
   return (
     <div className="space-y-0">
       {/* Breadcrumb stays outside the document flow */}
@@ -194,6 +222,7 @@ export function LocationDetailPage() {
         onCancel={handleCancel}
         onDelete={() => setDeleteDialogOpen(true)}
         backLink="/locations"
+        actions={generateChildButton}
       />
 
       <DocumentCanvas
@@ -346,6 +375,19 @@ export function LocationDetailPage() {
         title="Delete Location"
         description={`Are you sure you want to delete "${location.name}"? This action cannot be undone. Child locations will become orphaned.`}
         onConfirm={handleDelete}
+      />
+
+      <GenerationPreview
+        open={generator.isPreviewOpen}
+        onOpenChange={generator.closePreview}
+        entityType="location"
+        isLoading={generator.isLoading}
+        result={generator.result}
+        partialEntity={generator.partialEntity}
+        onAccept={generator.accept}
+        onRegenerate={generator.regenerate}
+        isCreating={generator.isCreating}
+        createError={generator.createError}
       />
     </div>
   );

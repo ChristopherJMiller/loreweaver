@@ -6,7 +6,7 @@
  */
 
 import { useState } from "react";
-import { Sparkles, Loader2 } from "lucide-react";
+import { Sparkles, Loader2, MapPin } from "lucide-react";
 import { Button, type ButtonProps } from "@/components/ui/button";
 import {
   Dialog,
@@ -35,6 +35,15 @@ interface GenerateButtonProps extends Omit<ButtonProps, "onClick"> {
 
   /** Available locations for parent selection (only for location entityType) */
   locations?: Location[];
+
+  /** Pre-set parent location ID (for "generate child" flow) */
+  defaultParentId?: string;
+
+  /** Name of the pre-set parent location (required when parentLocked is true) */
+  defaultParentName?: string;
+
+  /** If true, parent selection is shown but disabled/read-only */
+  parentLocked?: boolean;
 }
 
 export function GenerateButton({
@@ -43,12 +52,15 @@ export function GenerateButton({
   isLoading = false,
   children,
   locations = [],
+  defaultParentId,
+  defaultParentName,
+  parentLocked = false,
   ...buttonProps
 }: GenerateButtonProps) {
   const isAIAvailable = useAIAvailable();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [context, setContext] = useState("");
-  const [parentId, setParentId] = useState<string | null>(null);
+  const [parentId, setParentId] = useState<string | null>(defaultParentId ?? null);
 
   const isLocation = entityType === "location";
 
@@ -56,11 +68,12 @@ export function GenerateButton({
     onGenerate(context, parentId ?? undefined);
     setDialogOpen(false);
     setContext("");
-    setParentId(null);
+    setParentId(defaultParentId ?? null);
   };
 
   // Check if generate is allowed (for locations, require parent selection or explicit "none")
-  const canGenerate = !isLocation || parentId !== null || locations.length === 0;
+  // When defaultParentId is set, we already have a valid parent
+  const canGenerate = !isLocation || parentId !== null || locations.length === 0 || defaultParentId !== undefined;
 
   // Format entity type for display
   const entityLabel = entityType.toLowerCase();
@@ -114,8 +127,14 @@ export function GenerateButton({
             {/* Parent Location selector for locations */}
             {isLocation && (
               <div className="space-y-2">
-                <Label htmlFor="parent">Parent Location *</Label>
-                {locations.length === 0 ? (
+                <Label htmlFor="parent">Parent Location {!parentLocked && "*"}</Label>
+                {parentLocked && defaultParentId ? (
+                  // Locked parent display (for "generate child" flow)
+                  <div className="flex items-center gap-2 py-2 px-3 rounded-md border bg-muted/50">
+                    <MapPin className="h-4 w-4 text-muted-foreground" />
+                    <span>{defaultParentName ?? "Unknown"}</span>
+                  </div>
+                ) : locations.length === 0 ? (
                   <p className="text-sm text-muted-foreground py-2">
                     This will be a top-level location (no existing locations to parent under).
                   </p>

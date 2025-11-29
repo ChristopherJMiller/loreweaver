@@ -4,6 +4,7 @@
  * Connects the chat UI to the AI agent loop.
  * Manages message flow and agent execution.
  * Supports streaming for real-time text output.
+ * Supports entity proposals for create/update operations.
  */
 
 import { useCallback, useRef } from "react";
@@ -19,6 +20,7 @@ import {
   inferTaskType,
   selectModel,
 } from "@/ai";
+import { ProposalTracker } from "@/ai/proposals/tracker";
 
 export function useAgentChat() {
   const {
@@ -30,6 +32,8 @@ export function useAgentChat() {
     startStreaming,
     appendToStreaming,
     finishStreaming,
+    addProposal,
+    setAbortController,
   } = useChatStore();
   const { apiKey, modelPreference } = useAIStore();
 
@@ -48,6 +52,10 @@ export function useAgentChat() {
       setRunning(true);
       isStreamingRef.current = false;
 
+      // Create AbortController for this request
+      const abortController = new AbortController();
+      setAbortController(abortController);
+
       try {
         // Initialize client if needed
         if (!isClientInitialized()) {
@@ -57,8 +65,20 @@ export function useAgentChat() {
         // Create work item tracker for this session
         const workItemTracker = new WorkItemTracker();
 
-        // Create tool registry
-        const toolRegistry = createToolRegistry(workItemTracker, campaignId);
+        // Create proposal tracker for entity proposals
+        const proposalTracker = new ProposalTracker();
+
+        // Wire up proposal tracker to add proposals to chat
+        proposalTracker.setOnProposalCreated((proposal) => {
+          addProposal(proposal);
+        });
+
+        // Create tool registry with both trackers
+        const toolRegistry = createToolRegistry(
+          workItemTracker,
+          campaignId,
+          proposalTracker
+        );
 
         // Infer task type and get appropriate prompt
         const taskType = inferTaskType(content);
@@ -72,6 +92,7 @@ export function useAgentChat() {
           model,
           systemPrompt,
           maxIterations: 15,
+          signal: abortController.signal,
           onTextDelta: (delta) => {
             // Start streaming message on first delta
             if (!isStreamingRef.current) {
@@ -111,6 +132,11 @@ export function useAgentChat() {
           isStreamingRef.current = false;
         }
 
+        // Handle cancellation gracefully (don't show error)
+        if (result.cancelled) {
+          return;
+        }
+
         if (!result.completed && result.error) {
           addError(result.error);
         }
@@ -123,6 +149,7 @@ export function useAgentChat() {
         const message = err instanceof Error ? err.message : "Unknown error occurred";
         addError(message);
       } finally {
+        setAbortController(null);
         setRunning(false);
       }
     },
@@ -137,6 +164,8 @@ export function useAgentChat() {
       startStreaming,
       appendToStreaming,
       finishStreaming,
+      addProposal,
+      setAbortController,
     ]
   );
 

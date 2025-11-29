@@ -47,6 +47,7 @@ export {
   resetClient,
   createMessageStream,
   createStructuredMessageStream,
+  APIUserAbortError,
 } from "./client";
 export type {
   StreamingCallbacks,

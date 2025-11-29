@@ -15,6 +15,8 @@ export interface DocumentHeaderProps {
   onDelete: () => void;
   backLink: string;
   className?: string;
+  /** Additional action buttons to show in toolbar (before Edit/Delete, hidden in edit mode) */
+  actions?: React.ReactNode;
 }
 
 export function DocumentHeader({
@@ -29,6 +31,7 @@ export function DocumentHeader({
   onDelete,
   backLink,
   className,
+  actions,
 }: DocumentHeaderProps) {
   return (
     <div
@@ -70,6 +73,7 @@ export function DocumentHeader({
             </>
           ) : (
             <>
+              {actions}
               <Button variant="outline" onClick={onEdit}>
                 <Edit2 className="mr-2 h-4 w-4" />
                 Edit

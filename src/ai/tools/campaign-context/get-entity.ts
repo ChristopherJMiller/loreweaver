@@ -6,6 +6,7 @@
  */
 
 import { invoke } from "@tauri-apps/api/core";
+import { prosemirrorToMarkdown } from "@/ai/utils/content-bridge";
 import type { ToolDefinition, ToolResult, ToolContext } from "../types";
 import type {
   Character,
@@ -31,6 +32,26 @@ type EntityData =
   | TimelineEvent
   | Secret
   | Campaign;
+
+/**
+ * Convert a field value to markdown if it's ProseMirror JSON
+ */
+function fieldToMarkdown(value: string | null | undefined): string {
+  if (!value) return "";
+
+  // Check if it looks like ProseMirror JSON
+  if (value.startsWith('{"type":"doc"')) {
+    try {
+      const json = JSON.parse(value);
+      return prosemirrorToMarkdown(json);
+    } catch {
+      // Not valid JSON, return as-is
+      return value;
+    }
+  }
+
+  return value;
+}
 
 const ENTITY_COMMANDS: Record<string, string> = {
   campaign: "get_campaign",
@@ -107,7 +128,7 @@ function formatEntity(type: string, entity: EntityData): string {
   // Main content sections
   if ("description" in entity && entity.description) {
     lines.push("## Description");
-    lines.push(entity.description);
+    lines.push(fieldToMarkdown(entity.description));
     lines.push("");
   }
 
@@ -116,117 +137,117 @@ function formatEntity(type: string, entity: EntityData): string {
     const c = entity as Character;
     if (c.personality) {
       lines.push("## Personality");
-      lines.push(c.personality);
+      lines.push(fieldToMarkdown(c.personality));
       lines.push("");
     }
     if (c.motivations) {
       lines.push("## Motivations");
-      lines.push(c.motivations);
+      lines.push(fieldToMarkdown(c.motivations));
       lines.push("");
     }
     if (c.secrets) {
       lines.push("## Secrets");
-      lines.push(c.secrets);
+      lines.push(fieldToMarkdown(c.secrets));
       lines.push("");
     }
     if (c.voice_notes) {
       lines.push("## Voice Notes");
-      lines.push(c.voice_notes);
+      lines.push(fieldToMarkdown(c.voice_notes));
       lines.push("");
     }
   } else if (type === "location") {
     const l = entity as Location;
     if (l.gm_notes) {
       lines.push("## GM Notes");
-      lines.push(l.gm_notes);
+      lines.push(fieldToMarkdown(l.gm_notes));
       lines.push("");
     }
   } else if (type === "organization") {
     const o = entity as Organization;
     if (o.goals) {
       lines.push("## Goals");
-      lines.push(o.goals);
+      lines.push(fieldToMarkdown(o.goals));
       lines.push("");
     }
     if (o.resources) {
       lines.push("## Resources");
-      lines.push(o.resources);
+      lines.push(fieldToMarkdown(o.resources));
       lines.push("");
     }
     if (o.secrets) {
       lines.push("## Secrets");
-      lines.push(o.secrets);
+      lines.push(fieldToMarkdown(o.secrets));
       lines.push("");
     }
   } else if (type === "quest") {
     const q = entity as Quest;
     if (q.hook) {
       lines.push("## Hook");
-      lines.push(q.hook);
+      lines.push(fieldToMarkdown(q.hook));
       lines.push("");
     }
     if (q.objectives) {
       lines.push("## Objectives");
-      lines.push(q.objectives);
+      lines.push(fieldToMarkdown(q.objectives));
       lines.push("");
     }
     if (q.complications) {
       lines.push("## Complications");
-      lines.push(q.complications);
+      lines.push(fieldToMarkdown(q.complications));
       lines.push("");
     }
     if (q.resolution) {
       lines.push("## Resolution");
-      lines.push(q.resolution);
+      lines.push(fieldToMarkdown(q.resolution));
       lines.push("");
     }
     if (q.reward) {
       lines.push("## Reward");
-      lines.push(q.reward);
+      lines.push(fieldToMarkdown(q.reward));
       lines.push("");
     }
   } else if (type === "session") {
     const s = entity as Session;
     if (s.planned_content) {
       lines.push("## Planned Content");
-      lines.push(s.planned_content);
+      lines.push(fieldToMarkdown(s.planned_content));
       lines.push("");
     }
     if (s.summary) {
       lines.push("## Summary");
-      lines.push(s.summary);
+      lines.push(fieldToMarkdown(s.summary));
       lines.push("");
     }
     if (s.highlights) {
       lines.push("## Highlights");
-      lines.push(s.highlights);
+      lines.push(fieldToMarkdown(s.highlights));
       lines.push("");
     }
     if (s.notes) {
       lines.push("## Notes");
-      lines.push(s.notes);
+      lines.push(fieldToMarkdown(s.notes));
       lines.push("");
     }
   } else if (type === "secret") {
     const s = entity as Secret;
     lines.push("## Content");
-    lines.push(s.content);
+    lines.push(fieldToMarkdown(s.content));
     lines.push("");
   } else if (type === "hero") {
     const h = entity as Hero;
     if (h.backstory) {
       lines.push("## Backstory");
-      lines.push(h.backstory);
+      lines.push(fieldToMarkdown(h.backstory));
       lines.push("");
     }
     if (h.goals) {
       lines.push("## Goals");
-      lines.push(h.goals);
+      lines.push(fieldToMarkdown(h.goals));
       lines.push("");
     }
     if (h.bonds) {
       lines.push("## Bonds");
-      lines.push(h.bonds);
+      lines.push(fieldToMarkdown(h.bonds));
       lines.push("");
     }
   }
