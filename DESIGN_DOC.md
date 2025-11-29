@@ -709,6 +709,11 @@ END;
 
 ## 5. AI System Design
 
+> **Implementation Note (Nov 2025):** The original design specified Claude Agent SDK, but it
+> doesn't work in browser environments. The implementation uses a custom in-browser agent loop
+> with direct tool calling via the Anthropic SDK. This achieves the same goals with full
+> browser compatibility. See `src/ai/agent/loop.ts` for the implementation.
+
 ### 5.1 Agent Architecture
 
 ```
@@ -717,7 +722,7 @@ END;
 ├─────────────────────────────────────────────────────────────────────────────┤
 │                                                                              │
 │  ┌─────────────────────────────────────────────────────────────────────────┐│
-│  │                        Claude Agent SDK                                  ││
+│  │                    Custom Agent Loop (src/ai/agent/)                    ││
 │  │                                                                          ││
 │  │  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐  ┌─────────────────┐ ││
 │  │  │  GENERATOR  │  │  EXPANDER   │  │ CONSISTENCY │  │    SESSION      │ ││
@@ -734,8 +739,8 @@ END;
 │  │         └────────────────┴────────┬───────┴──────────────────┘          ││
 │  │                                   │                                      ││
 │  │                          ┌────────┴────────┐                            ││
-│  │                          │   MCP SERVER    │                            ││
-│  │                          │  (Campaign DB)  │                            ││
+│  │                          │  TOOL REGISTRY  │                            ││
+│  │                          │ (src/ai/tools/) │                            ││
 │  │                          └────────┬────────┘                            ││
 │  │                                   │                                      ││
 │  │                          ┌────────┴────────┐                            ││
@@ -745,21 +750,25 @@ END;
 │  │                          │ • get_relationships                          ││
 │  │                          │ • get_timeline   │                           ││
 │  │                          │ • get_location_hierarchy                     ││
+│  │                          │ • get_campaign_context                       ││
 │  │                          └─────────────────┘                            ││
 │  └─────────────────────────────────────────────────────────────────────────┘│
 │                                                                              │
 └──────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### 5.2 MCP Server Tools
+### 5.2 Tool Registry
 
-The MCP server exposes campaign data to Claude agents:
+> **Implementation Note:** Tools are registered directly in `src/ai/tools/` rather than
+> through an MCP server. This provides the same functionality with simpler architecture.
+> Each tool calls the Rust backend via Tauri IPC.
+
+The tool registry exposes campaign data to Claude agents:
 
 ```typescript
-// mcp-server/tools.ts
+// src/ai/tools/campaign-context/search-entities.ts
 
-import { tool } from "@anthropic-ai/claude-agent-sdk";
-import { z } from "zod";
+import type { Tool } from "../types";
 
 export const searchEntities = tool(
   "search_entities",
@@ -867,15 +876,19 @@ export const getCampaignContext = tool(
 
 ### 5.3 Agent Definitions
 
+> **Implementation Note:** Agents are implemented as specialized configurations of the
+> `runAgent()` function in `src/ai/agent/loop.ts`, using different system prompts from
+> `src/ai/agent/prompts.ts` rather than separate classes.
+
 #### 5.3.1 Generator Agent
 
 Creates new entities from scratch based on context.
 
 ```typescript
-// agents/generator.ts
+// src/ai/agents/generator.ts (planned for M6)
 
-import { query } from "@anthropic-ai/claude-agent-sdk";
-import { mcpServer } from "../mcp-server";
+import { runAgent } from "../agent/loop";
+import { createToolRegistry } from "../tools";
 
 export interface GeneratorRequest {
   entityType: "character" | "location" | "organization" | "quest" | "item";
@@ -1174,8 +1187,11 @@ Remember: The GM will review everything. It's better to miss something than to p
 
 ### 5.4 Model Selection Logic
 
+> **Implementation:** See `src/ai/model-selector.ts` and `src/ai/models.ts` for the actual
+> implementation. Model preference is stored in aiStore and persisted via Tauri plugin-store.
+
 ```typescript
-// ai/model-selector.ts
+// src/ai/model-selector.ts
 
 export type QualityPreference = "speed" | "balanced" | "quality";
 
