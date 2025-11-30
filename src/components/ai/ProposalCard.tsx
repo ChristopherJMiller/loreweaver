@@ -14,7 +14,11 @@ import {
   Lightbulb,
   ArrowRight,
   ArrowLeftRight,
+  Link2,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
+import { marked } from "marked";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
@@ -23,6 +27,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import type {
   EntityProposal,
   CreateProposal,
@@ -34,6 +39,8 @@ import {
   isUpdateProposal,
   isRelationshipProposal,
 } from "@/ai/tools/entity-proposals/types";
+import type { SuggestedRelationship } from "@/ai/agents/types";
+import { RICH_TEXT_FIELDS } from "@/types";
 
 interface ProposalCardProps {
   /** The proposal to display */
@@ -55,10 +62,134 @@ interface ProposalCardProps {
 /**
  * Format entity type for display
  */
-function formatEntityType(type: string): string {
+export function formatEntityType(type: string): string {
   return type
     .replace(/_/g, " ")
     .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+/**
+ * Check if a field should be rendered as rich text (markdown)
+ */
+function isRichTextField(fieldName: string): boolean {
+  return RICH_TEXT_FIELDS.has(fieldName);
+}
+
+/**
+ * Field Value Component
+ *
+ * Renders a single field value with optional markdown and expansion for long text.
+ */
+function FieldValue({
+  label,
+  value,
+  fieldName,
+}: {
+  label: string;
+  value: string;
+  fieldName: string;
+}) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const isLong = value.length > 150;
+  const isRichText = isRichTextField(fieldName);
+
+  const displayValue = isExpanded ? value : isLong ? value.slice(0, 150) + "..." : value;
+
+  return (
+    <div className="space-y-1">
+      <span className="text-xs font-medium text-muted-foreground">{label}</span>
+      {isRichText ? (
+        <ScrollArea className={isLong && !isExpanded ? "max-h-20" : isExpanded ? "max-h-48" : ""}>
+          <div
+            className="text-sm prose prose-sm dark:prose-invert max-w-none prose-p:my-1 prose-headings:my-2"
+            dangerouslySetInnerHTML={{ __html: marked.parse(displayValue) as string }}
+          />
+        </ScrollArea>
+      ) : (
+        <p className="text-sm">{displayValue}</p>
+      )}
+      {isLong && (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-auto p-0 text-xs gap-1"
+          onClick={() => setIsExpanded(!isExpanded)}
+          onMouseDown={(e) => e.preventDefault()}
+        >
+          {isExpanded ? (
+            <>
+              <ChevronUp className="h-3 w-3" />
+              Show less
+            </>
+          ) : (
+            <>
+              <ChevronDown className="h-3 w-3" />
+              Show more
+            </>
+          )}
+        </Button>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Suggested Relationships List Component
+ *
+ * Displays the relationships that will be created with a new entity.
+ */
+function SuggestedRelationshipsList({
+  relationships,
+  entityName,
+}: {
+  relationships: SuggestedRelationship[];
+  entityName: string;
+}) {
+  const [isExpanded, setIsExpanded] = useState(false);
+
+  if (relationships.length === 0) return null;
+
+  return (
+    <Collapsible open={isExpanded} onOpenChange={setIsExpanded}>
+      <CollapsibleTrigger asChild>
+        <Button variant="ghost" size="sm" className="h-auto p-0 text-xs gap-1" onMouseDown={(e) => e.preventDefault()}>
+          <Link2 className="h-3 w-3" />
+          {isExpanded ? "Hide" : "Show"} {relationships.length} relationship
+          {relationships.length !== 1 && "s"}
+        </Button>
+      </CollapsibleTrigger>
+      <CollapsibleContent>
+        <div className="mt-2 space-y-2 border-l-2 border-muted pl-3">
+          {relationships.map((rel, idx) => (
+            <div key={idx} className="text-sm">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="font-medium">{entityName}</span>
+                <ArrowRight className="h-3 w-3 text-muted-foreground shrink-0" />
+                <Badge variant="secondary" className="text-xs">
+                  {rel.relationshipType}
+                </Badge>
+                <ArrowRight className="h-3 w-3 text-muted-foreground shrink-0" />
+                <span className="font-medium">{rel.targetName}</span>
+                <span className="text-xs text-muted-foreground">
+                  ({formatEntityType(rel.targetType)})
+                </span>
+                {rel.isNewEntity && (
+                  <Badge variant="outline" className="text-xs">
+                    New
+                  </Badge>
+                )}
+              </div>
+              {rel.description && (
+                <p className="text-xs text-muted-foreground mt-1 ml-4">
+                  {rel.description}
+                </p>
+              )}
+            </div>
+          ))}
+        </div>
+      </CollapsibleContent>
+    </Collapsible>
+  );
 }
 
 /**
@@ -101,25 +232,31 @@ function getOperationVariant(
 function CreateProposalContent({ proposal }: { proposal: CreateProposal }) {
   const [showDetails, setShowDetails] = useState(false);
 
-  // Memoize field computations
-  const { previewFields, detailFields } = useMemo(() => {
+  // Memoize field computations - separate primary fields from additional
+  const { primaryFields, additionalFields } = useMemo(() => {
     const nonNameFields = Object.entries(proposal.data).filter(
       ([key]) => key !== "name"
     );
-    return {
-      previewFields: nonNameFields.slice(0, 3),
-      detailFields: nonNameFields.map(([key, value]) => ({
-        key,
-        label: formatEntityType(key),
-        displayValue:
-          typeof value === "string"
-            ? value.length > 100
-              ? value.slice(0, 100) + "..."
-              : value
-            : String(value),
-      })),
-    };
+
+    // Primary fields: description first if present
+    const primary: Array<{ key: string; label: string; value: string }> = [];
+    const additional: Array<{ key: string; label: string; value: string }> = [];
+
+    for (const [key, rawValue] of nonNameFields) {
+      const value = typeof rawValue === "string" ? rawValue : String(rawValue);
+      const item = { key, label: formatEntityType(key), value };
+
+      if (key === "description" || key === "personality" || key === "hook") {
+        primary.push(item);
+      } else {
+        additional.push(item);
+      }
+    }
+
+    return { primaryFields: primary, additionalFields: additional };
   }, [proposal.data]);
+
+  const hasFields = primaryFields.length > 0 || additionalFields.length > 0;
 
   return (
     <div className="space-y-3">
@@ -129,35 +266,130 @@ function CreateProposalContent({ proposal }: { proposal: CreateProposal }) {
         <span className="ml-2 font-medium">{proposal.data.name}</span>
       </div>
 
-      {/* Preview fields */}
-      {previewFields.length > 0 && (
+      {/* Primary fields (always visible) */}
+      {primaryFields.length > 0 && (
+        <div className="space-y-3">
+          {primaryFields.map(({ key, label, value }) => (
+            <FieldValue key={key} label={label} value={value} fieldName={key} />
+          ))}
+        </div>
+      )}
+
+      {/* Additional fields (collapsible) */}
+      {additionalFields.length > 0 && (
         <Collapsible open={showDetails} onOpenChange={setShowDetails}>
           <CollapsibleTrigger asChild>
-            <Button variant="ghost" size="sm" className="h-auto p-0 text-xs">
-              {showDetails ? "Hide details" : "Show details"}
+            <Button variant="ghost" size="sm" className="h-auto p-0 text-xs gap-1" onMouseDown={(e) => e.preventDefault()}>
+              {showDetails ? (
+                <>
+                  <ChevronUp className="h-3 w-3" />
+                  Hide {additionalFields.length} more field{additionalFields.length !== 1 && "s"}
+                </>
+              ) : (
+                <>
+                  <ChevronDown className="h-3 w-3" />
+                  Show {additionalFields.length} more field{additionalFields.length !== 1 && "s"}
+                </>
+              )}
             </Button>
           </CollapsibleTrigger>
           <CollapsibleContent>
-            <div className="mt-2 space-y-2 text-sm">
-              {detailFields.map(({ key, label, displayValue }) => (
-                <div key={key} className="grid grid-cols-[100px_1fr] gap-2">
-                  <span className="text-muted-foreground">{label}:</span>
-                  <span className="line-clamp-2">{displayValue}</span>
-                </div>
+            <div className="mt-2 space-y-3">
+              {additionalFields.map(({ key, label, value }) => (
+                <FieldValue key={key} label={label} value={value} fieldName={key} />
               ))}
             </div>
           </CollapsibleContent>
         </Collapsible>
       )}
 
+      {/* Empty state for entities with only a name */}
+      {!hasFields && (
+        <p className="text-xs text-muted-foreground italic">No additional details</p>
+      )}
+
       {/* Suggested relationships */}
       {proposal.suggestedRelationships &&
         proposal.suggestedRelationships.length > 0 && (
-          <div className="text-xs text-muted-foreground">
-            + {proposal.suggestedRelationships.length} relationship(s) will be
-            created
-          </div>
+          <SuggestedRelationshipsList
+            relationships={proposal.suggestedRelationships}
+            entityName={proposal.data.name}
+          />
         )}
+    </div>
+  );
+}
+
+/**
+ * Update Diff Item Component
+ *
+ * Renders a single diff item with expand/collapse for long values.
+ */
+function UpdateDiffItem({
+  label,
+  fieldName,
+  oldValue,
+  newValue,
+}: {
+  label: string;
+  fieldName: string;
+  oldValue: string;
+  newValue: string;
+}) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const isRichText = isRichTextField(fieldName);
+  const isLong = oldValue.length > 100 || newValue.length > 100;
+
+  const truncate = (val: string) =>
+    isExpanded ? val : val.length > 100 ? val.slice(0, 100) + "..." : val;
+
+  const renderValue = (value: string, className: string) => {
+    const displayValue = truncate(value);
+    if (isRichText && isExpanded) {
+      return (
+        <div
+          className={`prose prose-sm dark:prose-invert max-w-none prose-p:my-0.5 ${className}`}
+          dangerouslySetInnerHTML={{ __html: marked.parse(displayValue) as string }}
+        />
+      );
+    }
+    return <span className={className}>{displayValue}</span>;
+  };
+
+  return (
+    <div className="space-y-1.5">
+      <span className="text-xs font-medium text-muted-foreground">{label}</span>
+      <div className="space-y-1 text-sm">
+        <div className="flex items-start gap-2">
+          <span className="text-red-500/70 shrink-0 text-xs mt-0.5">−</span>
+          {renderValue(oldValue || "(empty)", "text-red-500/80 line-through")}
+        </div>
+        <div className="flex items-start gap-2">
+          <span className="text-green-500/70 shrink-0 text-xs mt-0.5">+</span>
+          {renderValue(newValue, "text-green-500/80")}
+        </div>
+      </div>
+      {isLong && (
+        <Button
+          variant="ghost"
+          size="sm"
+          className="h-auto p-0 text-xs gap-1"
+          onClick={() => setIsExpanded(!isExpanded)}
+          onMouseDown={(e) => e.preventDefault()}
+        >
+          {isExpanded ? (
+            <>
+              <ChevronUp className="h-3 w-3" />
+              Show less
+            </>
+          ) : (
+            <>
+              <ChevronDown className="h-3 w-3" />
+              Show full diff
+            </>
+          )}
+        </Button>
+      )}
     </div>
   );
 }
@@ -166,39 +398,29 @@ function CreateProposalContent({ proposal }: { proposal: CreateProposal }) {
  * Render update proposal content with diff
  */
 function UpdateProposalContent({ proposal }: { proposal: UpdateProposal }) {
-  // Memoize change display values
+  // Memoize change items
   const changeItems = useMemo(() => {
     return Object.entries(proposal.changes).map(([key, newValue]) => {
       const oldValue = proposal.currentData?.[key];
-      const oldDisplay =
-        oldValue !== undefined
-          ? String(oldValue).slice(0, 40) +
-            (String(oldValue).length > 40 ? "..." : "")
-          : "(empty)";
-      const newDisplay =
-        String(newValue).slice(0, 40) +
-        (String(newValue).length > 40 ? "..." : "");
-
       return {
         key,
         label: formatEntityType(key),
-        oldDisplay,
-        newDisplay,
+        oldValue: oldValue !== undefined ? String(oldValue) : "",
+        newValue: String(newValue),
       };
     });
   }, [proposal.changes, proposal.currentData]);
 
   return (
-    <div className="space-y-2 text-sm">
-      {changeItems.map(({ key, label, oldDisplay, newDisplay }) => (
-        <div key={key} className="space-y-0.5">
-          <span className="text-muted-foreground">{label}</span>
-          <div className="flex items-center gap-2 text-xs">
-            <span className="text-red-500/80 line-through">{oldDisplay}</span>
-            <ArrowRight className="h-3 w-3 text-muted-foreground" />
-            <span className="text-green-500/80">{newDisplay}</span>
-          </div>
-        </div>
+    <div className="space-y-3">
+      {changeItems.map(({ key, label, oldValue, newValue }) => (
+        <UpdateDiffItem
+          key={key}
+          label={label}
+          fieldName={key}
+          oldValue={oldValue}
+          newValue={newValue}
+        />
       ))}
     </div>
   );
@@ -288,7 +510,7 @@ export function ProposalCard({
             className="mt-3"
           >
             <CollapsibleTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-auto p-0 gap-1 text-xs">
+              <Button variant="ghost" size="sm" className="h-auto p-0 gap-1 text-xs" onMouseDown={(e) => e.preventDefault()}>
                 <Lightbulb className="h-3 w-3" />
                 {showReasoning ? "Hide reasoning" : "Show reasoning"}
               </Button>

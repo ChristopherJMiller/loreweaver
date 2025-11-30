@@ -52,3 +52,43 @@ export interface SearchResult {
   snippet: string | null;
   rank: number;
 }
+
+/**
+ * Fields that contain ProseMirror/TipTap JSON content.
+ * These fields should be converted to/from markdown when interfacing with AI.
+ *
+ * Source of truth for all rich text field detection in the app.
+ */
+export const RICH_TEXT_FIELDS = new Set([
+  // Character fields
+  "description",
+  "personality",
+  "motivations",
+  "secrets",
+  "voice_notes",
+  // Location fields
+  "gm_notes",
+  // Organization fields
+  "goals",
+  "resources",
+  // Quest fields
+  "hook",
+  "objectives",
+  "complications",
+  "resolution",
+  "reward",
+  // Hero fields
+  "backstory",
+  "bonds",
+  // Player fields
+  "preferences",
+  "boundaries",
+  "notes",
+  // Session fields
+  "planned_content",
+  "summary",
+  "highlights",
+  // Secret fields
+  "content",
+  "reveal_conditions",
+]);

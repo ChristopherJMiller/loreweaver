@@ -411,6 +411,7 @@ export interface AiConversationResponse {
   total_output_tokens: number;
   total_cache_read_tokens: number;
   total_cache_creation_tokens: number;
+  agent_messages_json: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -461,4 +462,10 @@ export const aiConversations = {
 
   clear: (data: { conversation_id: string }) =>
     invoke<boolean>("clear_ai_conversation", data),
+
+  updateProposal: (data: { message_id: string; proposal_json: string }) =>
+    invoke<AiMessageResponse>("update_ai_message_proposal", data),
+
+  updateAgentMessages: (data: { conversation_id: string; agent_messages_json: string }) =>
+    invoke<void>("update_ai_agent_messages", data),
 };

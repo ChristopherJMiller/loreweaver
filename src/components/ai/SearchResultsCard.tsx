@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/collapsible";
 import { EntityResultCard } from "./EntityResultCard";
 import type { SearchResult } from "@/types";
-import { Search, ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronDown, ChevronUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export interface SearchResultsCardProps {
@@ -46,15 +46,12 @@ export function SearchResultsCard({
 
   return (
     <Card className={cn("overflow-hidden", className)}>
-      <CardHeader className="py-2 px-3 bg-muted/30">
+      <CardHeader className="py-2 px-3">
         <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 min-w-0">
-            <Search className="h-4 w-4 text-muted-foreground flex-shrink-0" />
-            <CardTitle className="text-sm font-medium truncate">
-              Search: "{query}"
-            </CardTitle>
-          </div>
-          <Badge variant="secondary" className="flex-shrink-0">
+          <CardTitle className="text-sm font-medium text-muted-foreground truncate">
+            Found for "{query}"
+          </CardTitle>
+          <Badge variant="outline" className="text-xs flex-shrink-0">
             {totalResults} result{totalResults !== 1 ? "s" : ""}
           </Badge>
         </div>

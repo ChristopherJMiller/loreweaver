@@ -7,9 +7,16 @@
  */
 
 import { create } from "zustand";
+import type { MessageParam } from "@anthropic-ai/sdk/resources/messages";
 import type { EntityProposal } from "@/ai/tools/entity-proposals/types";
 import { aiConversations, type AiMessageResponse } from "@/lib/tauri";
 import type { AiContextType } from "@/types";
+
+/** Tool category determines UI behavior */
+export type ToolCategory = "read" | "write" | "internal";
+
+/** Display mode for message rendering */
+export type MessageDisplayMode = "normal" | "ephemeral" | "fading" | "hidden";
 
 export interface ChatMessage {
   id: string;
@@ -22,6 +29,14 @@ export interface ChatMessage {
   timestamp: Date;
   /** Proposal data for proposal messages */
   proposal?: EntityProposal;
+  /** UI display mode for this message */
+  displayMode?: MessageDisplayMode;
+  /** When the fade animation started (for cleanup timing) */
+  fadeStartedAt?: number;
+  /** Tool category for routing display logic */
+  toolCategory?: ToolCategory;
+  /** AI-provided flavor text for ephemeral indicators */
+  flavor?: string;
 }
 
 interface ChatState {
@@ -50,6 +65,16 @@ interface ChatState {
   /** Whether conversation is being loaded */
   isLoading: boolean;
 
+  // Ephemeral indicator state
+  /** Currently active ephemeral indicator ID (one at a time) */
+  activeEphemeralId: string | null;
+  /** Whether thinking indicator is active (for internal tools) */
+  thinkingActive: boolean;
+
+  // Agent conversation memory
+  /** Full Anthropic-format message history for agent continuity */
+  agentMessages: MessageParam[];
+
   // Actions
   addUserMessage: (content: string) => Promise<string>;
   addAssistantMessage: (content: string, toolName?: string) => string;
@@ -59,6 +84,8 @@ interface ChatState {
   setRunning: (running: boolean) => void;
   clearMessages: () => Promise<void>;
   clearError: () => void;
+  /** Update agent message history (for conversation memory) */
+  setAgentMessages: (messages: MessageParam[]) => Promise<void>;
   /** Add token usage from an agent run (includes cache metrics) */
   addTokenUsage: (usage: {
     inputTokens: number;
@@ -88,13 +115,29 @@ interface ChatState {
   // Proposal actions
   /** Add a proposal message, returns the message ID */
   addProposal: (proposal: EntityProposal) => Promise<string>;
-  /** Update a proposal's status in its message */
+  /** Update a proposal's status in its message (persists to database) */
   updateProposalStatus: (
     proposalId: string,
     status: EntityProposal["status"]
-  ) => void;
+  ) => Promise<void>;
   /** Get a proposal message by proposal ID */
   getProposalMessage: (proposalId: string) => ChatMessage | undefined;
+
+  // Ephemeral indicator actions
+  /** Add ephemeral indicator for read tools (returns message ID) */
+  addEphemeralIndicator: (
+    toolName: string,
+    toolInput?: unknown,
+    flavor?: string
+  ) => string;
+  /** Start fade animation on current ephemeral indicator */
+  fadeEphemeralIndicator: () => void;
+  /** Remove faded ephemeral messages after animation completes */
+  cleanupFadedMessages: () => void;
+  /** Show thinking indicator for internal tools */
+  showThinkingIndicator: () => void;
+  /** Hide thinking indicator */
+  hideThinkingIndicator: () => void;
 }
 
 let messageCounter = 0;
@@ -160,6 +203,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
   contextType: null,
   campaignId: null,
   isLoading: false,
+  activeEphemeralId: null,
+  thinkingActive: false,
+  agentMessages: [],
 
   loadConversation: async (campaignId: string, contextType: AiContextType) => {
     const state = get();
@@ -181,11 +227,16 @@ export const useChatStore = create<ChatState>((set, get) => ({
       if (result) {
         // Conversation exists, hydrate messages
         const messages = result.messages.map(dbMessageToChatMessage);
+        // Hydrate agent messages from JSON (for conversation memory)
+        const agentMessages = result.conversation.agent_messages_json
+          ? JSON.parse(result.conversation.agent_messages_json)
+          : [];
         set({
           conversationId: result.conversation.id,
           contextType,
           campaignId,
           messages,
+          agentMessages,
           sessionInputTokens: result.conversation.total_input_tokens,
           sessionOutputTokens: result.conversation.total_output_tokens,
           sessionCacheReadTokens: result.conversation.total_cache_read_tokens,
@@ -366,9 +417,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
   clearMessages: async () => {
     const { conversationId } = get();
 
-    // Clear local state
+    // Clear local state (including agent conversation memory)
     set({
       messages: [],
+      agentMessages: [],
       error: null,
       sessionInputTokens: 0,
       sessionOutputTokens: 0,
@@ -388,6 +440,23 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   clearError: () => {
     set({ error: null });
+  },
+
+  setAgentMessages: async (messages: MessageParam[]) => {
+    const { conversationId } = get();
+    set({ agentMessages: messages });
+
+    // Persist to database
+    if (conversationId) {
+      try {
+        await aiConversations.updateAgentMessages({
+          conversation_id: conversationId,
+          agent_messages_json: JSON.stringify(messages),
+        });
+      } catch (err) {
+        console.error("Failed to persist agent messages:", err);
+      }
+    }
   },
 
   addTokenUsage: async (usage) => {
@@ -579,26 +648,104 @@ export const useChatStore = create<ChatState>((set, get) => ({
     return id;
   },
 
-  updateProposalStatus: (
+  updateProposalStatus: async (
     proposalId: string,
     status: EntityProposal["status"]
   ) => {
+    const state = get();
+
+    // Find the message containing this proposal
+    const message = state.messages.find((msg) => msg.proposal?.id === proposalId);
+    if (!message?.proposal) return;
+
+    // Create updated proposal
+    const updatedProposal = { ...message.proposal, status };
+
+    // Update local state immediately for responsiveness
     set((state) => ({
       messages: state.messages.map((msg) => {
         if (msg.proposal?.id === proposalId) {
           return {
             ...msg,
-            proposal: { ...msg.proposal, status },
+            proposal: updatedProposal,
           };
         }
         return msg;
       }),
     }));
-    // Note: Proposal status updates are not persisted to DB
-    // as they're UI state that doesn't need to survive reload
+
+    // Persist to database
+    try {
+      await aiConversations.updateProposal({
+        message_id: message.id,
+        proposal_json: JSON.stringify(updatedProposal),
+      });
+    } catch (err) {
+      console.error("Failed to persist proposal status:", err);
+    }
   },
 
   getProposalMessage: (proposalId: string) => {
     return get().messages.find((msg) => msg.proposal?.id === proposalId);
+  },
+
+  // Ephemeral indicator implementations
+
+  addEphemeralIndicator: (
+    toolName: string,
+    toolInput?: unknown,
+    flavor?: string
+  ) => {
+    const id = generateId();
+    set((state) => ({
+      messages: [
+        ...state.messages,
+        {
+          id,
+          role: "tool",
+          content: "",
+          toolName,
+          toolInput,
+          displayMode: "ephemeral",
+          toolCategory: "read",
+          flavor,
+          timestamp: new Date(),
+        },
+      ],
+      activeEphemeralId: id,
+    }));
+    return id;
+  },
+
+  fadeEphemeralIndicator: () => {
+    set((state) => ({
+      messages: state.messages.map((msg) =>
+        msg.id === state.activeEphemeralId
+          ? { ...msg, displayMode: "fading" as const, fadeStartedAt: Date.now() }
+          : msg
+      ),
+      activeEphemeralId: null,
+    }));
+  },
+
+  cleanupFadedMessages: () => {
+    const now = Date.now();
+    set((state) => ({
+      messages: state.messages.filter((msg) => {
+        // Keep non-fading messages
+        if (msg.displayMode !== "fading") return true;
+        // Remove faded messages after 350ms (300ms fade + 50ms buffer)
+        if (msg.fadeStartedAt && now - msg.fadeStartedAt >= 350) return false;
+        return true;
+      }),
+    }));
+  },
+
+  showThinkingIndicator: () => {
+    set({ thinkingActive: true });
+  },
+
+  hideThinkingIndicator: () => {
+    set({ thinkingActive: false });
   },
 }));

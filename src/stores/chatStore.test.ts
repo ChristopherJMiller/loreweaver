@@ -283,6 +283,7 @@ describe("chatStore - Persistence", () => {
         entityType: "character",
         status: "pending",
         data: { name: "Gandalf" },
+        createdAt: new Date("2024-01-01T00:00:00Z"),
       };
 
       mockInvoke.mockResolvedValue({
@@ -324,7 +325,7 @@ describe("chatStore - Persistence", () => {
       });
 
       const store = useChatStore.getState();
-      const msgId = store.startStreaming();
+      store.startStreaming();
 
       // Simulate streaming
       store.appendToStreaming("Hello ");

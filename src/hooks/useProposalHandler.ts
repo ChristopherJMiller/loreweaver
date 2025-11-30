@@ -23,7 +23,7 @@ import {
   isUpdateProposal,
   isRelationshipProposal,
 } from "@/ai/tools/entity-proposals/types";
-import type { EntityType } from "@/types";
+import { RICH_TEXT_FIELDS, type EntityType } from "@/types";
 import type { SuggestedRelationship } from "@/ai/agents/types";
 import {
   characters,
@@ -39,30 +39,52 @@ import {
   campaigns,
   search,
 } from "@/lib/tauri";
+import {
+  useLocationStore,
+  useCharacterStore,
+  useOrganizationStore,
+  useQuestStore,
+  useHeroStore,
+  usePlayerStore,
+  useSessionStore,
+  useTimelineEventStore,
+  useSecretStore,
+} from "@/stores";
 
 /**
- * Fields that should be treated as rich text and converted from markdown
+ * Refresh the appropriate entity store after creation/update
  */
-const RICH_TEXT_FIELDS = new Set([
-  "description",
-  "personality",
-  "motivations",
-  "secrets",
-  "voice_notes",
-  "backstory",
-  "notes",
-  "goals",
-  "resources",
-  "objectives",
-  "hook",
-  "summary",
-  "content",
-  "gm_notes",
-  "highlights",
-  "reveal_conditions",
-  "preferences",
-  "boundaries",
-]);
+function refreshEntityStore(entityType: EntityType, campaignId: string): void {
+  switch (entityType) {
+    case "location":
+      useLocationStore.getState().fetchAll(campaignId);
+      break;
+    case "character":
+      useCharacterStore.getState().fetchAll(campaignId);
+      break;
+    case "organization":
+      useOrganizationStore.getState().fetchAll(campaignId);
+      break;
+    case "quest":
+      useQuestStore.getState().fetchAll(campaignId);
+      break;
+    case "hero":
+      useHeroStore.getState().fetchAll(campaignId);
+      break;
+    case "player":
+      usePlayerStore.getState().fetchAll(campaignId);
+      break;
+    case "session":
+      useSessionStore.getState().fetchAll(campaignId);
+      break;
+    case "timeline_event":
+      useTimelineEventStore.getState().fetchAll(campaignId);
+      break;
+    case "secret":
+      useSecretStore.getState().fetchAll(campaignId);
+      break;
+  }
+}
 
 /**
  * Convert markdown fields to ProseMirror JSON for database storage
@@ -380,18 +402,26 @@ export function useProposalHandler({
 
       try {
         let entityId: string | undefined;
+        let entityType: EntityType | undefined;
 
         if (isCreateProposal(proposal)) {
           entityId = await executeCreateProposal(proposal, campaignId, editedData);
+          entityType = proposal.entityType;
         } else if (isUpdateProposal(proposal)) {
           await executeUpdateProposal(proposal, editedData);
           entityId = proposal.entityId;
+          entityType = proposal.entityType;
         } else if (isRelationshipProposal(proposal)) {
           await executeRelationshipProposal(proposal, campaignId);
         }
 
         // Invalidate campaign summary cache
         invalidateCampaignSummary(campaignId);
+
+        // Refresh the entity store so UI updates immediately
+        if (entityType) {
+          refreshEntityStore(entityType, campaignId);
+        }
 
         onAccepted?.(proposal.id, entityId);
       } catch (err) {

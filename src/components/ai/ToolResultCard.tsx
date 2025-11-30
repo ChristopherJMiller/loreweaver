@@ -6,7 +6,6 @@
  */
 
 import { useState, useMemo } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
   Collapsible,
@@ -14,16 +13,26 @@ import {
 } from "@/components/ui/collapsible";
 import { SearchResultsCard } from "./SearchResultsCard";
 import { EntityPreviewCard, type EntityData } from "@/components/citation";
-import type { SearchResult, EntityType } from "@/types";
-import {
-  Wrench,
-  ChevronDown,
-  ChevronUp,
-  CheckCircle2,
-} from "lucide-react";
+import type { SearchResult, EntityType, Campaign } from "@/types";
+import { ChevronDown, ChevronUp, Globe } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { marked } from "marked";
 import { useEntityNavigation } from "@/hooks/useEntityNavigation";
+
+interface CampaignStats {
+  characters: number;
+  locations: number;
+  organizations: number;
+  quests: number;
+  heroes: number;
+  sessions: number;
+  timelineEvents: number;
+}
+
+interface CampaignContextData {
+  campaign: Campaign;
+  stats: CampaignStats;
+}
 
 export interface ToolResultCardProps {
   toolName: string;
@@ -33,10 +42,9 @@ export interface ToolResultCardProps {
 }
 
 /**
- * Default text display with smart expand/collapse
+ * Streamlined text display - no technical header, just content
  */
 function DefaultToolResult({
-  toolName,
   content,
   className,
 }: {
@@ -45,7 +53,7 @@ function DefaultToolResult({
   className?: string;
 }) {
   const [isExpanded, setIsExpanded] = useState(false);
-  const isLongContent = content.length > 300;
+  const isLongContent = content.length > 400;
 
   // Memoize markdown parsing
   const html = useMemo(
@@ -54,54 +62,96 @@ function DefaultToolResult({
   );
 
   return (
-    <Card className={cn("overflow-hidden", className)}>
-      <CardHeader className="py-2 px-3 bg-muted/30">
-        <div className="flex items-center gap-2">
-          <Wrench className="h-4 w-4 text-muted-foreground" />
-          <CardTitle className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-            {toolName}
-          </CardTitle>
-        </div>
-      </CardHeader>
-      <CardContent className="p-3">
-        <Collapsible open={isExpanded || !isLongContent} onOpenChange={setIsExpanded}>
-          <div
-            className={cn(
-              "prose prose-sm dark:prose-invert max-w-none",
-              !isExpanded && isLongContent && "line-clamp-4"
-            )}
-            dangerouslySetInnerHTML={{ __html: html }}
-          />
-
-          {isLongContent && (
-            <CollapsibleTrigger asChild>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="w-full mt-2 text-xs h-7"
-              >
-                {isExpanded ? (
-                  <>
-                    <ChevronUp className="h-3 w-3 mr-1" />
-                    Show less
-                  </>
-                ) : (
-                  <>
-                    <ChevronDown className="h-3 w-3 mr-1" />
-                    Show more
-                  </>
-                )}
-              </Button>
-            </CollapsibleTrigger>
+    <div className={cn("text-sm bg-muted/20 rounded-lg p-3", className)}>
+      <Collapsible open={isExpanded || !isLongContent} onOpenChange={setIsExpanded}>
+        <div
+          className={cn(
+            "prose prose-sm dark:prose-invert max-w-none",
+            !isExpanded && isLongContent && "line-clamp-6"
           )}
-        </Collapsible>
-      </CardContent>
-    </Card>
+          dangerouslySetInnerHTML={{ __html: html }}
+        />
+
+        {isLongContent && (
+          <CollapsibleTrigger asChild>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full mt-2 text-xs h-7"
+            >
+              {isExpanded ? (
+                <>
+                  <ChevronUp className="h-3 w-3 mr-1" />
+                  Show less
+                </>
+              ) : (
+                <>
+                  <ChevronDown className="h-3 w-3 mr-1" />
+                  Show more
+                </>
+              )}
+            </Button>
+          </CollapsibleTrigger>
+        )}
+      </Collapsible>
+    </div>
   );
 }
 
 /**
- * Single entity result display
+ * Compact campaign context display - shows campaign name and total entity count
+ */
+function CampaignContextResult({
+  data,
+  className,
+}: {
+  data: CampaignContextData;
+  className?: string;
+}) {
+  const { campaign, stats } = data;
+  const totalEntities =
+    stats.characters +
+    stats.locations +
+    stats.organizations +
+    stats.quests +
+    stats.heroes +
+    stats.sessions +
+    stats.timelineEvents;
+
+  return (
+    <div
+      className={cn(
+        "flex items-center gap-3 text-sm bg-muted/30 rounded-lg px-3 py-2",
+        className
+      )}
+    >
+      <Globe className="h-4 w-4 text-muted-foreground shrink-0" />
+      <span className="text-muted-foreground">
+        Fetched campaign overview for{" "}
+        <span className="font-medium text-foreground">{campaign.name}</span>
+        {" "}({totalEntities} {totalEntities === 1 ? "entity" : "entities"})
+      </span>
+    </div>
+  );
+}
+
+/**
+ * Check if data is campaign context data
+ */
+function isCampaignContextData(data: unknown): data is CampaignContextData {
+  if (typeof data !== "object" || data === null) return false;
+  const d = data as Record<string, unknown>;
+  return (
+    "campaign" in d &&
+    "stats" in d &&
+    typeof d.stats === "object" &&
+    d.stats !== null &&
+    "characters" in (d.stats as Record<string, unknown>)
+  );
+}
+
+/**
+ * Single entity result display - streamlined without technical header
  */
 function EntityToolResult({
   entityType,
@@ -116,24 +166,13 @@ function EntityToolResult({
   const navigateHandler = createNavigateHandler(entityType, entity.id);
 
   return (
-    <Card className={cn("overflow-hidden", className)}>
-      <CardHeader className="py-2 px-3 bg-muted/30">
-        <div className="flex items-center gap-2">
-          <CheckCircle2 className="h-4 w-4 text-green-500" />
-          <CardTitle className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
-            get_entity
-          </CardTitle>
-        </div>
-      </CardHeader>
-      <CardContent className="p-2">
-        <EntityPreviewCard
-          entityType={entityType}
-          entity={entity}
-          compact={false}
-          onNavigate={navigateHandler}
-        />
-      </CardContent>
-    </Card>
+    <EntityPreviewCard
+      entityType={entityType}
+      entity={entity}
+      compact={false}
+      onNavigate={navigateHandler}
+      className={cn("border rounded-lg", className)}
+    />
   );
 }
 
@@ -193,6 +232,11 @@ export function ToolResultCard({
   className,
 }: ToolResultCardProps) {
   // Route to appropriate component based on tool and data type
+
+  // Campaign context - compact summary
+  if (toolName === "get_campaign_context" && isCampaignContextData(data)) {
+    return <CampaignContextResult data={data} className={className} />;
+  }
 
   // Search results
   if (toolName === "search_entities" && isSearchResults(data)) {

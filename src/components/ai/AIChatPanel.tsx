@@ -6,6 +6,7 @@
  */
 
 import { useState, useCallback, useEffect, useRef } from "react";
+import type { ChatMessageListHandle } from "./ChatMessageList";
 import { useLocation } from "react-router-dom";
 import { PanelRightClose, Trash2, Sparkles, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -18,6 +19,7 @@ import { ChatMessageList } from "./ChatMessageList";
 import { ChatInput } from "./ChatInput";
 import { ChatCostFooter } from "./ChatCostFooter";
 import { ProposalEditDialog } from "./ProposalEditDialog";
+import { PendingApprovalsButton } from "./PendingApprovalsButton";
 import { useUIStore, useChatStore, useCampaignStore } from "@/stores";
 import { useAIAvailable } from "@/stores/aiStore";
 import { useAgentChat } from "@/hooks/useAgentChat";
@@ -45,6 +47,7 @@ export function AIChatPanel() {
   const loadConversation = useChatStore((state) => state.loadConversation);
   const isLoading = useChatStore((state) => state.isLoading);
   const sessionInputTokens = useChatStore((state) => state.sessionInputTokens);
+  const thinkingActive = useChatStore((state) => state.thinkingActive);
 
   const activeCampaignId = useCampaignStore((state) => state.activeCampaignId);
   const isAvailable = useAIAvailable();
@@ -56,6 +59,12 @@ export function AIChatPanel() {
   );
   const [shouldFocus, setShouldFocus] = useState(false);
   const previousOpenRef = useRef(aiChatOpen);
+  const messageListRef = useRef<ChatMessageListHandle>(null);
+
+  // Handle jumping to a proposal from the pending approvals button
+  const handleJumpToProposal = useCallback((messageId: string) => {
+    messageListRef.current?.scrollToMessage(messageId);
+  }, []);
 
   // Track when panel opens to trigger focus
   useEffect(() => {
@@ -84,12 +93,12 @@ export function AIChatPanel() {
   const { acceptProposal, rejectProposal, isProcessing: isProcessingProposal } =
     useProposalHandler({
       campaignId: activeCampaignId ?? "",
-      onAccepted: (proposalId) => {
-        updateProposalStatus(proposalId, "accepted");
+      onAccepted: async (proposalId) => {
+        await updateProposalStatus(proposalId, "accepted");
         setEditingProposal(null);
       },
-      onRejected: (proposalId) => {
-        updateProposalStatus(proposalId, "rejected");
+      onRejected: async (proposalId) => {
+        await updateProposalStatus(proposalId, "rejected");
       },
     });
 
@@ -103,9 +112,9 @@ export function AIChatPanel() {
 
   // Handle rejecting a proposal
   const handleRejectProposal = useCallback(
-    (proposalId: string) => {
+    async (proposalId: string) => {
       rejectProposal(proposalId);
-      updateProposalStatus(proposalId, "rejected");
+      await updateProposalStatus(proposalId, "rejected");
     },
     [rejectProposal, updateProposalStatus]
   );
@@ -149,6 +158,7 @@ export function AIChatPanel() {
           <h3 className="text-sm font-semibold">AI Assistant</h3>
         </div>
         <div className="flex items-center gap-1">
+          <PendingApprovalsButton onJumpToProposal={handleJumpToProposal} compact />
           <Tooltip>
             <TooltipTrigger asChild>
               <Button
@@ -181,6 +191,7 @@ export function AIChatPanel() {
         </div>
       ) : (
         <ChatMessageList
+          ref={messageListRef}
           messages={messages}
           isRunning={isRunning}
           isAvailable={isAvailable}
@@ -189,6 +200,7 @@ export function AIChatPanel() {
           onRejectProposal={handleRejectProposal}
           onEditProposal={handleEditProposal}
           isProcessingProposal={isProcessingProposal}
+          thinkingActive={thinkingActive}
         />
       )}
 

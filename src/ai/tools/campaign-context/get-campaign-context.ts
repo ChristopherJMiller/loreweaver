@@ -33,7 +33,13 @@ export const getCampaignContextTool: ToolDefinition = {
     "Get a high-level overview of the campaign including its description, game system, and entity counts. Use this to understand the campaign before diving into specifics.",
   input_schema: {
     type: "object",
-    properties: {},
+    properties: {
+      flavor: {
+        type: "string",
+        description:
+          "Brief status text shown to user while this tool runs (e.g., 'Getting campaign overview...'). Keep under 50 chars.",
+      },
+    },
     required: [],
   },
   handler: async (_input: unknown, context: ToolContext): Promise<ToolResult> => {

@@ -13,8 +13,6 @@ mod tests {
     #[ignore] // Only run when explicitly called (e.g., by generate-entities.sh)
     fn export_bindings() {
         // Export all entity models to TypeScript
-        crate::ai_conversations::Model::export_all().unwrap();
-        crate::ai_messages::Model::export_all().unwrap();
         crate::campaigns::Model::export_all().unwrap();
         crate::characters::Model::export_all().unwrap();
         crate::entity_tags::Model::export_all().unwrap();

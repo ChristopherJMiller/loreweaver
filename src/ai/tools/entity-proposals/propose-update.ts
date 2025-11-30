@@ -6,9 +6,50 @@
  */
 
 import { invoke } from "@tauri-apps/api/core";
+import { prosemirrorToMarkdown } from "@/ai/utils/content-bridge";
+import { RICH_TEXT_FIELDS } from "@/types";
 import type { ToolDefinition, ToolResult, ToolContext } from "../types";
 import type { ProposalTracker } from "@/ai/proposals/tracker";
 import type { ProposeUpdateInput, UPDATABLE_ENTITY_TYPES } from "./types";
+
+/**
+ * Convert a field value to markdown if it's ProseMirror JSON
+ */
+function fieldToMarkdown(value: unknown): unknown {
+  if (typeof value !== "string" || !value) return value;
+
+  // Check if it looks like ProseMirror JSON
+  if (value.startsWith('{"type":"doc"')) {
+    try {
+      const json = JSON.parse(value);
+      return prosemirrorToMarkdown(json);
+    } catch {
+      // Not valid JSON, return as-is
+      return value;
+    }
+  }
+
+  return value;
+}
+
+/**
+ * Convert all rich text fields in an entity to markdown for display
+ */
+function convertEntityToMarkdown(
+  entity: Record<string, unknown>
+): Record<string, unknown> {
+  const result: Record<string, unknown> = {};
+
+  for (const [key, value] of Object.entries(entity)) {
+    if (RICH_TEXT_FIELDS.has(key)) {
+      result[key] = fieldToMarkdown(value);
+    } else {
+      result[key] = value;
+    }
+  }
+
+  return result;
+}
 
 const ENTITY_COMMANDS: Record<string, string> = {
   campaign: "get_campaign",
@@ -137,7 +178,8 @@ Common fields by entity type:
         const entity = await invoke<Record<string, unknown>>(command, {
           id: entity_id,
         });
-        currentData = entity;
+        // Convert rich text fields to markdown for display
+        currentData = convertEntityToMarkdown(entity);
         entityName =
           (entity.name as string) || (entity.title as string) || entity_id;
       } catch (error) {

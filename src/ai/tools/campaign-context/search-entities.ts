@@ -30,6 +30,11 @@ export const searchEntitiesTool: ToolDefinition = {
         type: "number",
         description: "Maximum results to return (default 20)",
       },
+      flavor: {
+        type: "string",
+        description:
+          "Brief status text shown to user while this tool runs (e.g., 'Searching your characters...'). Keep under 50 chars.",
+      },
     },
     required: ["query"],
   },

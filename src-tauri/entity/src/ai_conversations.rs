@@ -18,6 +18,8 @@ pub struct Model {
     pub total_cache_creation_tokens: i32,
     pub created_at: DateTimeUtc,
     pub updated_at: DateTimeUtc,
+    #[sea_orm(column_type = "Text", nullable)]
+    pub agent_messages_json: Option<String>,
 }
 
 #[derive(Copy, Clone, Debug, EnumIter, DeriveRelation)]

@@ -17,6 +17,7 @@ pub struct AiConversationResponse {
     pub total_output_tokens: i32,
     pub total_cache_read_tokens: i32,
     pub total_cache_creation_tokens: i32,
+    pub agent_messages_json: Option<String>,
     pub created_at: String,
     pub updated_at: String,
 }
@@ -31,6 +32,7 @@ impl From<ai_conversations::Model> for AiConversationResponse {
             total_output_tokens: model.total_output_tokens,
             total_cache_read_tokens: model.total_cache_read_tokens,
             total_cache_creation_tokens: model.total_cache_creation_tokens,
+            agent_messages_json: model.agent_messages_json,
             created_at: model.created_at.to_string(),
             updated_at: model.updated_at.to_string(),
         }
@@ -104,6 +106,7 @@ pub async fn get_or_create_conversation_impl(
         total_output_tokens: Set(0),
         total_cache_read_tokens: Set(0),
         total_cache_creation_tokens: Set(0),
+        agent_messages_json: Set(None),
         created_at: Set(now),
         updated_at: Set(now),
     };
@@ -229,11 +232,47 @@ pub async fn clear_conversation_impl(
         active.total_output_tokens = Set(0);
         active.total_cache_read_tokens = Set(0);
         active.total_cache_creation_tokens = Set(0);
+        active.agent_messages_json = Set(None);
         active.updated_at = Set(chrono::Utc::now());
         active.update(db).await?;
     }
 
     Ok(result.rows_affected > 0)
+}
+
+pub async fn update_message_proposal_impl(
+    db: &DatabaseConnection,
+    message_id: String,
+    proposal_json: String,
+) -> Result<AiMessageResponse, AppError> {
+    let message = AiMessage::find_by_id(&message_id)
+        .one(db)
+        .await?
+        .ok_or_else(|| AppError::NotFound(format!("Message {} not found", message_id)))?;
+
+    let mut active: ai_messages::ActiveModel = message.into();
+    active.proposal_json = Set(Some(proposal_json));
+
+    let result = active.update(db).await?;
+    Ok(result.into())
+}
+
+pub async fn update_agent_messages_impl(
+    db: &DatabaseConnection,
+    conversation_id: String,
+    agent_messages_json: String,
+) -> Result<(), AppError> {
+    let conversation = AiConversation::find_by_id(&conversation_id)
+        .one(db)
+        .await?
+        .ok_or_else(|| AppError::NotFound(format!("Conversation {} not found", conversation_id)))?;
+
+    let mut active: ai_conversations::ActiveModel = conversation.into();
+    active.agent_messages_json = Set(Some(agent_messages_json));
+    active.updated_at = Set(chrono::Utc::now());
+    active.update(db).await?;
+
+    Ok(())
 }
 
 // ============ Tauri Command Wrappers ============
@@ -306,6 +345,24 @@ pub async fn clear_ai_conversation(
     conversation_id: String,
 ) -> Result<bool, AppError> {
     clear_conversation_impl(&state.db, conversation_id).await
+}
+
+#[tauri::command(rename_all = "snake_case")]
+pub async fn update_ai_message_proposal(
+    state: State<'_, AppState>,
+    message_id: String,
+    proposal_json: String,
+) -> Result<AiMessageResponse, AppError> {
+    update_message_proposal_impl(&state.db, message_id, proposal_json).await
+}
+
+#[tauri::command(rename_all = "snake_case")]
+pub async fn update_ai_agent_messages(
+    state: State<'_, AppState>,
+    conversation_id: String,
+    agent_messages_json: String,
+) -> Result<(), AppError> {
+    update_agent_messages_impl(&state.db, conversation_id, agent_messages_json).await
 }
 
 // ============ Tests ============
@@ -791,5 +848,67 @@ mod tests {
         // Should succeed but return false (no rows affected)
         assert!(result.is_ok());
         assert!(!result.unwrap());
+    }
+
+    #[tokio::test]
+    async fn test_update_message_proposal() {
+        let db = setup_test_db().await;
+        let campaign_id = create_test_campaign(&db).await;
+
+        let conversation = get_or_create_conversation_impl(
+            &db,
+            campaign_id,
+            "sidebar".to_string(),
+        )
+        .await
+        .unwrap();
+
+        // Add a proposal message with pending status
+        let initial_proposal = r#"{"id": "prop1", "status": "pending", "operation": "create"}"#;
+        let message = add_message_impl(
+            &db,
+            conversation.id,
+            "proposal".to_string(),
+            "Create character".to_string(),
+            None,
+            None,
+            None,
+            Some(initial_proposal.to_string()),
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(message.proposal_json, Some(initial_proposal.to_string()));
+
+        // Update the proposal status to accepted
+        let updated_proposal = r#"{"id": "prop1", "status": "accepted", "operation": "create"}"#;
+        let result = update_message_proposal_impl(
+            &db,
+            message.id.clone(),
+            updated_proposal.to_string(),
+        )
+        .await
+        .unwrap();
+
+        assert_eq!(result.proposal_json, Some(updated_proposal.to_string()));
+        assert_eq!(result.id, message.id);
+    }
+
+    #[tokio::test]
+    async fn test_update_message_proposal_nonexistent() {
+        let db = setup_test_db().await;
+
+        let result = update_message_proposal_impl(
+            &db,
+            "nonexistent-id".to_string(),
+            r#"{"status": "accepted"}"#.to_string(),
+        )
+        .await;
+
+        assert!(result.is_err());
+        match result {
+            Err(AppError::NotFound(_)) => (),
+            _ => panic!("Expected NotFound error"),
+        }
     }
 }

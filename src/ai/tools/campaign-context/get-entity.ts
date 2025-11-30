@@ -284,6 +284,11 @@ export const getEntityTool: ToolDefinition = {
         description:
           "The entity's UUID. Use search_entities to find IDs by name.",
       },
+      flavor: {
+        type: "string",
+        description:
+          "Brief status text shown to user while this tool runs (e.g., 'Looking up Aldric...'). Keep under 50 chars.",
+      },
     },
     required: ["entity_type", "entity_id"],
   },

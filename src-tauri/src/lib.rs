@@ -108,6 +108,8 @@ pub fn run() {
             commands::ai_conversation::add_ai_message,
             commands::ai_conversation::update_ai_token_counts,
             commands::ai_conversation::clear_ai_conversation,
+            commands::ai_conversation::update_ai_message_proposal,
+            commands::ai_conversation::update_ai_agent_messages,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

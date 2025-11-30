@@ -24,6 +24,11 @@ export const getTimelineTool: ToolDefinition = {
         description:
           "Include non-public events (default: true since you're the GM)",
       },
+      flavor: {
+        type: "string",
+        description:
+          "Brief status text shown to user while this tool runs (e.g., 'Checking the timeline...'). Keep under 50 chars.",
+      },
     },
     required: [],
   },

@@ -43,6 +43,11 @@ export const getLocationHierarchyTool: ToolDefinition = {
         description:
           "The location's UUID. Use search_entities to find IDs by name.",
       },
+      flavor: {
+        type: "string",
+        description:
+          "Brief status text shown to user while this tool runs (e.g., 'Mapping the Tavern District...'). Keep under 50 chars.",
+      },
     },
     required: ["location_id"],
   },

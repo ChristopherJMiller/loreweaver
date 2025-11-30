@@ -25,7 +25,6 @@ import { ProposalTracker } from "@/ai/proposals/tracker";
 export function useAgentChat() {
   const {
     addUserMessage,
-    addAssistantMessage,
     addToolResult,
     addError,
     setRunning,
@@ -35,6 +34,15 @@ export function useAgentChat() {
     addProposal,
     setAbortController,
     addTokenUsage,
+    // New ephemeral indicator actions
+    addEphemeralIndicator,
+    fadeEphemeralIndicator,
+    cleanupFadedMessages,
+    showThinkingIndicator,
+    hideThinkingIndicator,
+    // Conversation memory
+    agentMessages,
+    setAgentMessages,
   } = useChatStore();
   const { apiKey, modelPreference } = useAIStore();
 
@@ -88,44 +96,71 @@ export function useAgentChat() {
         // Select model based on preference
         const model = selectModel(modelPreference);
 
-        // Run the agent with streaming
-        const result = await runAgent(content, toolRegistry, {
-          model,
-          systemPrompt,
-          maxIterations: 15,
-          signal: abortController.signal,
-          onTextDelta: (delta) => {
-            // Start streaming message on first delta
-            if (!isStreamingRef.current) {
-              startStreaming();
-              isStreamingRef.current = true;
-            }
-            appendToStreaming(delta);
-          },
-          onMessage: (msg) => {
-            // Finish current streaming message before adding new messages
-            if (isStreamingRef.current) {
-              finishStreaming();
-              isStreamingRef.current = false;
-            }
-
-            if (msg.role === "assistant") {
-              if (msg.toolName) {
-                // Tool call announcement
-                addAssistantMessage(`Using ${msg.toolName}...`, msg.toolName);
+        // Run the agent with streaming, passing existing conversation history
+        const result = await runAgent(
+          content,
+          toolRegistry,
+          {
+            model,
+            systemPrompt,
+            maxIterations: 15,
+            signal: abortController.signal,
+            onTextDelta: (delta) => {
+              // Start streaming message on first delta
+              if (!isStreamingRef.current) {
+                startStreaming();
+                isStreamingRef.current = true;
               }
-              // Note: Regular assistant text is now handled via streaming,
-              // so we don't add duplicate messages here
-            } else if (msg.role === "tool_result" && msg.toolName) {
-              // Truncate long tool results for display
-              const displayContent =
-                msg.content.length > 500
-                  ? msg.content.slice(0, 500) + "..."
-                  : msg.content;
-              addToolResult(displayContent, msg.toolName, msg.toolData);
-            }
+              appendToStreaming(delta);
+            },
+            onMessage: (msg) => {
+              // Finish current streaming message before adding new messages
+              if (isStreamingRef.current) {
+                finishStreaming();
+                isStreamingRef.current = false;
+              }
+
+              switch (msg.role) {
+                case "tool_start":
+                  // Show ephemeral indicator for read tools
+                  addEphemeralIndicator(msg.toolName!, msg.toolInput, msg.flavor);
+                  break;
+
+                case "thinking":
+                  // Show subtle thinking dots for internal tools
+                  showThinkingIndicator();
+                  break;
+
+                case "tool_result":
+                  if (msg.toolCategory === "internal") {
+                    // Hide thinking indicator, don't show any result card
+                    hideThinkingIndicator();
+                  } else if (msg.toolCategory === "read") {
+                    // Start fade on ephemeral indicator, then add result card
+                    fadeEphemeralIndicator();
+                    // Add result after brief delay so fade animation is visible
+                    setTimeout(() => {
+                      const displayContent =
+                        msg.content.length > 500
+                          ? msg.content.slice(0, 500) + "..."
+                          : msg.content;
+                      addToolResult(displayContent, msg.toolName!, msg.toolData);
+                      // Cleanup faded messages after animation completes
+                      setTimeout(() => cleanupFadedMessages(), 350);
+                    }, 50);
+                  }
+                  // Note: "write" category (proposals) handled via ProposalTracker callback
+                  break;
+
+                case "assistant":
+                  // Regular assistant text is handled via streaming,
+                  // so we don't add duplicate messages here
+                  break;
+              }
+            },
           },
-        });
+          agentMessages // Pass existing conversation history
+        );
 
         // Ensure streaming is finished
         if (isStreamingRef.current) {
@@ -138,13 +173,19 @@ export function useAgentChat() {
           addTokenUsage(result.usage);
         }
 
+        // Store updated conversation history for multi-turn memory
+        if (result.messages) {
+          setAgentMessages(result.messages);
+        }
+
         // Handle cancellation gracefully (don't show error)
         if (result.cancelled) {
           return;
         }
 
+        // Log errors to console but don't show to user - AI handles gracefully
         if (!result.completed && result.error) {
-          addError(result.error);
+          console.error("[Agent Error]", result.error);
         }
       } catch (err) {
         // Finish streaming on error
@@ -152,8 +193,13 @@ export function useAgentChat() {
           finishStreaming();
           isStreamingRef.current = false;
         }
+        // Log to console - critical errors only shown to user
         const message = err instanceof Error ? err.message : "Unknown error occurred";
-        addError(message);
+        console.error("[Agent Error]", message);
+        // Only show critical errors (network, auth) to user
+        if (message.includes("API") || message.includes("network") || message.includes("unauthorized")) {
+          addError(message);
+        }
       } finally {
         setAbortController(null);
         setRunning(false);
@@ -163,7 +209,6 @@ export function useAgentChat() {
       apiKey,
       modelPreference,
       addUserMessage,
-      addAssistantMessage,
       addToolResult,
       addError,
       setRunning,
@@ -173,6 +218,13 @@ export function useAgentChat() {
       addProposal,
       setAbortController,
       addTokenUsage,
+      addEphemeralIndicator,
+      fadeEphemeralIndicator,
+      cleanupFadedMessages,
+      showThinkingIndicator,
+      hideThinkingIndicator,
+      agentMessages,
+      setAgentMessages,
     ]
   );
 

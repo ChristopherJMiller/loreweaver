@@ -5,7 +5,7 @@
  * Renders inside AppShell with sidebar visible.
  */
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback, useEffect, useRef } from "react";
 import { Sparkles, Trash2, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,10 +13,11 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { ChatMessageList } from "./ChatMessageList";
+import { ChatMessageList, type ChatMessageListHandle } from "./ChatMessageList";
 import { ChatInput } from "./ChatInput";
 import { ChatCostFooter } from "./ChatCostFooter";
 import { ProposalEditDialog } from "./ProposalEditDialog";
+import { PendingApprovalsButton } from "./PendingApprovalsButton";
 import { useChatStore, useCampaignStore } from "@/stores";
 import { useAIAvailable } from "@/stores/aiStore";
 import { useAgentChat } from "@/hooks/useAgentChat";
@@ -37,6 +38,7 @@ export function AIFullPageChat() {
   const loadConversation = useChatStore((state) => state.loadConversation);
   const isLoading = useChatStore((state) => state.isLoading);
   const sessionInputTokens = useChatStore((state) => state.sessionInputTokens);
+  const thinkingActive = useChatStore((state) => state.thinkingActive);
 
   const activeCampaignId = useCampaignStore((state) => state.activeCampaignId);
   const isAvailable = useAIAvailable();
@@ -46,6 +48,12 @@ export function AIFullPageChat() {
   const [editingProposal, setEditingProposal] = useState<EntityProposal | null>(
     null
   );
+  const messageListRef = useRef<ChatMessageListHandle>(null);
+
+  // Handle jumping to a proposal from the pending approvals button
+  const handleJumpToProposal = useCallback((messageId: string) => {
+    messageListRef.current?.scrollToMessage(messageId);
+  }, []);
 
   // Load conversation when component mounts or campaign changes
   useEffect(() => {
@@ -58,12 +66,12 @@ export function AIFullPageChat() {
   const { acceptProposal, rejectProposal, isProcessing: isProcessingProposal } =
     useProposalHandler({
       campaignId: activeCampaignId ?? "",
-      onAccepted: (proposalId) => {
-        updateProposalStatus(proposalId, "accepted");
+      onAccepted: async (proposalId) => {
+        await updateProposalStatus(proposalId, "accepted");
         setEditingProposal(null);
       },
-      onRejected: (proposalId) => {
-        updateProposalStatus(proposalId, "rejected");
+      onRejected: async (proposalId) => {
+        await updateProposalStatus(proposalId, "rejected");
       },
     });
 
@@ -77,9 +85,9 @@ export function AIFullPageChat() {
 
   // Handle rejecting a proposal
   const handleRejectProposal = useCallback(
-    (proposalId: string) => {
+    async (proposalId: string) => {
       rejectProposal(proposalId);
-      updateProposalStatus(proposalId, "rejected");
+      await updateProposalStatus(proposalId, "rejected");
     },
     [rejectProposal, updateProposalStatus]
   );
@@ -117,32 +125,36 @@ export function AIFullPageChat() {
           <Sparkles className="h-5 w-5 text-primary" />
           <h1 className="text-xl font-semibold">Loreweaver</h1>
         </div>
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={clearMessages}
-              disabled={(messages.length === 0 && sessionInputTokens === 0) || isRunning}
-            >
-              <Trash2 className="mr-2 h-4 w-4" />
-              Clear Chat
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent>Clear conversation history</TooltipContent>
-        </Tooltip>
+        <div className="flex items-center gap-2">
+          <PendingApprovalsButton onJumpToProposal={handleJumpToProposal} />
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={clearMessages}
+                disabled={(messages.length === 0 && sessionInputTokens === 0) || isRunning}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Clear Chat
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Clear conversation history</TooltipContent>
+          </Tooltip>
+        </div>
       </div>
 
       {/* Messages Area */}
       <div className="flex flex-1 flex-col overflow-hidden">
-        <div className="flex-1 overflow-auto">
-          <div className="mx-auto max-w-3xl">
+        <div className="flex-1 overflow-hidden">
+          <div className="mx-auto max-w-3xl h-full">
             {isLoading ? (
               <div className="flex h-full items-center justify-center py-20">
                 <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
               </div>
             ) : (
               <ChatMessageList
+                ref={messageListRef}
                 messages={messages}
                 isRunning={isRunning}
                 isAvailable={isAvailable}
@@ -151,9 +163,9 @@ export function AIFullPageChat() {
                 onRejectProposal={handleRejectProposal}
                 onEditProposal={handleEditProposal}
                 isProcessingProposal={isProcessingProposal}
+                thinkingActive={thinkingActive}
                 emptyStateMessage="Welcome to Loreweaver"
                 emptyStateDescription="Ask me anything about your campaign. I can search entities, explore relationships, create new content, and help with worldbuilding."
-                className="min-h-full"
               />
             )}
           </div>

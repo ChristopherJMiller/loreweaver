@@ -12,6 +12,101 @@ import type {
   CREATABLE_ENTITY_TYPES,
 } from "./types";
 import type { SuggestedRelationship } from "@/ai/agents/types";
+import type { EntityType } from "@/types";
+
+/**
+ * Validation constants (mirror backend validation.rs)
+ */
+const LOCATION_TYPES = [
+  "world",
+  "continent",
+  "region",
+  "territory",
+  "settlement",
+  "district",
+  "building",
+  "room",
+  "landmark",
+  "wilderness",
+] as const;
+
+const ORG_TYPES = [
+  "government",
+  "guild",
+  "religion",
+  "military",
+  "criminal",
+  "mercantile",
+  "academic",
+  "secret_society",
+  "family",
+  "other",
+] as const;
+
+const PLOT_TYPES = ["main", "secondary", "side", "background"] as const;
+
+const QUEST_STATUSES = [
+  "planned",
+  "available",
+  "active",
+  "completed",
+  "failed",
+  "abandoned",
+] as const;
+
+/**
+ * Validates proposal data before creating the proposal.
+ * Returns an error message if invalid, or null if valid.
+ */
+function validateProposalData(
+  entityType: EntityType,
+  data: Record<string, unknown>
+): string | null {
+  // All entities require name
+  if (!data.name || typeof data.name !== "string" || data.name.trim().length === 0) {
+    return "name is required and must be a non-empty string";
+  }
+  if ((data.name as string).length > 200) {
+    return "name must be 200 characters or less";
+  }
+
+  switch (entityType) {
+    case "location":
+      if (!data.location_type) {
+        return `location_type is required. Must be one of: ${LOCATION_TYPES.join(", ")}`;
+      }
+      if (!LOCATION_TYPES.includes(data.location_type as typeof LOCATION_TYPES[number])) {
+        return `location_type "${data.location_type}" is invalid. Must be one of: ${LOCATION_TYPES.join(", ")}`;
+      }
+      break;
+
+    case "organization":
+      if (!data.org_type) {
+        return `org_type is required. Must be one of: ${ORG_TYPES.join(", ")}`;
+      }
+      if (!ORG_TYPES.includes(data.org_type as typeof ORG_TYPES[number])) {
+        return `org_type "${data.org_type}" is invalid. Must be one of: ${ORG_TYPES.join(", ")}`;
+      }
+      break;
+
+    case "quest":
+      if (!data.plot_type) {
+        return `plot_type is required. Must be one of: ${PLOT_TYPES.join(", ")}`;
+      }
+      if (!PLOT_TYPES.includes(data.plot_type as typeof PLOT_TYPES[number])) {
+        return `plot_type "${data.plot_type}" is invalid. Must be one of: ${PLOT_TYPES.join(", ")}`;
+      }
+      if (!data.status) {
+        return `status is required. Must be one of: ${QUEST_STATUSES.join(", ")}`;
+      }
+      if (!QUEST_STATUSES.includes(data.status as typeof QUEST_STATUSES[number])) {
+        return `status "${data.status}" is invalid. Must be one of: ${QUEST_STATUSES.join(", ")}`;
+      }
+      break;
+  }
+
+  return null; // Valid
+}
 
 /**
  * Factory to create the propose_create tool with a tracker instance
@@ -153,6 +248,18 @@ Common fields by entity type:
         return {
           success: false,
           content: "Entity data must include a 'name' field",
+        };
+      }
+
+      // Validate proposal data against backend requirements
+      const validationError = validateProposalData(
+        entity_type as EntityType,
+        data
+      );
+      if (validationError) {
+        return {
+          success: false,
+          content: `Proposal validation failed: ${validationError}\n\nPlease fix the data and try again.`,
         };
       }
 
