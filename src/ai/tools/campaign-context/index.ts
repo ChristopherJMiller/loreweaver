@@ -11,6 +11,7 @@ export { getRelationshipsTool } from "./get-relationships";
 export { getLocationHierarchyTool } from "./get-location-hierarchy";
 export { getTimelineTool } from "./get-timeline";
 export { getCampaignContextTool } from "./get-campaign-context";
+export { getPageContextTool } from "./get-page-context";
 
 import type { ToolDefinition } from "../types";
 import { searchEntitiesTool } from "./search-entities";
@@ -19,6 +20,7 @@ import { getRelationshipsTool } from "./get-relationships";
 import { getLocationHierarchyTool } from "./get-location-hierarchy";
 import { getTimelineTool } from "./get-timeline";
 import { getCampaignContextTool } from "./get-campaign-context";
+import { getPageContextTool } from "./get-page-context";
 
 /**
  * Get all campaign context tools
@@ -31,5 +33,6 @@ export function getCampaignContextTools(): ToolDefinition[] {
     getLocationHierarchyTool,
     getTimelineTool,
     getCampaignContextTool,
+    getPageContextTool,
   ];
 }

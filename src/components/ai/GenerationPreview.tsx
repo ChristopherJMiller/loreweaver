@@ -3,10 +3,11 @@
  *
  * Shows AI-generated entity content for review and editing before creation.
  * Allows the user to modify fields and accept/reject the generation.
+ * Supports two-phase generation with research + structured output.
  */
 
 import { useState } from "react";
-import { Sparkles, Loader2, AlertCircle, Lightbulb } from "lucide-react";
+import { Sparkles, Loader2, AlertCircle, Lightbulb, Search, Check } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -26,7 +27,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import type { GenerationResult, SuggestedRelationship } from "@/ai/agents/types";
+import type { AgenticGenerationResult, SuggestedRelationship, ResearchStep } from "@/ai/agents/types";
 import type { PartialEntity } from "@/ai/agents";
 import type { EntityType } from "@/types";
 
@@ -40,11 +41,20 @@ interface GenerationPreviewProps {
   /** The entity type being generated */
   entityType: EntityType;
 
-  /** Whether generation is in progress */
+  /** Whether generation is in progress (includes research + generation) */
   isLoading: boolean;
 
+  /** Whether research phase is in progress */
+  isResearching?: boolean;
+
+  /** Progress message from research phase */
+  researchProgress?: string;
+
+  /** Research steps for structured progress display */
+  researchSteps?: ResearchStep[];
+
   /** Generation result (null if loading or not started) */
-  result: GenerationResult | null;
+  result: AgenticGenerationResult | null;
 
   /** Partial entity data during streaming (for progressive display) */
   partialEntity?: PartialEntity | null;
@@ -171,6 +181,9 @@ export function GenerationPreview({
   onOpenChange,
   entityType,
   isLoading,
+  isResearching = false,
+  researchProgress = "",
+  researchSteps = [],
   result,
   partialEntity,
   onAccept,
@@ -184,7 +197,7 @@ export function GenerationPreview({
   const [showReasoning, setShowReasoning] = useState(false);
 
   // Initialize edited state when result changes
-  const initializeFromResult = (r: GenerationResult) => {
+  const initializeFromResult = (r: AgenticGenerationResult) => {
     if (r.entity) {
       setEditedName(r.entity.name);
       setEditedFields({ ...r.entity.fields });
@@ -259,7 +272,47 @@ export function GenerationPreview({
         </DialogHeader>
 
         <ScrollArea className="max-h-[55vh] pr-4">
-          {isLoading && partialEntity ? (
+          {isResearching ? (
+            // Research phase indicator with structured steps
+            <div className="flex flex-col items-center justify-center py-8">
+              <Search className="h-8 w-8 text-primary mb-4 animate-pulse" />
+              <p className="text-sm text-muted-foreground mb-4">
+                Researching your world...
+              </p>
+
+              {/* Research steps list */}
+              {researchSteps.length > 0 ? (
+                <div className="w-full max-w-sm space-y-1">
+                  {researchSteps.map((step) => (
+                    <div
+                      key={step.id}
+                      className="flex items-center gap-2 text-xs"
+                    >
+                      {step.status === "complete" ? (
+                        <Check className="h-3 w-3 text-green-500 flex-shrink-0" />
+                      ) : (
+                        <Loader2 className="h-3 w-3 animate-spin text-primary flex-shrink-0" />
+                      )}
+                      <span
+                        className={
+                          step.status === "complete"
+                            ? "text-muted-foreground"
+                            : ""
+                        }
+                      >
+                        {step.action}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              ) : researchProgress ? (
+                // Fallback to legacy progress text if no steps yet
+                <p className="text-xs text-muted-foreground/70 max-w-xs text-center font-mono truncate">
+                  {researchProgress.slice(-50)}
+                </p>
+              ) : null}
+            </div>
+          ) : isLoading && partialEntity ? (
             // Streaming preview with partial data
             <div className="space-y-6">
               <StreamingField
@@ -286,9 +339,9 @@ export function GenerationPreview({
               )}
             </div>
           ) : isLoading ? (
-            // Initial loading state before any data streams
+            // Generation phase - after research, before streaming starts
             <div className="flex flex-col items-center justify-center py-12">
-              <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
+              <Sparkles className="h-8 w-8 text-primary mb-4 animate-pulse" />
               <p className="text-sm text-muted-foreground">
                 Generating {entityType.toLowerCase()}...
               </p>
@@ -362,9 +415,14 @@ export function GenerationPreview({
               )}
 
               {/* Token usage */}
-              {result.usage && (
+              {result.totalUsage && (
                 <p className="text-xs text-muted-foreground">
-                  Tokens used: {result.usage.inputTokens + result.usage.outputTokens}
+                  Tokens used: {result.totalUsage.inputTokens + result.totalUsage.outputTokens}
+                  {result.totalUsage.researchTokens > 0 && (
+                    <span className="text-muted-foreground/70">
+                      {" "}(research: {result.totalUsage.researchTokens})
+                    </span>
+                  )}
                 </p>
               )}
 

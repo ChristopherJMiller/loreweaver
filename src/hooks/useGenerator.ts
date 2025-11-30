@@ -3,20 +3,27 @@
  *
  * Manages the entity generation flow:
  * 1. User triggers generation with context
- * 2. AI generates entity (with streaming for progressive display)
- * 3. User previews and edits
- * 4. User accepts → entity is created
+ * 2. AI researches the world for contextual understanding (optional)
+ * 3. AI generates entity (with streaming for progressive display)
+ * 4. User previews and edits
+ * 5. User accepts → entity is created
  */
 
 import { useState, useCallback } from "react";
-import { generateEntity, type PartialEntity } from "@/ai/agents";
+import {
+  generateEntityWithResearch,
+  type PartialEntity,
+  type ResearchFindings,
+} from "@/ai/agents";
 import { initializeClient, isClientInitialized } from "@/ai/client";
 import { invalidateCampaignSummary } from "@/ai/context";
+import type { PageContext } from "@/ai/context/types";
 import type {
-  GenerationRequest,
-  GenerationResult,
+  AgenticGenerationRequest,
+  AgenticGenerationResult,
   GenerationQuality,
   SuggestedRelationship,
+  ResearchStep,
 } from "@/ai/agents/types";
 import type { EntityType } from "@/types";
 import {
@@ -65,17 +72,33 @@ interface UseGeneratorReturn {
   /** Close the preview dialog */
   closePreview: () => void;
 
-  /** Whether generation is in progress */
+  /** Whether generation is in progress (includes research + generation) */
   isLoading: boolean;
 
+  /** Whether research phase is in progress */
+  isResearching: boolean;
+
+  /** Progress message from research phase (DEPRECATED) */
+  researchProgress: string;
+
+  /** Research steps for progress display */
+  researchSteps: ResearchStep[];
+
   /** Current generation result */
-  result: GenerationResult | null;
+  result: AgenticGenerationResult | null;
 
   /** Partial entity data during streaming (for progressive display) */
   partialEntity: PartialEntity | null;
 
-  /** Trigger generation with context and optional parentId (for locations) */
-  generate: (context: string, parentId?: string) => Promise<void>;
+  /** Research findings (if research was enabled) */
+  researchFindings: ResearchFindings | null;
+
+  /** Trigger generation with context, optional parentId, and optional pageContext */
+  generate: (
+    context: string,
+    parentId?: string,
+    pageContext?: PageContext
+  ) => Promise<void>;
 
   /** Accept the generation and create the entity */
   accept: (data: {
@@ -218,25 +241,35 @@ export function useGenerator({
   const modelPreference = useAIStore((state) => state.modelPreference);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isResearching, setIsResearching] = useState(false);
+  const [researchProgress, setResearchProgress] = useState("");
+  const [researchSteps, setResearchSteps] = useState<ResearchStep[]>([]);
   const [isCreating, setIsCreating] = useState(false);
-  const [result, setResult] = useState<GenerationResult | null>(null);
+  const [result, setResult] = useState<AgenticGenerationResult | null>(null);
   const [partialEntity, setPartialEntity] = useState<PartialEntity | null>(null);
+  const [researchFindings, setResearchFindings] =
+    useState<ResearchFindings | null>(null);
   const [createError, setCreateError] = useState<string | null>(null);
 
   // Store last generation request for regeneration
   const [lastRequest, setLastRequest] = useState<{
     context: string;
     parentId?: string;
+    pageContext?: PageContext;
   } | null>(null);
 
   const generate = useCallback(
-    async (context: string, parentId?: string) => {
+    async (context: string, parentId?: string, pageContext?: PageContext) => {
       setIsLoading(true);
+      setIsResearching(true);
+      setResearchProgress("");
+      setResearchSteps([]);
       setResult(null);
       setPartialEntity(null);
+      setResearchFindings(null);
       setCreateError(null);
       setIsPreviewOpen(true);
-      setLastRequest({ context, parentId });
+      setLastRequest({ context, parentId, pageContext });
 
       // Initialize client if needed
       if (!isClientInitialized() && apiKey) {
@@ -247,15 +280,54 @@ export function useGenerator({
       const quality = preferenceToQuality(modelPreference);
 
       try {
-        const request: GenerationRequest = {
+        const request: AgenticGenerationRequest = {
           campaignId,
           entityType,
           context: context || undefined,
           quality,
           parentId,
+          pageContext,
+          enableResearch: true,
+          maxResearchIterations: 5,
         };
 
-        const generationResult = await generateEntity(request, {
+        const generationResult = await generateEntityWithResearch(request, {
+          onResearchStart: () => {
+            setIsResearching(true);
+            setResearchProgress("Starting research...");
+          },
+          onResearchProgress: (message) => {
+            // Accumulate short progress snippets (deprecated, kept for compatibility)
+            setResearchProgress((prev) => {
+              const combined = prev + message;
+              if (combined.length > 100) {
+                return combined.slice(-100);
+              }
+              return combined;
+            });
+          },
+          onResearchStep: (step) => {
+            // Update or add research step
+            setResearchSteps((prev) => {
+              const existing = prev.findIndex((s) => s.id === step.id);
+              if (existing >= 0) {
+                // Update existing step status
+                const updated = [...prev];
+                updated[existing] = step;
+                return updated;
+              }
+              // Add new step
+              return [...prev, step];
+            });
+          },
+          onResearchComplete: (findings) => {
+            setIsResearching(false);
+            setResearchFindings(findings);
+            setResearchProgress("");
+          },
+          onGenerationStart: () => {
+            setIsResearching(false);
+          },
           onPartialEntity: (partial) => {
             setPartialEntity(partial);
           },
@@ -269,6 +341,7 @@ export function useGenerator({
         });
       } finally {
         setIsLoading(false);
+        setIsResearching(false);
       }
     },
     [campaignId, entityType, modelPreference, apiKey]
@@ -276,7 +349,11 @@ export function useGenerator({
 
   const regenerate = useCallback(async () => {
     if (lastRequest) {
-      await generate(lastRequest.context, lastRequest.parentId);
+      await generate(
+        lastRequest.context,
+        lastRequest.parentId,
+        lastRequest.pageContext
+      );
     }
   }, [lastRequest, generate]);
 
@@ -334,10 +411,17 @@ export function useGenerator({
       setIsPreviewOpen(false);
       setResult(null);
       setPartialEntity(null);
+      setResearchFindings(null);
+      setResearchProgress("");
+      setResearchSteps([]);
     },
     isLoading,
+    isResearching,
+    researchProgress,
+    researchSteps,
     result,
     partialEntity,
+    researchFindings,
     generate,
     accept,
     regenerate,

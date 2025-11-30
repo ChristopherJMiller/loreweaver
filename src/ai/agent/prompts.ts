@@ -5,6 +5,8 @@
  * These guide the agent's behavior for specific use cases.
  */
 
+import type { PageContext } from "@/ai/context/types";
+
 /**
  * Base system prompt with core instructions
  */
@@ -178,11 +180,75 @@ Be thorough and systematic - this is about catching mistakes.`,
 };
 
 /**
+ * Format page context as a system prompt section
+ *
+ * This provides the AI with immediate awareness of what the user is viewing,
+ * without requiring tool calls.
+ */
+function formatPageContext(pageContext: PageContext | undefined): string {
+  if (!pageContext?.entityType || !pageContext.entityId) {
+    return "";
+  }
+
+  const lines: string[] = [];
+  lines.push("## Current Page Context");
+  lines.push("");
+  lines.push(
+    `The user is currently viewing: **${pageContext.entityName ?? "Unknown"}** (${pageContext.entityType})`
+  );
+  lines.push(`Entity ID: \`${pageContext.entityId}\``);
+
+  // Include location hierarchy for locations
+  if (
+    pageContext.locationHierarchy &&
+    pageContext.locationHierarchy.length > 1
+  ) {
+    lines.push("");
+    lines.push("**Location Hierarchy:**");
+    pageContext.locationHierarchy.forEach((loc, i) => {
+      const indent = "  ".repeat(i);
+      lines.push(`${indent}> ${loc.name} (${loc.locationType})`);
+    });
+  }
+
+  // Include related entities if present
+  if (
+    pageContext.relatedEntityIds &&
+    pageContext.relatedEntityIds.length > 0
+  ) {
+    lines.push("");
+    lines.push("**Related entities on this page:**");
+    // Limit to 10 to avoid bloating the prompt
+    for (const ref of pageContext.relatedEntityIds.slice(0, 10)) {
+      const relationship = ref.relationship ? ` [${ref.relationship}]` : "";
+      lines.push(`- ${ref.name} (${ref.entityType})${relationship}: \`${ref.entityId}\``);
+    }
+    if (pageContext.relatedEntityIds.length > 10) {
+      lines.push(`- ... and ${pageContext.relatedEntityIds.length - 10} more`);
+    }
+  }
+
+  lines.push("");
+  lines.push(
+    "Use the `get_page_context` tool for more detailed information about this entity and its connections."
+  );
+
+  return lines.join("\n");
+}
+
+/**
  * Get the system prompt for a given task type
  */
-export function getSystemPrompt(taskType: TaskType = "general"): string {
+export function getSystemPrompt(
+  taskType: TaskType = "general",
+  pageContext?: PageContext
+): string {
   const taskPrompt = TASK_PROMPTS[taskType];
-  return BASE_PROMPT + "\n" + taskPrompt;
+  const pageContextSection = formatPageContext(pageContext);
+
+  // Combine: base + page context (if any) + task-specific
+  const parts = [BASE_PROMPT, pageContextSection, taskPrompt].filter(Boolean);
+  return parts.join("\n\n");
 }
 
 /**

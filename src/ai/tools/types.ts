@@ -5,6 +5,7 @@
  */
 
 import type { Tool } from "@anthropic-ai/sdk/resources/messages";
+import type { PageContext } from "@/ai/context/types";
 
 /**
  * JSON Schema type for tool input properties
@@ -37,6 +38,9 @@ export interface ToolResult {
 export interface ToolContext {
   /** Current campaign ID */
   campaignId: string;
+
+  /** Current page context (optional) - what the user is viewing */
+  pageContext?: PageContext;
 }
 
 /**

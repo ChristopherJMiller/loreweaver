@@ -21,6 +21,7 @@ import {
   selectModel,
 } from "@/ai";
 import { ProposalTracker } from "@/ai/proposals/tracker";
+import type { PageContext } from "@/ai/context/types";
 
 export function useAgentChat() {
   const {
@@ -50,7 +51,7 @@ export function useAgentChat() {
   const isStreamingRef = useRef(false);
 
   const sendMessage = useCallback(
-    async (content: string, campaignId: string) => {
+    async (content: string, campaignId: string, pageContext?: PageContext) => {
       if (!apiKey) {
         addError("API key not configured");
         return;
@@ -82,16 +83,17 @@ export function useAgentChat() {
           addProposal(proposal);
         });
 
-        // Create tool registry with both trackers
+        // Create tool registry with both trackers and page context
         const toolRegistry = createToolRegistry(
           workItemTracker,
           campaignId,
-          proposalTracker
+          proposalTracker,
+          pageContext
         );
 
-        // Infer task type and get appropriate prompt
+        // Infer task type and get appropriate prompt with page context
         const taskType = inferTaskType(content);
-        const systemPrompt = getSystemPrompt(taskType);
+        const systemPrompt = getSystemPrompt(taskType, pageContext);
 
         // Select model based on preference
         const model = selectModel(modelPreference);

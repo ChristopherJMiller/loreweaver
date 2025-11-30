@@ -357,6 +357,9 @@ export function QuestsPage() {
         onOpenChange={generator.closePreview}
         entityType="quest"
         isLoading={generator.isLoading}
+        isResearching={generator.isResearching}
+        researchProgress={generator.researchProgress}
+        researchSteps={generator.researchSteps}
         result={generator.result}
         partialEntity={generator.partialEntity}
         onAccept={generator.accept}

@@ -15,6 +15,8 @@ import type {
   GenerationRequest,
   GenerationResult,
   GenerationQuality,
+  PartialEntity,
+  GeneratorCallbacks,
 } from "./types";
 import { ENTITY_FIELDS } from "./types";
 import { getEntityPrompt } from "./generator/prompts";
@@ -24,29 +26,8 @@ import {
 } from "../schemas";
 import type { EntityType } from "@/types";
 
-/**
- * Partial entity for streaming display
- */
-export interface PartialEntity {
-  name?: string;
-  fields?: Record<string, string | undefined>;
-  relationships?: Array<{
-    targetType?: string;
-    targetName?: string;
-    relationshipType?: string;
-    description?: string;
-    isNewEntity?: boolean;
-  }>;
-  reasoning?: string;
-}
-
-/**
- * Callbacks for generation streaming
- */
-export interface GeneratorCallbacks {
-  /** Called with parsed partial entity data as JSON streams in */
-  onPartialEntity?: (partial: PartialEntity) => void;
-}
+// Re-export types for backward compatibility
+export type { PartialEntity, GeneratorCallbacks };
 
 /** Maximum validation retries (2 retries = 3 total attempts) */
 const MAX_VALIDATION_RETRIES = 2;

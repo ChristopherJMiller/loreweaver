@@ -1,8 +1,53 @@
 /**
  * Campaign Context Types
  *
- * Types for the cached campaign summary used in agent system prompts.
+ * Types for the cached campaign summary used in agent system prompts,
+ * and page context for AI awareness of what the user is viewing.
  */
+
+import type { EntityType } from "@/types";
+
+/**
+ * Location hierarchy item for page context
+ */
+export interface LocationHierarchyItem {
+  id: string;
+  name: string;
+  locationType: string;
+}
+
+/**
+ * Reference to a related entity visible on the current page
+ */
+export interface RelatedEntityRef {
+  entityType: EntityType;
+  entityId: string;
+  name: string;
+  relationship?: string; // e.g., "parent", "child", "member_of"
+}
+
+/**
+ * Page context for AI awareness of what the user is currently viewing
+ */
+export interface PageContext {
+  /** Entity type the user is viewing (null if not on an entity page) */
+  entityType: EntityType | null;
+
+  /** Entity ID (null if not on an entity page) */
+  entityId: string | null;
+
+  /** Entity name (for immediate AI awareness without tool call) */
+  entityName: string | null;
+
+  /** Route path (e.g., "/locations/abc-123") */
+  path: string;
+
+  /** For locations: the hierarchy chain from root to current */
+  locationHierarchy?: LocationHierarchyItem[];
+
+  /** IDs of related entities visible on the page */
+  relatedEntityIds?: RelatedEntityRef[];
+}
 
 /**
  * Brief entity reference for context injection

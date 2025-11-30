@@ -22,7 +22,7 @@ import { ProposalEditDialog } from "./ProposalEditDialog";
 import { PendingApprovalsButton } from "./PendingApprovalsButton";
 import { useUIStore, useChatStore, useCampaignStore } from "@/stores";
 import { useAIAvailable } from "@/stores/aiStore";
-import { useAgentChat } from "@/hooks/useAgentChat";
+import { useAgentChat, usePageContext } from "@/hooks";
 import { useProposalHandler } from "@/hooks/useProposalHandler";
 import type { EntityProposal } from "@/ai/tools/entity-proposals/types";
 import { isRelationshipProposal } from "@/ai/tools/entity-proposals/types";
@@ -52,6 +52,7 @@ export function AIChatPanel() {
   const activeCampaignId = useCampaignStore((state) => state.activeCampaignId);
   const isAvailable = useAIAvailable();
   const { sendMessage } = useAgentChat();
+  const pageContext = usePageContext();
 
   const [input, setInput] = useState("");
   const [editingProposal, setEditingProposal] = useState<EntityProposal | null>(
@@ -141,7 +142,7 @@ export function AIChatPanel() {
     if (!trimmed || isRunning || !activeCampaignId) return;
 
     setInput("");
-    await sendMessage(trimmed, activeCampaignId);
+    await sendMessage(trimmed, activeCampaignId, pageContext);
   };
 
   // Don't show the sidebar panel on the full chat page or when closed

@@ -316,6 +316,9 @@ export function CharactersPage() {
         onOpenChange={generator.closePreview}
         entityType="character"
         isLoading={generator.isLoading}
+        isResearching={generator.isResearching}
+        researchProgress={generator.researchProgress}
+        researchSteps={generator.researchSteps}
         result={generator.result}
         partialEntity={generator.partialEntity}
         onAccept={generator.accept}

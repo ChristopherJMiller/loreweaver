@@ -10,6 +10,7 @@ import type { ToolDefinition, ToolResult, ToolContext } from "./types";
 import { toAnthropicTool } from "./types";
 import type { WorkItemTracker } from "../agent/work-items";
 import type { ProposalTracker } from "../proposals/tracker";
+import type { PageContext } from "../context/types";
 import { createWorkItemTools } from "./work-items";
 import { getCampaignContextTools } from "./campaign-context";
 import { createProposalTools } from "./entity-proposals";
@@ -36,11 +37,13 @@ export interface ToolRegistry {
  * @param workItemTracker - Tracker for work items
  * @param campaignId - Current campaign ID
  * @param proposalTracker - Optional tracker for entity proposals
+ * @param pageContext - Optional page context for AI awareness of current view
  */
 export function createToolRegistry(
   workItemTracker: WorkItemTracker,
   campaignId: string,
-  proposalTracker?: ProposalTracker
+  proposalTracker?: ProposalTracker,
+  pageContext?: PageContext
 ): ToolRegistry {
   const definitions: ToolDefinition[] = [
     // Work item tools for tracking research
@@ -60,7 +63,7 @@ export function createToolRegistry(
     handlers.set(def.name, def.handler);
   }
 
-  const context: ToolContext = { campaignId };
+  const context: ToolContext = { campaignId, pageContext };
 
   return {
     tools,
