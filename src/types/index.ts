@@ -12,6 +12,11 @@ export type { Secrets as Secret } from "./bindings/Secrets";
 export type { Relationships as Relationship } from "./bindings/Relationships";
 export type { Tags as Tag } from "./bindings/Tags";
 export type { EntityTags as EntityTag } from "./bindings/EntityTags";
+export type { AiConversations as AiConversation } from "./bindings/AiConversations";
+export type { AiMessages as AiMessage } from "./bindings/AiMessages";
+
+// AI conversation context type
+export type AiContextType = "sidebar" | "fullpage";
 
 // Re-export command input types (generated from Rust via ts-rs)
 export type { ListByCampaignInput } from "./bindings/ListByCampaignInput";

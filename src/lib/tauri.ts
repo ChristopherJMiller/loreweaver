@@ -401,3 +401,64 @@ export const search = {
   entities: (input: SearchInput) =>
     invoke<SearchResult[]>("search_entities", input),
 };
+
+// AI Conversation types (response types from Rust commands)
+export interface AiConversationResponse {
+  id: string;
+  campaign_id: string;
+  context_type: string;
+  total_input_tokens: number;
+  total_output_tokens: number;
+  total_cache_read_tokens: number;
+  total_cache_creation_tokens: number;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface AiMessageResponse {
+  id: string;
+  conversation_id: string;
+  role: string;
+  content: string;
+  tool_name: string | null;
+  tool_input_json: string | null;
+  tool_data_json: string | null;
+  proposal_json: string | null;
+  message_order: number;
+  created_at: string;
+}
+
+export interface ConversationWithMessages {
+  conversation: AiConversationResponse;
+  messages: AiMessageResponse[];
+}
+
+// AI Conversation commands
+export const aiConversations = {
+  getOrCreate: (data: { campaign_id: string; context_type: string }) =>
+    invoke<AiConversationResponse>("get_or_create_ai_conversation", data),
+
+  load: (data: { campaign_id: string; context_type: string }) =>
+    invoke<ConversationWithMessages | null>("load_ai_conversation", data),
+
+  addMessage: (data: {
+    conversation_id: string;
+    role: string;
+    content: string;
+    tool_name?: string;
+    tool_input_json?: string;
+    tool_data_json?: string;
+    proposal_json?: string;
+  }) => invoke<AiMessageResponse>("add_ai_message", data),
+
+  updateTokenCounts: (data: {
+    conversation_id: string;
+    input_tokens: number;
+    output_tokens: number;
+    cache_read_tokens: number;
+    cache_creation_tokens: number;
+  }) => invoke<AiConversationResponse>("update_ai_token_counts", data),
+
+  clear: (data: { conversation_id: string }) =>
+    invoke<boolean>("clear_ai_conversation", data),
+};

@@ -3,10 +3,13 @@
  *
  * Manages chat conversation state for the AI assistant panel.
  * Handles message history, agent execution, streaming updates, and proposals.
+ * Supports persistence to database via Tauri commands.
  */
 
 import { create } from "zustand";
 import type { EntityProposal } from "@/ai/tools/entity-proposals/types";
+import { aiConversations, type AiMessageResponse } from "@/lib/tauri";
+import type { AiContextType } from "@/types";
 
 export interface ChatMessage {
   id: string;
@@ -37,14 +40,24 @@ interface ChatState {
   sessionCacheReadTokens: number;
   sessionCacheCreationTokens: number;
 
+  // Persistence state
+  /** Current conversation ID in database */
+  conversationId: string | null;
+  /** Current context type (sidebar or fullpage) */
+  contextType: AiContextType | null;
+  /** Current campaign ID */
+  campaignId: string | null;
+  /** Whether conversation is being loaded */
+  isLoading: boolean;
+
   // Actions
-  addUserMessage: (content: string) => string;
+  addUserMessage: (content: string) => Promise<string>;
   addAssistantMessage: (content: string, toolName?: string) => string;
-  addToolResult: (content: string, toolName: string, toolData?: unknown) => string;
-  addError: (error: string) => string;
+  addToolResult: (content: string, toolName: string, toolData?: unknown) => Promise<string>;
+  addError: (error: string) => Promise<string>;
   updateMessage: (id: string, content: string) => void;
   setRunning: (running: boolean) => void;
-  clearMessages: () => void;
+  clearMessages: () => Promise<void>;
   clearError: () => void;
   /** Add token usage from an agent run (includes cache metrics) */
   addTokenUsage: (usage: {
@@ -52,15 +65,19 @@ interface ChatState {
     outputTokens: number;
     cacheReadTokens: number;
     cacheCreationTokens: number;
-  }) => void;
+  }) => Promise<void>;
+
+  // Persistence actions
+  /** Load conversation from database for given campaign and context */
+  loadConversation: (campaignId: string, contextType: AiContextType) => Promise<void>;
 
   // Streaming actions
   /** Start streaming a new assistant message, returns the message ID */
   startStreaming: () => string;
   /** Append text delta to the currently streaming message */
   appendToStreaming: (delta: string) => void;
-  /** Finish streaming (clears streamingMessageId) */
-  finishStreaming: () => void;
+  /** Finish streaming (clears streamingMessageId and persists) */
+  finishStreaming: () => Promise<void>;
 
   // Cancellation actions
   /** Store the abort controller for the current operation */
@@ -70,7 +87,7 @@ interface ChatState {
 
   // Proposal actions
   /** Add a proposal message, returns the message ID */
-  addProposal: (proposal: EntityProposal) => string;
+  addProposal: (proposal: EntityProposal) => Promise<string>;
   /** Update a proposal's status in its message */
   updateProposalStatus: (
     proposalId: string,
@@ -90,6 +107,45 @@ function generateId(): string {
 let streamingBuffer = "";
 let streamingRafId: number | null = null;
 
+/**
+ * Convert a database message to a ChatMessage
+ */
+function dbMessageToChatMessage(msg: AiMessageResponse): ChatMessage {
+  return {
+    id: msg.id,
+    role: msg.role as ChatMessage["role"],
+    content: msg.content,
+    toolName: msg.tool_name ?? undefined,
+    toolInput: msg.tool_input_json ? JSON.parse(msg.tool_input_json) : undefined,
+    toolData: msg.tool_data_json ? JSON.parse(msg.tool_data_json) : undefined,
+    proposal: msg.proposal_json ? JSON.parse(msg.proposal_json) : undefined,
+    timestamp: new Date(msg.created_at),
+  };
+}
+
+/**
+ * Persist a message to the database
+ */
+async function persistMessage(
+  conversationId: string,
+  role: string,
+  content: string,
+  toolName?: string,
+  toolInput?: unknown,
+  toolData?: unknown,
+  proposal?: EntityProposal
+): Promise<AiMessageResponse> {
+  return aiConversations.addMessage({
+    conversation_id: conversationId,
+    role,
+    content,
+    tool_name: toolName,
+    tool_input_json: toolInput ? JSON.stringify(toolInput) : undefined,
+    tool_data_json: toolData ? JSON.stringify(toolData) : undefined,
+    proposal_json: proposal ? JSON.stringify(proposal) : undefined,
+  });
+}
+
 export const useChatStore = create<ChatState>((set, get) => ({
   messages: [],
   isRunning: false,
@@ -100,9 +156,73 @@ export const useChatStore = create<ChatState>((set, get) => ({
   sessionOutputTokens: 0,
   sessionCacheReadTokens: 0,
   sessionCacheCreationTokens: 0,
+  conversationId: null,
+  contextType: null,
+  campaignId: null,
+  isLoading: false,
 
-  addUserMessage: (content: string) => {
+  loadConversation: async (campaignId: string, contextType: AiContextType) => {
+    const state = get();
+
+    // Skip if already loaded for this campaign/context
+    if (state.campaignId === campaignId && state.contextType === contextType && state.conversationId) {
+      return;
+    }
+
+    set({ isLoading: true });
+
+    try {
+      // Load or create conversation
+      const result = await aiConversations.load({
+        campaign_id: campaignId,
+        context_type: contextType,
+      });
+
+      if (result) {
+        // Conversation exists, hydrate messages
+        const messages = result.messages.map(dbMessageToChatMessage);
+        set({
+          conversationId: result.conversation.id,
+          contextType,
+          campaignId,
+          messages,
+          sessionInputTokens: result.conversation.total_input_tokens,
+          sessionOutputTokens: result.conversation.total_output_tokens,
+          sessionCacheReadTokens: result.conversation.total_cache_read_tokens,
+          sessionCacheCreationTokens: result.conversation.total_cache_creation_tokens,
+          isLoading: false,
+          error: null,
+        });
+      } else {
+        // No conversation exists, create one
+        const conversation = await aiConversations.getOrCreate({
+          campaign_id: campaignId,
+          context_type: contextType,
+        });
+        set({
+          conversationId: conversation.id,
+          contextType,
+          campaignId,
+          messages: [],
+          sessionInputTokens: 0,
+          sessionOutputTokens: 0,
+          sessionCacheReadTokens: 0,
+          sessionCacheCreationTokens: 0,
+          isLoading: false,
+          error: null,
+        });
+      }
+    } catch (err) {
+      console.error("Failed to load conversation:", err);
+      set({ isLoading: false, error: String(err) });
+    }
+  },
+
+  addUserMessage: async (content: string) => {
+    const { conversationId } = get();
     const id = generateId();
+
+    // Add to local state immediately
     set((state) => ({
       messages: [
         ...state.messages,
@@ -115,6 +235,23 @@ export const useChatStore = create<ChatState>((set, get) => ({
       ],
       error: null,
     }));
+
+    // Persist to database
+    if (conversationId) {
+      try {
+        const dbMsg = await persistMessage(conversationId, "user", content);
+        // Update ID to match database
+        set((state) => ({
+          messages: state.messages.map((msg) =>
+            msg.id === id ? { ...msg, id: dbMsg.id } : msg
+          ),
+        }));
+        return dbMsg.id;
+      } catch (err) {
+        console.error("Failed to persist user message:", err);
+      }
+    }
+
     return id;
   },
 
@@ -135,8 +272,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
     return id;
   },
 
-  addToolResult: (content: string, toolName: string, toolData?: unknown) => {
+  addToolResult: async (content: string, toolName: string, toolData?: unknown) => {
+    const { conversationId } = get();
     const id = generateId();
+
     set((state) => ({
       messages: [
         ...state.messages,
@@ -150,11 +289,36 @@ export const useChatStore = create<ChatState>((set, get) => ({
         },
       ],
     }));
+
+    // Persist to database
+    if (conversationId) {
+      try {
+        const dbMsg = await persistMessage(
+          conversationId,
+          "tool",
+          content,
+          toolName,
+          undefined,
+          toolData
+        );
+        set((state) => ({
+          messages: state.messages.map((msg) =>
+            msg.id === id ? { ...msg, id: dbMsg.id } : msg
+          ),
+        }));
+        return dbMsg.id;
+      } catch (err) {
+        console.error("Failed to persist tool result:", err);
+      }
+    }
+
     return id;
   },
 
-  addError: (error: string) => {
+  addError: async (error: string) => {
+    const { conversationId } = get();
     const id = generateId();
+
     set((state) => ({
       messages: [
         ...state.messages,
@@ -168,6 +332,22 @@ export const useChatStore = create<ChatState>((set, get) => ({
       error,
       isRunning: false,
     }));
+
+    // Persist to database
+    if (conversationId) {
+      try {
+        const dbMsg = await persistMessage(conversationId, "error", error);
+        set((state) => ({
+          messages: state.messages.map((msg) =>
+            msg.id === id ? { ...msg, id: dbMsg.id } : msg
+          ),
+        }));
+        return dbMsg.id;
+      } catch (err) {
+        console.error("Failed to persist error:", err);
+      }
+    }
+
     return id;
   },
 
@@ -183,21 +363,57 @@ export const useChatStore = create<ChatState>((set, get) => ({
     set({ isRunning: running });
   },
 
-  clearMessages: () => {
-    set({ messages: [], error: null, sessionInputTokens: 0, sessionOutputTokens: 0, sessionCacheReadTokens: 0, sessionCacheCreationTokens: 0 });
+  clearMessages: async () => {
+    const { conversationId } = get();
+
+    // Clear local state
+    set({
+      messages: [],
+      error: null,
+      sessionInputTokens: 0,
+      sessionOutputTokens: 0,
+      sessionCacheReadTokens: 0,
+      sessionCacheCreationTokens: 0,
+    });
+
+    // Clear in database
+    if (conversationId) {
+      try {
+        await aiConversations.clear({ conversation_id: conversationId });
+      } catch (err) {
+        console.error("Failed to clear conversation:", err);
+      }
+    }
   },
 
   clearError: () => {
     set({ error: null });
   },
 
-  addTokenUsage: (usage) => {
+  addTokenUsage: async (usage) => {
+    const { conversationId } = get();
+
     set((state) => ({
       sessionInputTokens: state.sessionInputTokens + usage.inputTokens,
       sessionOutputTokens: state.sessionOutputTokens + usage.outputTokens,
       sessionCacheReadTokens: state.sessionCacheReadTokens + usage.cacheReadTokens,
       sessionCacheCreationTokens: state.sessionCacheCreationTokens + usage.cacheCreationTokens,
     }));
+
+    // Update in database
+    if (conversationId) {
+      try {
+        await aiConversations.updateTokenCounts({
+          conversation_id: conversationId,
+          input_tokens: usage.inputTokens,
+          output_tokens: usage.outputTokens,
+          cache_read_tokens: usage.cacheReadTokens,
+          cache_creation_tokens: usage.cacheCreationTokens,
+        });
+      } catch (err) {
+        console.error("Failed to update token counts:", err);
+      }
+    }
   },
 
   startStreaming: () => {
@@ -244,32 +460,57 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }
   },
 
-  finishStreaming: () => {
+  finishStreaming: async () => {
+    const { streamingMessageId, conversationId } = get();
+
     // Flush any remaining buffered content
     if (streamingRafId !== null) {
       cancelAnimationFrame(streamingRafId);
       streamingRafId = null;
     }
 
+    let finalContent = "";
+
     if (streamingBuffer) {
-      const { streamingMessageId } = get();
       if (streamingMessageId) {
         const bufferedContent = streamingBuffer;
         streamingBuffer = "";
-        set((state) => ({
-          messages: state.messages.map((msg) =>
-            msg.id === streamingMessageId
-              ? { ...msg, content: msg.content + bufferedContent }
-              : msg
-          ),
-          streamingMessageId: null,
-        }));
-        return;
+        set((state) => {
+          const updatedMessages = state.messages.map((msg) => {
+            if (msg.id === streamingMessageId) {
+              finalContent = msg.content + bufferedContent;
+              return { ...msg, content: finalContent };
+            }
+            return msg;
+          });
+          return {
+            messages: updatedMessages,
+            streamingMessageId: null,
+          };
+        });
       }
+    } else {
+      // Get the final content
+      const state = get();
+      const msg = state.messages.find((m) => m.id === streamingMessageId);
+      finalContent = msg?.content || "";
+      streamingBuffer = "";
+      set({ streamingMessageId: null });
     }
 
-    streamingBuffer = "";
-    set({ streamingMessageId: null });
+    // Persist the completed streaming message
+    if (conversationId && streamingMessageId && finalContent) {
+      try {
+        const dbMsg = await persistMessage(conversationId, "assistant", finalContent);
+        set((state) => ({
+          messages: state.messages.map((msg) =>
+            msg.id === streamingMessageId ? { ...msg, id: dbMsg.id } : msg
+          ),
+        }));
+      } catch (err) {
+        console.error("Failed to persist streaming message:", err);
+      }
+    }
   },
 
   setAbortController: (controller: AbortController | null) => {
@@ -284,8 +525,10 @@ export const useChatStore = create<ChatState>((set, get) => ({
     }
   },
 
-  addProposal: (proposal: EntityProposal) => {
+  addProposal: async (proposal: EntityProposal) => {
+    const { conversationId } = get();
     const id = generateId();
+
     // Generate a summary for the proposal content
     let content: string;
     if (proposal.operation === "create") {
@@ -309,6 +552,30 @@ export const useChatStore = create<ChatState>((set, get) => ({
         },
       ],
     }));
+
+    // Persist to database
+    if (conversationId) {
+      try {
+        const dbMsg = await persistMessage(
+          conversationId,
+          "proposal",
+          content,
+          undefined,
+          undefined,
+          undefined,
+          proposal
+        );
+        set((state) => ({
+          messages: state.messages.map((msg) =>
+            msg.id === id ? { ...msg, id: dbMsg.id } : msg
+          ),
+        }));
+        return dbMsg.id;
+      } catch (err) {
+        console.error("Failed to persist proposal:", err);
+      }
+    }
+
     return id;
   },
 
@@ -327,6 +594,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
         return msg;
       }),
     }));
+    // Note: Proposal status updates are not persisted to DB
+    // as they're UI state that doesn't need to survive reload
   },
 
   getProposalMessage: (proposalId: string) => {

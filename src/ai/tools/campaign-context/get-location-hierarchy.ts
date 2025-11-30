@@ -5,6 +5,7 @@
  */
 
 import { invoke } from "@tauri-apps/api/core";
+import { isUUID, createInvalidIdError } from "@/ai/utils/uuid";
 import type { ToolDefinition, ToolResult, ToolContext } from "../types";
 import type { Location } from "@/types";
 
@@ -39,13 +40,22 @@ export const getLocationHierarchyTool: ToolDefinition = {
     properties: {
       location_id: {
         type: "string",
-        description: "The location ID to get hierarchy for",
+        description:
+          "The location's UUID. Use search_entities to find IDs by name.",
       },
     },
     required: ["location_id"],
   },
   handler: async (input: unknown, context: ToolContext): Promise<ToolResult> => {
     const { location_id } = input as { location_id: string };
+
+    // Validate UUID format before hitting the database
+    if (!isUUID(location_id)) {
+      return {
+        success: false,
+        content: createInvalidIdError(location_id),
+      };
+    }
 
     try {
       // Get the location itself

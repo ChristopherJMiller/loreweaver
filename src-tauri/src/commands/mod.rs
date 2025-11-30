@@ -1,3 +1,4 @@
+pub mod ai_conversation;
 pub mod campaign;
 pub mod character;
 pub mod hero;

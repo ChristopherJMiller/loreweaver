@@ -5,6 +5,7 @@
  */
 
 import { invoke } from "@tauri-apps/api/core";
+import { isUUID, createInvalidIdError } from "@/ai/utils/uuid";
 import type { ToolDefinition, ToolResult, ToolContext } from "../types";
 import type { Relationship } from "@/types";
 
@@ -32,7 +33,8 @@ export const getRelationshipsTool: ToolDefinition = {
       },
       entity_id: {
         type: "string",
-        description: "The entity ID",
+        description:
+          "The entity's UUID. Use search_entities to find IDs by name.",
       },
     },
     required: ["entity_type", "entity_id"],
@@ -42,6 +44,14 @@ export const getRelationshipsTool: ToolDefinition = {
       entity_type: string;
       entity_id: string;
     };
+
+    // Validate UUID format before hitting the database
+    if (!isUUID(entity_id)) {
+      return {
+        success: false,
+        content: createInvalidIdError(entity_id),
+      };
+    }
 
     try {
       const relationships = await invoke<Relationship[]>(

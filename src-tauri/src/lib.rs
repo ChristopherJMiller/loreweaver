@@ -102,6 +102,12 @@ pub fn run() {
             commands::tag::get_entity_tags,
             // Search commands
             commands::search::search_entities,
+            // AI Conversation commands
+            commands::ai_conversation::get_or_create_ai_conversation,
+            commands::ai_conversation::load_ai_conversation,
+            commands::ai_conversation::add_ai_message,
+            commands::ai_conversation::update_ai_token_counts,
+            commands::ai_conversation::clear_ai_conversation,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

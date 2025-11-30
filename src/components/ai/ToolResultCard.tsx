@@ -5,7 +5,7 @@
  * based on tool type and data structure.
  */
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
@@ -47,8 +47,11 @@ function DefaultToolResult({
   const [isExpanded, setIsExpanded] = useState(false);
   const isLongContent = content.length > 300;
 
-  // Parse as markdown
-  const html = marked.parse(content, { async: false }) as string;
+  // Memoize markdown parsing
+  const html = useMemo(
+    () => marked.parse(content, { async: false }) as string,
+    [content]
+  );
 
   return (
     <Card className={cn("overflow-hidden", className)}>

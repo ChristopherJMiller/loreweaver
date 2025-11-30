@@ -32,6 +32,14 @@ const BASE_PROMPT = `You are a knowledgeable TTRPG assistant helping a Game Mast
 - **Timeline**: Understand history with get_timeline
 - **Overview**: Start with get_campaign_context for the big picture
 
+## Entity IDs
+
+- All entity IDs are UUIDs (e.g., "550e8400-e29b-41d4-a716-446655440000")
+- Entity names and IDs are NOT the same thing
+- If you only know an entity's name, use search_entities first to get its UUID
+- Tool results include IDs - save these for subsequent lookups
+- Tools like get_entity, get_relationships, and get_location_hierarchy require UUIDs
+
 ## Response Format
 
 Structure your responses clearly:

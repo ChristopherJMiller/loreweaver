@@ -13,6 +13,7 @@ import {
   ChevronLeft,
   Home,
   Settings,
+  Sparkles,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -23,7 +24,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useUIStore } from "@/stores";
+import { useUIStore, useChatStore } from "@/stores";
 
 interface NavItem {
   label: string;
@@ -105,6 +106,7 @@ function NavItemLink({
 
 export function Sidebar() {
   const { sidebarCollapsed, toggleSidebar } = useUIStore();
+  const isAIRunning = useChatStore((state) => state.isRunning);
 
   return (
     <aside
@@ -114,6 +116,59 @@ export function Sidebar() {
       )}
     >
       <ScrollArea className="flex-1 py-4">
+        {/* Loreweaver AI - Primary action at top */}
+        <div className={cn("px-2 mb-2", sidebarCollapsed && "px-2")}>
+          {sidebarCollapsed ? (
+            <Tooltip delayDuration={0}>
+              <TooltipTrigger asChild>
+                <NavLink
+                  to="/chat"
+                  className={({ isActive }) =>
+                    cn(
+                      "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                      isActive
+                        ? "bg-primary text-primary-foreground"
+                        : "text-primary hover:bg-primary/10"
+                    )
+                  }
+                >
+                  <Sparkles
+                    className={cn(
+                      "h-4 w-4 shrink-0",
+                      isAIRunning && "animate-pulse text-yellow-500 drop-shadow-[0_0_6px_rgba(234,179,8,0.8)]"
+                    )}
+                  />
+                </NavLink>
+              </TooltipTrigger>
+              <TooltipContent side="right">
+                {isAIRunning ? "Loreweaver (running...)" : "Loreweaver"}
+              </TooltipContent>
+            </Tooltip>
+          ) : (
+            <NavLink
+              to="/chat"
+              className={({ isActive }) =>
+                cn(
+                  "flex items-center gap-3 rounded-md px-3 py-2 text-sm font-medium transition-colors",
+                  isActive
+                    ? "bg-primary text-primary-foreground"
+                    : "text-primary hover:bg-primary/10"
+                )
+              }
+            >
+              <Sparkles
+                className={cn(
+                  "h-4 w-4 shrink-0",
+                  isAIRunning && "animate-pulse text-yellow-500 drop-shadow-[0_0_6px_rgba(234,179,8,0.8)]"
+                )}
+              />
+              <span>Loreweaver</span>
+            </NavLink>
+          )}
+        </div>
+
+        <Separator className="my-2" />
+
         <div className={cn("space-y-1 px-2", sidebarCollapsed && "px-2")}>
           <NavItemLink
             item={{ label: "Dashboard", icon: Home, to: "/" }}

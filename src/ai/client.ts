@@ -183,6 +183,51 @@ export interface StreamingCallbacks {
 }
 
 /**
+ * Add cache_control to the last content block of a message
+ * Supports text, tool_use, and tool_result content types
+ */
+function addCacheControlToMessage(message: MessageParam): MessageParam {
+  const content = message.content;
+
+  // If content is a string, convert to content block with cache_control
+  if (typeof content === "string") {
+    return {
+      ...message,
+      content: [
+        {
+          type: "text" as const,
+          text: content,
+          cache_control: { type: "ephemeral" as const },
+        },
+      ],
+    };
+  }
+
+  // If content is an array, add cache_control to the last block
+  if (Array.isArray(content) && content.length > 0) {
+    const newContent = [...content];
+    const lastIndex = content.length - 1;
+    const lastBlock = content[lastIndex];
+
+    // Add cache_control to supported block types
+    // text, tool_use, and tool_result all support cache_control
+    if (
+      lastBlock.type === "text" ||
+      lastBlock.type === "tool_use" ||
+      lastBlock.type === "tool_result"
+    ) {
+      newContent[lastIndex] = {
+        ...lastBlock,
+        cache_control: { type: "ephemeral" as const },
+      };
+      return { ...message, content: newContent };
+    }
+  }
+
+  return message;
+}
+
+/**
  * Create a streaming message using the Claude API.
  *
  * Returns a MessageStream that can be used to listen for events.
@@ -191,6 +236,7 @@ export interface StreamingCallbacks {
  *
  * @param options.cacheSystem - If true, adds cache_control to system prompt
  * @param options.cacheTools - If true, adds cache_control to the last tool definition
+ * @param options.cacheMessages - If true, adds cache_control to previous conversation turns
  */
 export function createMessageStream(options: {
   model: string;
@@ -200,6 +246,7 @@ export function createMessageStream(options: {
   maxTokens?: number;
   cacheSystem?: boolean;
   cacheTools?: boolean;
+  cacheMessages?: boolean;
 }): MessageStream {
   const client = getClient();
 
@@ -221,10 +268,25 @@ export function createMessageStream(options: {
     return tool;
   });
 
+  // Add cache_control to conversation history if enabled
+  // We cache all messages except the last one (which is the new user message)
+  // This allows the conversation history to be cached across turns
+  let messages = options.messages;
+  if (options.cacheMessages && messages.length > 1) {
+    messages = messages.map((msg, i) => {
+      // Add cache_control to the second-to-last message
+      // This creates a cache breakpoint right before the new user input
+      if (i === messages.length - 2) {
+        return addCacheControlToMessage(msg);
+      }
+      return msg;
+    });
+  }
+
   return client.messages.stream({
     model: options.model,
     system: systemBlocks,
-    messages: options.messages,
+    messages,
     tools,
     max_tokens: options.maxTokens ?? 4096,
   });

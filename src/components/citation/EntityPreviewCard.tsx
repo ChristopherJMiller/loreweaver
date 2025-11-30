@@ -5,8 +5,10 @@
  * Displays type-specific fields for each entity type.
  */
 
+import { useMemo } from "react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { prosemirrorToMarkdown } from "@/ai/utils/content-bridge";
 import type {
   EntityType,
   Character,
@@ -169,13 +171,39 @@ function getEntityFields(
 }
 
 /**
+ * Try to parse a string as TipTap JSON and convert to plain text
+ */
+function parseTiptapContent(content: string): string | null {
+  try {
+    // Check if it looks like JSON (TipTap format)
+    if (content.startsWith("{") && content.includes('"type"')) {
+      const json = JSON.parse(content);
+      if (json.type === "doc") {
+        return prosemirrorToMarkdown(json);
+      }
+    }
+    // Not TipTap JSON, return as-is
+    return content;
+  } catch {
+    // Not valid JSON, return as-is
+    return content;
+  }
+}
+
+/**
  * Get description field from entity (if available)
+ * Parses TipTap JSON content to markdown for display
  */
 function getDescription(entity: EntityData): string | null {
-  if ("description" in entity && entity.description)
-    return entity.description;
-  if ("content" in entity && entity.content) return entity.content;
-  if ("summary" in entity && entity.summary) return entity.summary;
+  if ("description" in entity && entity.description) {
+    return parseTiptapContent(entity.description);
+  }
+  if ("content" in entity && entity.content) {
+    return parseTiptapContent(entity.content);
+  }
+  if ("summary" in entity && entity.summary) {
+    return parseTiptapContent(entity.summary);
+  }
   return null;
 }
 
@@ -197,8 +225,13 @@ export function EntityPreviewCard({
   const Icon = ENTITY_ICONS[entityType];
   const typeLabel = ENTITY_LABELS[entityType];
   const name = getEntityName(entity);
-  const fields = getEntityFields(entityType, entity);
-  const description = getDescription(entity);
+
+  // Memoize expensive field extraction and description parsing
+  const fields = useMemo(
+    () => getEntityFields(entityType, entity),
+    [entityType, entity]
+  );
+  const description = useMemo(() => getDescription(entity), [entity]);
 
   return (
     <div

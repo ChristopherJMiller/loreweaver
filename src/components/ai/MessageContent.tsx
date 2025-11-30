@@ -5,7 +5,7 @@
  * Handles markdown rendering with citation placeholders.
  */
 
-import { useMemo } from "react";
+import { useMemo, memo, useCallback } from "react";
 import { marked } from "marked";
 import { parseContentSegments } from "@/lib/citation-parser";
 import { CitationPill, EntityPreviewPopover } from "@/components/citation";
@@ -29,7 +29,11 @@ marked.setOptions({
  * Render a text segment as HTML
  * Note: We use dangerouslySetInnerHTML because marked.parse is trusted
  */
-function TextSegment({ content }: { content: string }) {
+const TextSegment = memo(function TextSegment({
+  content,
+}: {
+  content: string;
+}) {
   const html = useMemo(() => {
     return marked.parse(content, { async: false }) as string;
   }, [content]);
@@ -40,37 +44,42 @@ function TextSegment({ content }: { content: string }) {
       dangerouslySetInnerHTML={{ __html: html }}
     />
   );
-}
+})
 
 /**
  * Render a citation segment as a pill with hover preview
  */
-function CitationSegment({
+const CitationSegment = memo(function CitationSegment({
   entityType,
   entityId,
   displayName,
-  onNavigate,
 }: {
   entityType: EntityType;
   entityId: string;
   displayName: string;
-  onNavigate: () => void;
 }) {
+  const { createNavigateHandler } = useEntityNavigation();
+
+  const handleNavigate = useCallback(
+    () => createNavigateHandler(entityType, entityId)(),
+    [createNavigateHandler, entityType, entityId]
+  );
+
   return (
     <EntityPreviewPopover
       entityType={entityType}
       entityId={entityId}
-      onNavigate={onNavigate}
+      onNavigate={handleNavigate}
     >
       <CitationPill
         entityType={entityType}
         entityId={entityId}
         displayName={displayName}
-        onClick={onNavigate}
+        onClick={handleNavigate}
       />
     </EntityPreviewPopover>
   );
-}
+})
 
 /**
  * MessageContent renders AI messages with inline citation pills
@@ -79,8 +88,6 @@ function CitationSegment({
  * Example: [[character:550e8400-e29b-41d4-a716-446655440000:Captain Aldric]]
  */
 export function MessageContent({ content, className }: MessageContentProps) {
-  const { createNavigateHandler } = useEntityNavigation();
-
   const segments = useMemo(() => parseContentSegments(content), [content]);
 
   return (
@@ -98,7 +105,6 @@ export function MessageContent({ content, className }: MessageContentProps) {
               entityType={entityType}
               entityId={entityId}
               displayName={displayName}
-              onNavigate={createNavigateHandler(entityType, entityId)}
             />
           );
         }

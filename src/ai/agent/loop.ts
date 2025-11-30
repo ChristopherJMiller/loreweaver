@@ -11,6 +11,7 @@ import type {
   ContentBlock,
   ToolUseBlock,
   ToolResultBlockParam,
+  Message,
 } from "@anthropic-ai/sdk/resources/messages";
 import { createMessageStream, APIUserAbortError } from "../client";
 import type { ToolRegistry, ToolResult } from "../tools";
@@ -103,6 +104,23 @@ function getToolUseBlocks(blocks: ContentBlock[]): ToolUseBlock[] {
 }
 
 /**
+ * Check if an error is a JSON parse error from incomplete streaming
+ */
+function isJsonParseError(error: unknown): boolean {
+  if (error instanceof Error) {
+    const msg = error.message.toLowerCase();
+    return (
+      msg.includes("json parse") ||
+      msg.includes("json.parse") ||
+      msg.includes("unexpected end of json") ||
+      msg.includes("expected '}'") ||
+      msg.includes('expected "}"')
+    );
+  }
+  return false;
+}
+
+/**
  * Run the agent loop until completion or max iterations
  * Uses streaming for real-time text output via onTextDelta callback
  */
@@ -112,7 +130,7 @@ export async function runAgent(
   config: AgentConfig
 ): Promise<AgentResult> {
   const maxIterations = config.maxIterations ?? 20;
-  const maxTokens = config.maxTokens ?? 4096;
+  const maxTokens = config.maxTokens ?? 8192;
 
   const messages: MessageParam[] = [{ role: "user", content: userMessage }];
   const workItemTracker = new WorkItemTracker();
@@ -140,38 +158,71 @@ export async function runAgent(
 
       iterations++;
 
-      // Create streaming message with prompt caching enabled
-      const stream = createMessageStream({
-        model: config.model,
-        system: config.systemPrompt,
-        messages,
-        tools: toolRegistry.tools,
-        maxTokens,
-        cacheSystem: true,
-        cacheTools: true,
-      });
-
       // Track text content as it streams
       let iterationTextContent = "";
 
-      // Listen for abort signal to cancel stream
-      if (config.signal) {
-        const abortHandler = () => {
-          stream.abort();
-        };
-        config.signal.addEventListener("abort", abortHandler, { once: true });
-      }
+      // Helper to create and run a stream with retry on JSON parse errors
+      const runStreamWithRetry = async (retryCount = 0): Promise<Message> => {
+        // Create streaming message with prompt caching enabled
+        // Cache breakpoints: system prompt, tools, and conversation history
+        const stream = createMessageStream({
+          model: config.model,
+          system: config.systemPrompt,
+          messages,
+          tools: toolRegistry.tools,
+          maxTokens,
+          cacheSystem: true,
+          cacheTools: true,
+          cacheMessages: true,
+        });
 
-      // Stream text deltas to callback
-      stream.on("text", (textDelta: string) => {
-        iterationTextContent += textDelta;
-        config.onTextDelta?.(textDelta);
-      });
+        // Reset text content on retry
+        if (retryCount > 0) {
+          iterationTextContent = "";
+        }
+
+        // Listen for abort signal to cancel stream
+        if (config.signal) {
+          const abortHandler = () => {
+            stream.abort();
+          };
+          config.signal.addEventListener("abort", abortHandler, { once: true });
+        }
+
+        // Stream text deltas to callback
+        stream.on("text", (textDelta: string) => {
+          iterationTextContent += textDelta;
+          config.onTextDelta?.(textDelta);
+        });
+
+        try {
+          return await stream.finalMessage();
+        } catch (streamError) {
+          // Check if this was an abort
+          if (
+            streamError instanceof APIUserAbortError ||
+            (streamError instanceof Error && streamError.name === "AbortError")
+          ) {
+            throw streamError; // Re-throw abort errors
+          }
+
+          // Retry once on JSON parse errors (usually from incomplete streaming)
+          if (isJsonParseError(streamError) && retryCount < 1) {
+            console.warn(
+              `JSON parse error during streaming, retrying iteration ${iterations} (attempt ${retryCount + 2})...`,
+              streamError
+            );
+            return runStreamWithRetry(retryCount + 1);
+          }
+
+          throw streamError;
+        }
+      };
 
       // Wait for stream to complete and get final message
       let response;
       try {
-        response = await stream.finalMessage();
+        response = await runStreamWithRetry();
       } catch (streamError) {
         // Check if this was an abort
         if (

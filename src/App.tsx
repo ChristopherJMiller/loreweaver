@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AppShell } from "@/components/layout";
+import { AIFullPageChat } from "@/components/ai/AIFullPageChat";
 import { useAIStore } from "@/stores";
 import {
   DashboardPage,
@@ -43,6 +44,9 @@ function App() {
         {/* All routes within AppShell require active campaign */}
         <Route element={<AppShell />}>
           <Route path="/" element={<DashboardPage />} />
+
+          {/* AI Chat - full-page experience */}
+          <Route path="/chat" element={<AIFullPageChat />} />
 
           {/* Entity routes */}
           <Route path="/characters" element={<CharactersPage />} />

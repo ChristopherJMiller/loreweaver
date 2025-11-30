@@ -2,6 +2,8 @@
 
 pub mod prelude;
 
+pub mod ai_conversations;
+pub mod ai_messages;
 pub mod campaigns;
 pub mod characters;
 pub mod entity_tags;

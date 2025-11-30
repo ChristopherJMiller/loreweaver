@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { BookOpen, Search, ChevronDown, Plus, Globe, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,9 +13,13 @@ import { useCampaignStore, useUIStore } from "@/stores";
 
 export function Header() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { campaigns, activeCampaignId, setActiveCampaign, fetchCampaigns } =
     useCampaignStore();
   const { openCommandPalette, worldNavigatorOpen, toggleWorldNavigator, aiChatOpen, toggleAIChat } = useUIStore();
+
+  // Hide AI chat button when on the full chat page
+  const isOnChatPage = location.pathname === "/chat";
 
   const activeCampaign = campaigns.find((c) => c.id === activeCampaignId);
 
@@ -99,14 +103,16 @@ export function Header() {
         >
           <Globe className="h-4 w-4" />
         </Button>
-        <Button
-          variant={aiChatOpen ? "default" : "outline"}
-          size="icon"
-          onClick={toggleAIChat}
-          title={aiChatOpen ? "Hide AI Assistant" : "Show AI Assistant"}
-        >
-          <Sparkles className="h-4 w-4" />
-        </Button>
+        {!isOnChatPage && (
+          <Button
+            variant={aiChatOpen ? "default" : "outline"}
+            size="icon"
+            onClick={toggleAIChat}
+            title={aiChatOpen ? "Hide AI Assistant" : "Show AI Assistant"}
+          >
+            <Sparkles className="h-4 w-4" />
+          </Button>
+        )}
       </div>
     </header>
   );

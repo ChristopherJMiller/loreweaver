@@ -5,7 +5,7 @@
  * Allows users to accept, edit, or reject proposals.
  */
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import {
   Check,
   X,
@@ -101,10 +101,25 @@ function getOperationVariant(
 function CreateProposalContent({ proposal }: { proposal: CreateProposal }) {
   const [showDetails, setShowDetails] = useState(false);
 
-  // Get preview fields (first 3 non-name fields)
-  const previewFields = Object.entries(proposal.data)
-    .filter(([key]) => key !== "name")
-    .slice(0, 3);
+  // Memoize field computations
+  const { previewFields, detailFields } = useMemo(() => {
+    const nonNameFields = Object.entries(proposal.data).filter(
+      ([key]) => key !== "name"
+    );
+    return {
+      previewFields: nonNameFields.slice(0, 3),
+      detailFields: nonNameFields.map(([key, value]) => ({
+        key,
+        label: formatEntityType(key),
+        displayValue:
+          typeof value === "string"
+            ? value.length > 100
+              ? value.slice(0, 100) + "..."
+              : value
+            : String(value),
+      })),
+    };
+  }, [proposal.data]);
 
   return (
     <div className="space-y-3">
@@ -124,22 +139,12 @@ function CreateProposalContent({ proposal }: { proposal: CreateProposal }) {
           </CollapsibleTrigger>
           <CollapsibleContent>
             <div className="mt-2 space-y-2 text-sm">
-              {Object.entries(proposal.data)
-                .filter(([key]) => key !== "name")
-                .map(([key, value]) => (
-                  <div key={key} className="grid grid-cols-[100px_1fr] gap-2">
-                    <span className="text-muted-foreground">
-                      {formatEntityType(key)}:
-                    </span>
-                    <span className="line-clamp-2">
-                      {typeof value === "string"
-                        ? value.length > 100
-                          ? value.slice(0, 100) + "..."
-                          : value
-                        : String(value)}
-                    </span>
-                  </div>
-                ))}
+              {detailFields.map(({ key, label, displayValue }) => (
+                <div key={key} className="grid grid-cols-[100px_1fr] gap-2">
+                  <span className="text-muted-foreground">{label}:</span>
+                  <span className="line-clamp-2">{displayValue}</span>
+                </div>
+              ))}
             </div>
           </CollapsibleContent>
         </Collapsible>
@@ -161,30 +166,40 @@ function CreateProposalContent({ proposal }: { proposal: CreateProposal }) {
  * Render update proposal content with diff
  */
 function UpdateProposalContent({ proposal }: { proposal: UpdateProposal }) {
+  // Memoize change display values
+  const changeItems = useMemo(() => {
+    return Object.entries(proposal.changes).map(([key, newValue]) => {
+      const oldValue = proposal.currentData?.[key];
+      const oldDisplay =
+        oldValue !== undefined
+          ? String(oldValue).slice(0, 40) +
+            (String(oldValue).length > 40 ? "..." : "")
+          : "(empty)";
+      const newDisplay =
+        String(newValue).slice(0, 40) +
+        (String(newValue).length > 40 ? "..." : "");
+
+      return {
+        key,
+        label: formatEntityType(key),
+        oldDisplay,
+        newDisplay,
+      };
+    });
+  }, [proposal.changes, proposal.currentData]);
+
   return (
     <div className="space-y-2 text-sm">
-      {Object.entries(proposal.changes).map(([key, newValue]) => {
-        const oldValue = proposal.currentData?.[key];
-        const oldDisplay =
-          oldValue !== undefined
-            ? String(oldValue).slice(0, 40) +
-              (String(oldValue).length > 40 ? "..." : "")
-            : "(empty)";
-        const newDisplay =
-          String(newValue).slice(0, 40) +
-          (String(newValue).length > 40 ? "..." : "");
-
-        return (
-          <div key={key} className="space-y-0.5">
-            <span className="text-muted-foreground">{formatEntityType(key)}</span>
-            <div className="flex items-center gap-2 text-xs">
-              <span className="text-red-500/80 line-through">{oldDisplay}</span>
-              <ArrowRight className="h-3 w-3 text-muted-foreground" />
-              <span className="text-green-500/80">{newDisplay}</span>
-            </div>
+      {changeItems.map(({ key, label, oldDisplay, newDisplay }) => (
+        <div key={key} className="space-y-0.5">
+          <span className="text-muted-foreground">{label}</span>
+          <div className="flex items-center gap-2 text-xs">
+            <span className="text-red-500/80 line-through">{oldDisplay}</span>
+            <ArrowRight className="h-3 w-3 text-muted-foreground" />
+            <span className="text-green-500/80">{newDisplay}</span>
           </div>
-        );
-      })}
+        </div>
+      ))}
     </div>
   );
 }
