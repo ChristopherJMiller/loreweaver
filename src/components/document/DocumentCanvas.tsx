@@ -1,8 +1,16 @@
+/**
+ * DocumentCanvas
+ *
+ * Document canvas with AI expansion capabilities.
+ * Provides rich text editing with inline AI expansion for entity content.
+ */
+
 import { useState, useCallback } from "react";
 import { Editor } from "@tiptap/react";
 import { SectionEditor } from "./SectionEditor";
 import { DocumentToolbar } from "./DocumentToolbar";
 import { cn } from "@/lib/utils";
+import type { EntityType } from "@/types";
 
 export interface DocumentSection {
   id: string;
@@ -15,7 +23,10 @@ export interface DocumentCanvasProps {
   sections: DocumentSection[];
   isEditing: boolean;
   onChange: (fieldId: string, content: string) => void;
-  campaignId?: string;
+  campaignId: string;
+  entityType: EntityType;
+  entityId: string;
+  entityName: string;
   className?: string;
   children?: React.ReactNode;
 }
@@ -25,6 +36,9 @@ export function DocumentCanvas({
   isEditing,
   onChange,
   campaignId,
+  entityType,
+  entityId,
+  entityName,
   className,
   children,
 }: DocumentCanvasProps) {
@@ -56,6 +70,9 @@ export function DocumentCanvas({
             placeholder={section.placeholder}
             readOnly={!isEditing}
             campaignId={campaignId}
+            entityType={entityType}
+            entityId={entityId}
+            entityName={entityName}
             onFocus={handleFocus}
             hideTitle={index === 0}
           />

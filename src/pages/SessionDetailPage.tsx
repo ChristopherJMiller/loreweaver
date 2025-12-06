@@ -193,7 +193,10 @@ export function SessionDetailPage() {
         sections={sections}
         isEditing={isEditing}
         onChange={handleSectionChange}
-        campaignId={activeCampaignId || undefined}
+        campaignId={activeCampaignId || ""}
+        entityType="session"
+        entityId={id || ""}
+        entityName={session.title || ""}
       >
         <MetadataSection defaultOpen={isEditing}>
           {isEditing ? (

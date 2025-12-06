@@ -191,7 +191,10 @@ export function TimelineEventDetailPage() {
         sections={sections}
         isEditing={isEditing}
         onChange={handleSectionChange}
-        campaignId={activeCampaignId || undefined}
+        campaignId={activeCampaignId || ""}
+        entityType="timeline_event"
+        entityId={id || ""}
+        entityName={event.title}
       >
         <MetadataSection defaultOpen={isEditing}>
           {isEditing ? (

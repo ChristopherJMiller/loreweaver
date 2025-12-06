@@ -205,7 +205,10 @@ export function OrganizationDetailPage() {
         sections={sections}
         isEditing={isEditing}
         onChange={handleSectionChange}
-        campaignId={activeCampaignId || undefined}
+        campaignId={activeCampaignId || ""}
+        entityType="organization"
+        entityId={id || ""}
+        entityName={org.name}
       >
         <MetadataSection defaultOpen={isEditing}>
           {isEditing ? (

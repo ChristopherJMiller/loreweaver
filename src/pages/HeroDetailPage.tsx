@@ -225,7 +225,10 @@ export function HeroDetailPage() {
         sections={sections}
         isEditing={isEditing}
         onChange={handleSectionChange}
-        campaignId={activeCampaignId || undefined}
+        campaignId={activeCampaignId || ""}
+        entityType="hero"
+        entityId={id || ""}
+        entityName={hero.name}
       >
         <MetadataSection defaultOpen={isEditing}>
           {isEditing ? (

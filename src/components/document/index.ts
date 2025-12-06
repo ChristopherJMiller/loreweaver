@@ -9,12 +9,6 @@ export type { DocumentCanvasProps, DocumentSection } from "./DocumentCanvas";
 export { SectionEditor } from "./SectionEditor";
 export type { SectionEditorProps } from "./SectionEditor";
 
-export { SectionEditorWithExpansion } from "./SectionEditorWithExpansion";
-export type { SectionEditorWithExpansionProps } from "./SectionEditorWithExpansion";
-
-export { DocumentCanvasWithExpansion } from "./DocumentCanvasWithExpansion";
-export type { DocumentCanvasWithExpansionProps } from "./DocumentCanvasWithExpansion";
-
 export { RelationshipsPanel } from "./RelationshipsPanel";
 export type { RelationshipsPanelProps, EntityType } from "./RelationshipsPanel";
 

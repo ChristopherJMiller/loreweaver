@@ -235,7 +235,10 @@ export function QuestDetailPage() {
         sections={sections}
         isEditing={isEditing}
         onChange={handleSectionChange}
-        campaignId={activeCampaignId || undefined}
+        campaignId={activeCampaignId || ""}
+        entityType="quest"
+        entityId={id || ""}
+        entityName={quest.name}
       >
         <MetadataSection defaultOpen={isEditing}>
           {isEditing ? (

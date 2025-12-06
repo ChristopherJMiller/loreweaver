@@ -229,7 +229,10 @@ export function LocationDetailPage() {
         sections={sections}
         isEditing={isEditing}
         onChange={handleSectionChange}
-        campaignId={activeCampaignId || undefined}
+        campaignId={activeCampaignId || ""}
+        entityType="location"
+        entityId={id || ""}
+        entityName={location.name}
       >
         <MetadataSection defaultOpen={isEditing}>
           {isEditing ? (

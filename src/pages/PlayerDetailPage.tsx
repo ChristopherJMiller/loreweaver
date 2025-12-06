@@ -153,7 +153,10 @@ export function PlayerDetailPage() {
         sections={sections}
         isEditing={isEditing}
         onChange={handleSectionChange}
-        campaignId={activeCampaignId || undefined}
+        campaignId={activeCampaignId || ""}
+        entityType="player"
+        entityId={id || ""}
+        entityName={player.name}
       >
         {/* Heroes Section */}
         <Card className="mt-8">

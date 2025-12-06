@@ -7,11 +7,11 @@ import { Badge } from "@/components/ui/badge";
 import { LoadingState, DeleteDialog } from "@/components/common";
 import {
   DocumentHeader,
-  DocumentCanvasWithExpansion,
+  DocumentCanvas,
   MetadataSection,
   RelationshipsPanel,
+  type DocumentSection,
 } from "@/components/document";
-import type { DocumentSection } from "@/components/document";
 import { useCharacterStore, useCampaignStore } from "@/stores";
 
 export function CharacterDetailPage() {
@@ -203,7 +203,7 @@ export function CharacterDetailPage() {
         backLink="/characters"
       />
 
-      <DocumentCanvasWithExpansion
+      <DocumentCanvas
         sections={sections}
         isEditing={isEditing}
         onChange={handleSectionChange}
@@ -257,7 +257,7 @@ export function CharacterDetailPage() {
             entityName={character.name}
           />
         )}
-      </DocumentCanvasWithExpansion>
+      </DocumentCanvas>
 
       <DeleteDialog
         open={deleteDialogOpen}
