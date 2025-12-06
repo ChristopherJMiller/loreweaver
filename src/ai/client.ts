@@ -374,8 +374,6 @@ export async function createStructuredMessageStream<T>(options: {
       output_format: {
         type: "json_schema",
         schema: jsonSchema,
-        // strict: true allows tool use with structured output
-        strict: anthropicTools && anthropicTools.length > 0 ? true : undefined,
       },
       tools: anthropicTools,
     });

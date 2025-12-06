@@ -3,15 +3,18 @@
  *
  * Floating popover that appears when text is selected in the editor.
  * Allows users to choose an expansion type and preview/accept the result.
+ * Renders markdown preview with proper formatting.
  */
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
+import { marked } from "marked";
 import {
   Popover,
   PopoverContent,
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import {
   Sparkles,
   BookOpen,
@@ -27,6 +30,35 @@ import {
   EXPANSION_TYPE_DESCRIPTIONS,
   type ExpansionType,
 } from "@/ai/agents/expander";
+
+/**
+ * Configure marked for safe rendering
+ */
+marked.setOptions({
+  gfm: true,
+  breaks: true,
+});
+
+/**
+ * Renders markdown content with proper styling
+ */
+function MarkdownPreview({ content, streaming = false }: { content: string; streaming?: boolean }) {
+  const html = useMemo(() => {
+    return marked.parse(content, { async: false }) as string;
+  }, [content]);
+
+  return (
+    <div className="relative">
+      <div
+        className="prose prose-sm dark:prose-invert max-w-none"
+        dangerouslySetInnerHTML={{ __html: html }}
+      />
+      {streaming && (
+        <span className="inline-block w-0.5 h-4 bg-primary animate-pulse ml-0.5" />
+      )}
+    </div>
+  );
+}
 
 interface ExpansionPopoverProps {
   /** Whether the popover is open */
@@ -116,7 +148,11 @@ export function ExpansionPopover({
         <span>{children}</span>
       </PopoverTrigger>
       <PopoverContent
-        className="w-96 p-0"
+        className={cn(
+          "p-0 shadow-lg",
+          // Wider for markdown rendering during expanding/previewing
+          state === "expanding" || state === "previewing" ? "w-[480px]" : "w-96"
+        )}
         side="top"
         align="start"
         sideOffset={8}
@@ -164,30 +200,38 @@ export function ExpansionPopover({
 
         {/* Expanding State */}
         {state === "expanding" && (
-          <div className="p-4">
-            <div className="flex items-center gap-2 text-sm text-muted-foreground mb-3">
-              <Loader2 className="h-4 w-4 animate-spin" />
-              <span>Expanding...</span>
-            </div>
-            {previewText && (
-              <div className="text-sm bg-muted/50 rounded-md p-2 max-h-40 overflow-y-auto">
-                <span className="text-primary">{previewText}</span>
-                <span className="animate-pulse">|</span>
+          <Card className="border-0 shadow-none">
+            <CardHeader className="py-3 px-4">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" />
+                <span>Expanding...</span>
               </div>
+            </CardHeader>
+            {previewText && (
+              <CardContent className="px-4 pb-4 pt-0">
+                <div className="max-h-64 overflow-y-auto rounded-md bg-muted/30 p-3">
+                  <MarkdownPreview content={previewText} streaming />
+                </div>
+              </CardContent>
             )}
-          </div>
+          </Card>
         )}
 
         {/* Preview State */}
         {state === "previewing" && previewText && (
-          <div className="p-4">
-            <div className="text-xs font-medium text-muted-foreground mb-2">
-              Preview
-            </div>
-            <div className="text-sm bg-muted/50 rounded-md p-2 max-h-48 overflow-y-auto mb-3">
-              {previewText}
-            </div>
-            <div className="flex gap-2">
+          <Card className="border-0 shadow-none">
+            <CardHeader className="py-3 px-4">
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <Sparkles className="h-4 w-4 text-primary" />
+                <span>Preview</span>
+              </div>
+            </CardHeader>
+            <CardContent className="px-4 pb-3 pt-0">
+              <div className="max-h-72 overflow-y-auto rounded-md bg-muted/30 p-3">
+                <MarkdownPreview content={previewText} />
+              </div>
+            </CardContent>
+            <CardFooter className="px-4 pb-4 pt-0 gap-2">
               <Button
                 size="sm"
                 onClick={onAccept}
@@ -205,8 +249,8 @@ export function ExpansionPopover({
                 <X className="h-4 w-4 mr-1" />
                 Reject
               </Button>
-            </div>
-          </div>
+            </CardFooter>
+          </Card>
         )}
 
         {/* Error State */}
