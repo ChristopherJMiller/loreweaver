@@ -6,7 +6,7 @@
  * to expand the content with AI assistance.
  */
 
-import { useEditor, EditorContent, JSONContent, AnyExtension } from "@tiptap/react";
+import { useEditor, EditorContent, JSONContent, AnyExtension, Editor } from "@tiptap/react";
 import { BubbleMenu } from "@tiptap/react/menus";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
@@ -283,8 +283,9 @@ export function EditorWithExpansion({
 
   // Determine if bubble menu should show
   const shouldShowBubbleMenu = useCallback(
-    ({ state }: { state: { selection: { from: number; to: number } } }) => {
-      const { from, to } = state.selection;
+    ({ editor: ed, from, to }: { editor: Editor; from: number; to: number }) => {
+      // Only show if there's a selection and editor is editable
+      if (!ed.isEditable) return false;
       return from !== to;
     },
     []
@@ -311,6 +312,7 @@ export function EditorWithExpansion({
             <BubbleMenu
               editor={editor}
               shouldShow={shouldShowBubbleMenu}
+              updateDelay={0}
               options={{
                 placement: "top-start",
                 offset: 8,

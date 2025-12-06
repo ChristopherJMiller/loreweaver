@@ -284,8 +284,9 @@ export function SectionEditorWithExpansion({
 
   // Determine if bubble menu should show
   const shouldShowBubbleMenu = useCallback(
-    ({ state }: { state: { selection: { from: number; to: number } } }) => {
-      const { from, to } = state.selection;
+    ({ editor: ed, from, to }: { editor: Editor; from: number; to: number }) => {
+      // Only show if there's a selection and editor is editable
+      if (!ed.isEditable) return false;
       return from !== to;
     },
     []
@@ -314,6 +315,7 @@ export function SectionEditorWithExpansion({
               <BubbleMenu
                 editor={editor}
                 shouldShow={shouldShowBubbleMenu}
+                updateDelay={0}
                 options={{
                   placement: "top-start",
                   offset: 8,
