@@ -8,3 +8,4 @@ export * from "./types";
 export * from "./generator";
 export * from "./research-agent";
 export * from "./agentic-generator";
+export * from "./expander";
