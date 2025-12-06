@@ -63,6 +63,17 @@ ${typeGuidance}
 ## Style Guidelines
 ${styleGuidance}
 
+## Available Tools
+You have tools to gather additional context if needed:
+- **search_entities** - Search for characters, locations, organizations, etc. by name or keyword
+- **get_entity** - Get full details of a specific entity by ID
+- **get_relationships** - See how entities are connected
+- **get_location_hierarchy** - Understand location parent/child relationships
+- **get_timeline** - See chronological events
+
+Use these tools when you need more context about related entities, world history, or connections.
+Only use tools if genuinely helpful for the expansion - don't use them just because they're available.
+
 ## Critical Rules
 1. **Maintain Voice** - Match the existing writing style, tone, and perspective
 2. **Seamless Integration** - The expansion should flow naturally with surrounding content
@@ -71,7 +82,7 @@ ${styleGuidance}
 5. **Appropriate Length** - Expand meaningfully but don't overwrite. Aim for 2-4x the original length.
 
 ## Output Format
-Respond with a JSON object containing:
+After gathering any needed context, respond with a JSON object containing:
 - expandedText: The expanded version of the selected text
 - reasoning: Brief explanation of what you added and why (1-2 sentences)
 `;

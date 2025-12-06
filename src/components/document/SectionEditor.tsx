@@ -153,12 +153,15 @@ export function SectionEditor({
     },
     onSelectionUpdate: ({ editor: ed }) => {
       const { from, to } = ed.state.selection;
+      console.log("[SectionEditor] Selection update:", { from, to, isEditable: ed.isEditable, readOnly });
       if (from !== to) {
         const text = ed.state.doc.textBetween(from, to);
+        console.log("[SectionEditor] Has selection:", text);
         if (text.trim()) {
           setSelectionInfo({ text, from, to });
         }
       } else {
+        console.log("[SectionEditor] Selection cleared");
         setSelectionInfo(null);
       }
     },
@@ -251,9 +254,17 @@ export function SectionEditor({
     }
   }, [content, editor]);
 
-  const handleContainerClick = useCallback(() => {
+  const handleContainerClick = useCallback((e: React.MouseEvent) => {
     if (editor && !readOnly) {
-      editor.commands.focus("end");
+      // Only focus to end if clicking directly on the container (empty area),
+      // not when clicking inside the editor content or when there's a selection
+      const target = e.target as HTMLElement;
+      const isEditorContent = target.closest('.ProseMirror');
+      const hasSelection = !editor.state.selection.empty;
+
+      if (!isEditorContent && !hasSelection) {
+        editor.commands.focus("end");
+      }
     }
   }, [editor, readOnly]);
 
@@ -335,7 +346,10 @@ export function SectionEditor({
                     setPopoverOpen(false);
                   }}
                 >
-                  <ExpandButton onClick={() => setPopoverOpen(true)} />
+                  <ExpandButton onClick={() => {
+                    console.log("[SectionEditor] ExpandButton onClick - setting popoverOpen to true");
+                    setPopoverOpen(true);
+                  }} />
                 </ExpansionPopover>
               </BubbleMenu>
             )}

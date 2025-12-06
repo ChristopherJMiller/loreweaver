@@ -5,12 +5,16 @@
  * Uses Anthropic's structured outputs beta for guaranteed JSON format,
  * with Zod validation for semantic correctness.
  * Supports streaming with partial JSON parsing for progressive display.
+ *
+ * Uses tools to gather additional context about the campaign,
+ * related entities, and world information when needed.
  */
 
 import { z } from "zod";
 import { parse as parsePartialJson, Allow } from "partial-json";
 import { createStructuredMessageStream, type MessageParam } from "../client";
 import { getCampaignSummary, formatCampaignSummary } from "../context";
+import { getCampaignContextTools } from "../tools/campaign-context";
 import type {
   GenerationRequest,
   GenerationResult,
@@ -72,6 +76,17 @@ Generate a new ${entityType} that fits naturally into this world.
 
 ${entityGuidance}
 
+## Available Tools
+You have tools to gather additional context if needed:
+- **search_entities** - Search for characters, locations, organizations, etc. by name or keyword
+- **get_entity** - Get full details of a specific entity by ID
+- **get_relationships** - See how entities are connected
+- **get_location_hierarchy** - Understand location parent/child relationships
+- **get_timeline** - See chronological events
+
+Use these tools when you need more context about related entities, world history, or connections.
+Only use tools if genuinely helpful for creating the entity - don't use them just because they're available.
+
 ## Guidelines
 1. **Consistency** - Your creation must fit the established world tone and facts
 2. **Hooks** - Include story hooks and connections to existing elements
@@ -79,7 +94,7 @@ ${entityGuidance}
 4. **${detailLevel}**
 
 ## Output Format
-Respond with a JSON object containing:
+After gathering any needed context, respond with a JSON object containing:
 - name: The entity's name (1-200 characters)
 - fields: Entity-specific fields matching the schema
   - For text fields (description, personality, etc.), use **Markdown formatting**
@@ -184,18 +199,31 @@ export async function generateEntity(
     let attempts = 0;
     let lastRawOutput = "";
 
+    // Get tools for context gathering
+    const tools = getCampaignContextTools();
+
     // Retry loop with validation
     while (attempts < MAX_VALIDATION_RETRIES + 1) {
       attempts++;
 
       try {
-        // Call Claude with streaming structured output
+        // Call Claude with streaming structured output and tools
         const response = await createStructuredMessageStream({
           model,
           system: systemPrompt,
           messages,
           schema,
           maxTokens: 2048,
+          tools,
+          toolContext: {
+            campaignId: request.campaignId,
+          },
+          toolProgress: {
+            onToolStart: (toolName, _input, flavor) => {
+              callbacks?.onToolUse?.(toolName, flavor);
+            },
+          },
+          maxToolIterations: 5,
           onTextDelta: (_delta, accumulated) => {
             // Try to parse partial JSON for streaming display
             if (callbacks?.onPartialEntity) {

@@ -77,6 +77,9 @@ export interface ExpanderCallbacks {
 
   /** Called when expansion completes */
   onComplete?: (result: ExpansionResult) => void;
+
+  /** Called when the agent uses a tool to gather context */
+  onToolUse?: (toolName: string, flavor?: string) => void;
 }
 
 /**

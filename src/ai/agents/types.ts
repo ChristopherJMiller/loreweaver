@@ -273,6 +273,9 @@ export interface PartialEntity {
 export interface GeneratorCallbacks {
   /** Called with parsed partial entity data as JSON streams in */
   onPartialEntity?: (partial: PartialEntity) => void;
+
+  /** Called when the agent uses a tool to gather context */
+  onToolUse?: (toolName: string, flavor?: string) => void;
 }
 
 /**

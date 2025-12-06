@@ -4,12 +4,16 @@
  * Expands brief content with more detail while maintaining
  * the original voice and style. Supports streaming for
  * progressive display.
+ *
+ * Uses tools to gather additional context about the campaign,
+ * related entities, and world information when needed.
  */
 
 import { z } from "zod";
 import { parse as parsePartialJson, Allow } from "partial-json";
 import { createStructuredMessageStream } from "../../client";
 import { getCampaignSummary, formatCampaignSummary } from "../../context";
+import { getCampaignContextTools } from "../../tools/campaign-context";
 import { buildExpansionSystemPrompt, buildExpansionUserPrompt } from "./prompts";
 import type {
   ExpansionRequest,
@@ -78,6 +82,9 @@ function getSurroundingContext(
  *
  * Takes selected text and expands it based on the expansion type,
  * maintaining consistency with the surrounding content and world.
+ *
+ * The agent has access to tools for gathering additional context
+ * (related entities, location hierarchy, timeline, etc.) when needed.
  */
 export async function expandContent(
   request: ExpansionRequest,
@@ -111,13 +118,32 @@ export async function expandContent(
       surroundingContext
     );
 
-    // Call Claude with streaming structured output
+    // Get tools for context gathering
+    const tools = getCampaignContextTools();
+
+    // Call Claude with streaming structured output and tools
     const response = await createStructuredMessageStream({
       model: EXPANSION_MODEL,
       system: systemPrompt,
       messages: [{ role: "user", content: userPrompt }],
       schema: ExpansionOutputSchema,
       maxTokens: 2048,
+      tools,
+      toolContext: {
+        campaignId: request.campaignId,
+        pageContext: {
+          entityType: request.entityType,
+          entityId: request.entityId,
+          entityName: request.entityName,
+          path: `/${request.entityType}s/${request.entityId}`,
+        },
+      },
+      toolProgress: {
+        onToolStart: (toolName, _input, flavor) => {
+          callbacks?.onToolUse?.(toolName, flavor);
+        },
+      },
+      maxToolIterations: 5,
       onTextDelta: (_delta, accumulated) => {
         // Try to parse partial JSON for streaming display
         if (callbacks?.onPartialText) {

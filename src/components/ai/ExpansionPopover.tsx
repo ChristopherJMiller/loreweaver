@@ -112,42 +112,53 @@ export function ExpansionPopover({
 
   return (
     <Popover open={open} onOpenChange={onOpenChange}>
-      <PopoverTrigger asChild>{children}</PopoverTrigger>
+      <PopoverTrigger asChild>
+        <span>{children}</span>
+      </PopoverTrigger>
       <PopoverContent
-        className="w-80 p-0"
+        className="w-96 p-0"
         side="top"
         align="start"
         sideOffset={8}
+        onOpenAutoFocus={(e) => e?.preventDefault?.()}
+        onCloseAutoFocus={(e) => e?.preventDefault?.()}
       >
         {/* Type Selection */}
         {(state === "idle" || state === "selecting") && (
-          <div className="p-2">
-            <div className="text-xs font-medium text-muted-foreground mb-2 px-2">
-              Expand with AI
-            </div>
-            <div className="space-y-1">
-              {EXPANSION_TYPES.map((item) => (
-                <button
-                  key={item.type}
-                  onClick={() => onExpand(item.type)}
-                  onMouseEnter={() => setHoveredType(item.type)}
-                  onMouseLeave={() => setHoveredType(null)}
-                  className={cn(
-                    "w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm",
-                    "hover:bg-accent hover:text-accent-foreground",
-                    "transition-colors"
-                  )}
-                >
-                  {item.icon}
-                  <span>{item.label}</span>
-                </button>
-              ))}
-            </div>
-            {hoveredType && (
-              <div className="mt-2 px-2 py-1.5 text-xs text-muted-foreground border-t">
-                {EXPANSION_TYPE_DESCRIPTIONS[hoveredType]}
+          <div className="p-2 flex gap-2">
+            <div className="flex-shrink-0">
+              <div className="text-xs font-medium text-muted-foreground mb-2 px-2">
+                Expand with AI
               </div>
-            )}
+              <div className="space-y-1">
+                {EXPANSION_TYPES.map((item) => (
+                  <button
+                    key={item.type}
+                    onClick={() => onExpand(item.type)}
+                    onMouseEnter={() => setHoveredType(item.type)}
+                    onMouseLeave={() => setHoveredType(null)}
+                    className={cn(
+                      "w-full flex items-center gap-2 px-2 py-1.5 rounded-md text-sm",
+                      "hover:bg-accent hover:text-accent-foreground",
+                      "transition-colors",
+                      hoveredType === item.type && "bg-accent text-accent-foreground"
+                    )}
+                  >
+                    {item.icon}
+                    <span>{item.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="flex-1 border-l pl-2 min-w-[140px]">
+              <div className="text-xs text-muted-foreground h-full flex items-center">
+                {hoveredType ? (
+                  EXPANSION_TYPE_DESCRIPTIONS[hoveredType]
+                ) : (
+                  <span className="italic">Hover for details</span>
+                )}
+              </div>
+            </div>
           </div>
         )}
 
@@ -232,7 +243,17 @@ export function ExpandButton({ onClick, className }: ExpandButtonProps) {
     <Button
       size="icon"
       variant="secondary"
-      onClick={onClick}
+      onClick={(e) => {
+        console.log("[ExpandButton] clicked");
+        e.stopPropagation();
+        onClick();
+      }}
+      onMouseDown={(e) => {
+        // Prevent the editor from losing focus when clicking the button
+        console.log("[ExpandButton] mousedown - preventing default");
+        e.preventDefault();
+        e.stopPropagation();
+      }}
       className={cn(
         "h-7 w-7 rounded-full shadow-md",
         "bg-primary text-primary-foreground hover:bg-primary/90",

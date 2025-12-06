@@ -13,9 +13,13 @@ import type {
   ContentBlock,
   Message,
   MessageStreamEvent,
+  ToolUseBlock,
+  ToolResultBlockParam,
 } from "@anthropic-ai/sdk/resources/messages";
 import type { MessageStream } from "@anthropic-ai/sdk/lib/MessageStream";
 import { z } from "zod";
+import type { ToolDefinition, ToolContext, ToolResult } from "./tools/types";
+import { toAnthropicTool } from "./tools/types";
 
 /** Beta flag for structured outputs */
 const STRUCTURED_OUTPUT_BETA = "structured-outputs-2025-11-13";
@@ -305,10 +309,24 @@ export interface StructuredStreamResult<T> {
 }
 
 /**
+ * Callback for tool execution progress
+ */
+export interface ToolProgressCallback {
+  /** Called when a tool starts executing */
+  onToolStart?: (toolName: string, input: unknown, flavor?: string) => void;
+  /** Called when a tool completes */
+  onToolComplete?: (toolName: string, result: ToolResult) => void;
+}
+
+/**
  * Create a streaming message with structured JSON output.
  *
  * Streams text deltas via callback and returns the validated result.
  * Use partial-json library in the callback to parse incomplete JSON.
+ *
+ * Supports an agentic tool loop: if tools are provided, the model can
+ * call tools to gather context before producing the final structured output.
+ * The loop continues until the model stops with "end_turn" (final output).
  */
 export async function createStructuredMessageStream<T>(options: {
   model: string;
@@ -317,53 +335,195 @@ export async function createStructuredMessageStream<T>(options: {
   schema: z.ZodType<T>;
   maxTokens?: number;
   onTextDelta?: (delta: string, accumulated: string) => void;
+  /** Optional tools the model can call to gather context */
+  tools?: ToolDefinition[];
+  /** Context passed to tool handlers */
+  toolContext?: ToolContext;
+  /** Callbacks for tool execution progress */
+  toolProgress?: ToolProgressCallback;
+  /** Maximum number of tool loop iterations (default 10) */
+  maxToolIterations?: number;
 }): Promise<StructuredStreamResult<T>> {
   const client = getClient();
 
   // Convert Zod schema to JSON Schema for Anthropic API
   const jsonSchema = z.toJSONSchema(options.schema);
 
-  const stream = client.beta.messages.stream({
-    model: options.model,
-    system: options.system,
-    messages: options.messages,
-    max_tokens: options.maxTokens ?? 4096,
-    betas: [STRUCTURED_OUTPUT_BETA],
-    output_format: {
-      type: "json_schema",
-      schema: jsonSchema,
-    },
-  });
+  // Convert tool definitions to Anthropic format
+  const anthropicTools = options.tools?.map(toAnthropicTool);
 
-  // Accumulate text and emit deltas
-  let accumulated = "";
-  stream.on("text", (textDelta: string) => {
-    accumulated += textDelta;
-    options.onTextDelta?.(textDelta, accumulated);
-  });
+  // Build a map for quick tool lookup
+  const toolMap = new Map(options.tools?.map((t) => [t.name, t]) ?? []);
 
-  // Wait for stream to complete
-  const finalMessage = await stream.finalMessage();
+  // Track conversation for multi-turn tool loop
+  const conversationMessages: MessageParam[] = [...options.messages];
+  let totalUsage = { input_tokens: 0, output_tokens: 0 };
+  const maxIterations = options.maxToolIterations ?? 10;
+  let iteration = 0;
 
-  // Extract text content from response
-  const textBlock = finalMessage.content.find((b) => b.type === "text");
-  if (!textBlock || textBlock.type !== "text") {
-    throw new Error("No text content in structured output response");
+  // Agentic loop: call tools until model produces final output
+  while (iteration < maxIterations) {
+    iteration++;
+
+    const stream = client.beta.messages.stream({
+      model: options.model,
+      system: options.system,
+      messages: conversationMessages,
+      max_tokens: options.maxTokens ?? 4096,
+      betas: [STRUCTURED_OUTPUT_BETA],
+      output_format: {
+        type: "json_schema",
+        schema: jsonSchema,
+        // strict: true allows tool use with structured output
+        strict: anthropicTools && anthropicTools.length > 0 ? true : undefined,
+      },
+      tools: anthropicTools,
+    });
+
+    // Accumulate text and emit deltas
+    let accumulated = "";
+    stream.on("text", (textDelta: string) => {
+      accumulated += textDelta;
+      options.onTextDelta?.(textDelta, accumulated);
+    });
+
+    // Wait for stream to complete
+    const finalMessage = await stream.finalMessage();
+
+    // Accumulate usage
+    totalUsage.input_tokens += finalMessage.usage.input_tokens;
+    totalUsage.output_tokens += finalMessage.usage.output_tokens;
+
+    // Check if model stopped with end_turn (final structured output)
+    if (finalMessage.stop_reason === "end_turn") {
+      // Extract text content from response
+      const textBlock = finalMessage.content.find((b) => b.type === "text");
+      if (!textBlock || textBlock.type !== "text") {
+        throw new Error("No text content in structured output response");
+      }
+
+      // Parse JSON and validate with Zod
+      const parsed = JSON.parse(textBlock.text);
+      const validated = options.schema.parse(parsed);
+
+      return {
+        data: validated,
+        raw: textBlock.text,
+        usage: totalUsage,
+      };
+    }
+
+    // Check if model wants to use tools
+    if (finalMessage.stop_reason === "tool_use") {
+      const toolUseBlocks = finalMessage.content.filter(
+        (b): b is ToolUseBlock => b.type === "tool_use"
+      );
+
+      if (toolUseBlocks.length === 0) {
+        throw new Error("stop_reason is tool_use but no tool_use blocks found");
+      }
+
+      // Execute each tool and collect results
+      const toolResults: ToolResultBlockParam[] = [];
+
+      for (const toolUse of toolUseBlocks) {
+        const toolDef = toolMap.get(toolUse.name);
+
+        if (!toolDef) {
+          // Unknown tool - return error
+          toolResults.push({
+            type: "tool_result",
+            tool_use_id: toolUse.id,
+            content: `Error: Unknown tool "${toolUse.name}"`,
+            is_error: true,
+          });
+          continue;
+        }
+
+        // Extract flavor from input if present
+        const input = toolUse.input as Record<string, unknown>;
+        const flavor = typeof input?.flavor === "string" ? input.flavor : undefined;
+
+        // Notify about tool start
+        options.toolProgress?.onToolStart?.(toolUse.name, toolUse.input, flavor);
+
+        try {
+          // Execute the tool handler
+          const result = await toolDef.handler(
+            toolUse.input,
+            options.toolContext ?? { campaignId: "" }
+          );
+
+          // Notify about tool completion
+          options.toolProgress?.onToolComplete?.(toolUse.name, result);
+
+          toolResults.push({
+            type: "tool_result",
+            tool_use_id: toolUse.id,
+            content: result.content,
+            is_error: !result.success,
+          });
+        } catch (error) {
+          const errorMessage =
+            error instanceof Error ? error.message : String(error);
+
+          // Notify about tool completion (with error)
+          options.toolProgress?.onToolComplete?.(toolUse.name, {
+            success: false,
+            content: errorMessage,
+          });
+
+          toolResults.push({
+            type: "tool_result",
+            tool_use_id: toolUse.id,
+            content: `Tool execution error: ${errorMessage}`,
+            is_error: true,
+          });
+        }
+      }
+
+      // Add assistant message with tool uses
+      // Map beta content blocks to regular format for the conversation
+      const assistantContent = finalMessage.content.map((block) => {
+        if (block.type === "text") {
+          return { type: "text" as const, text: block.text };
+        } else if (block.type === "tool_use") {
+          return {
+            type: "tool_use" as const,
+            id: block.id,
+            name: block.name,
+            input: block.input,
+          };
+        }
+        // Skip other block types (thinking, etc.)
+        return null;
+      }).filter((b): b is NonNullable<typeof b> => b !== null);
+
+      conversationMessages.push({
+        role: "assistant",
+        content: assistantContent,
+      });
+
+      // Add user message with tool results
+      conversationMessages.push({
+        role: "user",
+        content: toolResults,
+      });
+
+      // Continue the loop to get next response
+      continue;
+    }
+
+    // Unexpected stop reason
+    throw new Error(`Unexpected stop_reason: ${finalMessage.stop_reason}`);
   }
 
-  // Parse JSON and validate with Zod
-  const parsed = JSON.parse(textBlock.text);
-  const validated = options.schema.parse(parsed);
-
-  return {
-    data: validated,
-    raw: textBlock.text,
-    usage: finalMessage.usage,
-  };
+  throw new Error(`Tool loop exceeded maximum iterations (${maxIterations})`);
 }
 
 // Re-export useful types
 export type { MessageParam, Tool, ContentBlock, Message, MessageStreamEvent, MessageStream };
+export type { ToolDefinition, ToolContext, ToolResult } from "./tools/types";
 
 // Re-export error type for abort handling
 export { APIUserAbortError } from "@anthropic-ai/sdk";
