@@ -10,7 +10,6 @@ import { useEditor, EditorContent, JSONContent, AnyExtension, Editor } from "@ti
 import { BubbleMenu } from "@tiptap/react/menus";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
-import Link from "@tiptap/extension-link";
 import { useEffect, useCallback, useMemo, useState, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { EditorToolbar } from "./EditorToolbar";
@@ -127,17 +126,17 @@ export function EditorWithExpansion({
         heading: {
           levels: [1, 2, 3],
         },
+        link: {
+          openOnClick: false,
+          HTMLAttributes: {
+            class: "text-primary underline cursor-pointer",
+          },
+        },
       }),
       Placeholder.configure({
         placeholder,
         emptyEditorClass:
           "before:content-[attr(data-placeholder)] before:text-muted-foreground before:float-left before:h-0 before:pointer-events-none",
-      }),
-      Link.configure({
-        openOnClick: false,
-        HTMLAttributes: {
-          class: "text-primary underline cursor-pointer",
-        },
       }),
     ];
 
