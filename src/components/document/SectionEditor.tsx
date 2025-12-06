@@ -11,6 +11,7 @@ import { Editor } from "@tiptap/react";
 import { BubbleMenu } from "@tiptap/react/menus";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
+import { marked } from "marked";
 import { useEffect, useCallback, useMemo, useState, useRef } from "react";
 import { cn } from "@/lib/utils";
 import { createMentionExtension } from "@/components/editor/MentionExtension";
@@ -18,6 +19,12 @@ import { ExpansionPopover, ExpandButton } from "@/components/ai/ExpansionPopover
 import { useExpander, type ExpansionState } from "@/hooks/useExpander";
 import type { ExpansionType } from "@/ai/agents/expander";
 import type { EntityType } from "@/types";
+
+// Configure marked for consistent rendering
+marked.setOptions({
+  gfm: true,
+  breaks: true,
+});
 
 export interface SectionEditorProps {
   id: string;
@@ -216,11 +223,16 @@ export function SectionEditor({
     (expandedText: string, _originalText: string) => {
       const ed = editorRef.current;
       if (ed && selectionInfo) {
+        // Convert markdown to HTML for TipTap to parse
+        const html = marked.parse(expandedText, { async: false }) as string;
+
         ed
           .chain()
           .focus()
           .deleteRange({ from: selectionInfo.from, to: selectionInfo.to })
-          .insertContentAt(selectionInfo.from, expandedText)
+          .insertContentAt(selectionInfo.from, html, {
+            parseOptions: { preserveWhitespace: false },
+          })
           .run();
 
         setPopoverOpen(false);

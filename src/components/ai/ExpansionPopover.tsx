@@ -50,11 +50,11 @@ function MarkdownPreview({ content, streaming = false }: { content: string; stre
   return (
     <div className="relative">
       <div
-        className="prose prose-sm dark:prose-invert max-w-none"
+        className="prose prose-sm dark:prose-invert max-w-none [&>p]:my-2 [&>ul]:my-2 [&>ol]:my-2"
         dangerouslySetInnerHTML={{ __html: html }}
       />
       {streaming && (
-        <span className="inline-block w-0.5 h-4 bg-primary animate-pulse ml-0.5" />
+        <span className="absolute bottom-0 inline-block w-0.5 h-4 bg-primary animate-pulse" />
       )}
     </div>
   );
