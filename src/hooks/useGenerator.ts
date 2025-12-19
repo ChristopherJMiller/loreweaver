@@ -9,7 +9,7 @@
  * 5. User accepts → entity is created
  */
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import {
   generateEntityWithResearch,
   type PartialEntity,
@@ -258,8 +258,15 @@ export function useGenerator({
     pageContext?: PageContext;
   } | null>(null);
 
+  // AbortController for cancellation
+  const abortControllerRef = useRef<AbortController | null>(null);
+
   const generate = useCallback(
     async (context: string, parentId?: string, pageContext?: PageContext) => {
+      // Cancel any existing operation
+      abortControllerRef.current?.abort();
+      abortControllerRef.current = new AbortController();
+
       setIsLoading(true);
       setIsResearching(true);
       setResearchProgress("");
@@ -292,6 +299,7 @@ export function useGenerator({
         };
 
         const generationResult = await generateEntityWithResearch(request, {
+          signal: abortControllerRef.current?.signal,
           onResearchStart: () => {
             setIsResearching(true);
             setResearchProgress("Starting research...");
@@ -404,10 +412,20 @@ export function useGenerator({
     [campaignId, entityType, onCreated, lastRequest?.parentId]
   );
 
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      abortControllerRef.current?.abort();
+    };
+  }, []);
+
   return {
     isPreviewOpen,
     openPreview: () => setIsPreviewOpen(true),
     closePreview: () => {
+      // Abort any in-progress operation
+      abortControllerRef.current?.abort();
+      abortControllerRef.current = null;
       setIsPreviewOpen(false);
       setResult(null);
       setPartialEntity(null);

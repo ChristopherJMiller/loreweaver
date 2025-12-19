@@ -41,6 +41,9 @@ export function useAgentChat() {
     cleanupFadedMessages,
     showThinkingIndicator,
     hideThinkingIndicator,
+    // Live token tracking
+    addLiveTokens,
+    resetLiveTokens,
     // Conversation memory
     agentMessages,
     setAgentMessages,
@@ -61,6 +64,7 @@ export function useAgentChat() {
       addUserMessage(content);
       setRunning(true);
       isStreamingRef.current = false;
+      resetLiveTokens();
 
       // Create AbortController for this request
       const abortController = new AbortController();
@@ -114,6 +118,9 @@ export function useAgentChat() {
                 isStreamingRef.current = true;
               }
               appendToStreaming(delta);
+            },
+            onTokenUsage: (usage) => {
+              addLiveTokens(usage.inputTokens, usage.outputTokens);
             },
             onMessage: (msg) => {
               // Finish current streaming message before adding new messages
@@ -205,6 +212,7 @@ export function useAgentChat() {
       } finally {
         setAbortController(null);
         setRunning(false);
+        resetLiveTokens();
       }
     },
     [
@@ -220,6 +228,8 @@ export function useAgentChat() {
       addProposal,
       setAbortController,
       addTokenUsage,
+      addLiveTokens,
+      resetLiveTokens,
       addEphemeralIndicator,
       fadeEphemeralIndicator,
       cleanupFadedMessages,

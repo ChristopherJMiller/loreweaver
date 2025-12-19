@@ -69,6 +69,9 @@ export interface ExpansionResult {
  * Callbacks for expansion streaming
  */
 export interface ExpanderCallbacks {
+  /** AbortSignal for cancellation */
+  signal?: AbortSignal;
+
   /** Called with partial expanded text as it streams */
   onPartialText?: (text: string) => void;
 

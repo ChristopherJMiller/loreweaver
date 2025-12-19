@@ -54,6 +54,9 @@ interface ChatState {
   /** Session cache token tracking */
   sessionCacheReadTokens: number;
   sessionCacheCreationTokens: number;
+  /** Live token counts for current operation (cumulative, reset when operation ends) */
+  liveInputTokens: number;
+  liveOutputTokens: number;
 
   // Persistence state
   /** Current conversation ID in database */
@@ -93,6 +96,10 @@ interface ChatState {
     cacheReadTokens: number;
     cacheCreationTokens: number;
   }) => Promise<void>;
+  /** Add to live token counts (cumulative during operation) */
+  addLiveTokens: (inputTokens: number, outputTokens: number) => void;
+  /** Reset live token counts (called at operation start/end) */
+  resetLiveTokens: () => void;
 
   // Persistence actions
   /** Load conversation from database for given campaign and context */
@@ -199,6 +206,8 @@ export const useChatStore = create<ChatState>((set, get) => ({
   sessionOutputTokens: 0,
   sessionCacheReadTokens: 0,
   sessionCacheCreationTokens: 0,
+  liveInputTokens: 0,
+  liveOutputTokens: 0,
   conversationId: null,
   contextType: null,
   campaignId: null,
@@ -483,6 +492,17 @@ export const useChatStore = create<ChatState>((set, get) => ({
         console.error("Failed to update token counts:", err);
       }
     }
+  },
+
+  addLiveTokens: (inputTokens: number, outputTokens: number) => {
+    set((state) => ({
+      liveInputTokens: state.liveInputTokens + inputTokens,
+      liveOutputTokens: state.liveOutputTokens + outputTokens,
+    }));
+  },
+
+  resetLiveTokens: () => {
+    set({ liveInputTokens: 0, liveOutputTokens: 0 });
   },
 
   startStreaming: () => {

@@ -296,6 +296,9 @@ export interface ResearchStep {
  * Extended callbacks for agentic generation with research
  */
 export interface AgenticGeneratorCallbacks extends GeneratorCallbacks {
+  /** AbortSignal for cancellation */
+  signal?: AbortSignal;
+
   /** Called when research phase starts */
   onResearchStart?: () => void;
 

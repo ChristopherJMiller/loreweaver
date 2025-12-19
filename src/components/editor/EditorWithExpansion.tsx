@@ -319,7 +319,13 @@ export function EditorWithExpansion({
             >
               <ExpansionPopover
                 open={popoverOpen}
-                onOpenChange={setPopoverOpen}
+                onOpenChange={(open) => {
+                  if (!open && expander.isExpanding) {
+                    // Cancel if closing while expanding
+                    expander.cancel();
+                  }
+                  setPopoverOpen(open);
+                }}
                 isExpanding={expander.isExpanding}
                 state={getPopoverState()}
                 previewText={expander.expandedText}
@@ -328,7 +334,7 @@ export function EditorWithExpansion({
                 onExpand={handleExpand}
                 onAccept={expander.accept}
                 onReject={() => {
-                  expander.reject();
+                  expander.cancel();
                   setPopoverOpen(false);
                 }}
               >

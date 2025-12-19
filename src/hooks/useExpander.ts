@@ -8,7 +8,7 @@
  * 4. User accepts or rejects
  */
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef, useEffect } from "react";
 import {
   expandContent,
   type ExpansionRequest,
@@ -88,6 +88,9 @@ interface UseExpanderReturn {
 
   /** Reset to idle state */
   reset: () => void;
+
+  /** Cancel any in-progress expansion */
+  cancel: () => void;
 }
 
 export function useExpander({
@@ -110,6 +113,9 @@ export function useExpander({
     outputTokens: number;
   } | null>(null);
 
+  // AbortController for cancellation
+  const abortControllerRef = useRef<AbortController | null>(null);
+
   const expand = useCallback(
     async (
       selectedText: string,
@@ -118,6 +124,10 @@ export function useExpander({
       selectionEnd: number,
       expansionType: ExpansionType
     ) => {
+      // Cancel any existing operation
+      abortControllerRef.current?.abort();
+      abortControllerRef.current = new AbortController();
+
       // Initialize client if needed
       if (!isClientInitialized() && apiKey) {
         initializeClient(apiKey);
@@ -146,6 +156,7 @@ export function useExpander({
 
       try {
         const result = await expandContent(request, {
+          signal: abortControllerRef.current?.signal,
           onPartialText: (text) => {
             setExpandedText(text);
           },
@@ -207,6 +218,19 @@ export function useExpander({
     setUsage(null);
   }, []);
 
+  const cancel = useCallback(() => {
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = null;
+    reset();
+  }, [reset]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      abortControllerRef.current?.abort();
+    };
+  }, []);
+
   return {
     state,
     isExpanding: state === "expanding",
@@ -219,5 +243,6 @@ export function useExpander({
     accept,
     reject,
     reset,
+    cancel,
   };
 }

@@ -91,6 +91,11 @@ export async function expandContent(
   callbacks?: ExpanderCallbacks
 ): Promise<ExpansionResult> {
   try {
+    // Check for cancellation before starting
+    if (callbacks?.signal?.aborted) {
+      return { success: false, error: "Cancelled" };
+    }
+
     callbacks?.onStart?.();
 
     // Get campaign context for world consistency
@@ -144,6 +149,7 @@ export async function expandContent(
         },
       },
       maxToolIterations: 5,
+      signal: callbacks?.signal,
       onTextDelta: (_delta, accumulated) => {
         // Try to parse partial JSON for streaming display
         if (callbacks?.onPartialText) {
@@ -177,6 +183,11 @@ export async function expandContent(
     callbacks?.onComplete?.(result);
     return result;
   } catch (error) {
+    // Check if this was a cancellation
+    if (callbacks?.signal?.aborted) {
+      return { success: false, error: "Cancelled" };
+    }
+
     const result: ExpansionResult = {
       success: false,
       error: error instanceof Error ? error.message : String(error),

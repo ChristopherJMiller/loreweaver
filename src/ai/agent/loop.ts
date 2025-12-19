@@ -33,6 +33,8 @@ export interface AgentConfig {
   onTextDelta?: (delta: string) => void;
   /** Callback for complete messages (tool calls, tool results, final text) */
   onMessage?: (message: AgentMessage) => void;
+  /** Callback for token usage after each iteration (for live display) */
+  onTokenUsage?: (usage: { inputTokens: number; outputTokens: number }) => void;
   /** Optional AbortSignal to cancel the agent run */
   signal?: AbortSignal;
 }
@@ -284,6 +286,12 @@ export async function runAgent(
       };
       totalCacheReadTokens += usage.cache_read_input_tokens ?? 0;
       totalCacheCreationTokens += usage.cache_creation_input_tokens ?? 0;
+
+      // Emit token usage for live display
+      config.onTokenUsage?.({
+        inputTokens: response.usage.input_tokens,
+        outputTokens: response.usage.output_tokens,
+      });
 
       // Store text response (use streamed content or extract from blocks)
       const textContent = iterationTextContent || extractText(response.content);

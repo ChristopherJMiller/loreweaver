@@ -30,12 +30,17 @@ export function ChatCostFooter({ className }: ChatCostFooterProps) {
   const sessionCacheCreationTokens = useChatStore(
     (state) => state.sessionCacheCreationTokens
   );
+  const liveInputTokens = useChatStore((state) => state.liveInputTokens);
+  const liveOutputTokens = useChatStore((state) => state.liveOutputTokens);
+  const isRunning = useChatStore((state) => state.isRunning);
   const modelPreference = useAIStore((state) => state.modelPreference);
 
   const hasUsage =
     sessionInputTokens > 0 ||
     sessionOutputTokens > 0 ||
     sessionCacheReadTokens > 0;
+
+  const hasLiveUsage = liveInputTokens > 0 || liveOutputTokens > 0;
 
   // Memoize expensive calculations
   const { totalInputTokens, cacheEfficiency, cost } = useMemo(() => {
@@ -65,7 +70,7 @@ export function ChatCostFooter({ className }: ChatCostFooterProps) {
     modelPreference,
   ]);
 
-  if (!hasUsage) {
+  if (!hasUsage && !hasLiveUsage) {
     return null;
   }
 
@@ -76,31 +81,44 @@ export function ChatCostFooter({ className }: ChatCostFooterProps) {
         className
       )}
     >
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <span className="cursor-help">
-            {formatTokens(totalInputTokens)} in
-            {cacheEfficiency > 0 && (
-              <span className="text-green-600 dark:text-green-400">
-                {" "}
-                ({cacheEfficiency}% cached)
-              </span>
-            )}
-            {" / "}
-            {formatTokens(sessionOutputTokens)} out | ~{formatCost(cost)}
+      {/* Live token display during operation */}
+      {isRunning && hasLiveUsage && (
+        <div className="flex items-center gap-1.5 mb-1">
+          <span className="inline-block w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+          <span className="text-primary">
+            {formatTokens(liveInputTokens)} in / {formatTokens(liveOutputTokens)} out
           </span>
-        </TooltipTrigger>
-        <TooltipContent>
-          <div className="text-xs">
-            <div>Input: {formatTokens(sessionInputTokens)} tokens</div>
-            <div>Cached: {formatTokens(sessionCacheReadTokens)} tokens</div>
-            <div>
-              Cache writes: {formatTokens(sessionCacheCreationTokens)} tokens
+        </div>
+      )}
+
+      {/* Session totals */}
+      {hasUsage && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <span className="cursor-help">
+              {formatTokens(totalInputTokens)} in
+              {cacheEfficiency > 0 && (
+                <span className="text-green-600 dark:text-green-400">
+                  {" "}
+                  ({cacheEfficiency}% cached)
+                </span>
+              )}
+              {" / "}
+              {formatTokens(sessionOutputTokens)} out | ~{formatCost(cost)}
+            </span>
+          </TooltipTrigger>
+          <TooltipContent>
+            <div className="text-xs">
+              <div>Input: {formatTokens(sessionInputTokens)} tokens</div>
+              <div>Cached: {formatTokens(sessionCacheReadTokens)} tokens</div>
+              <div>
+                Cache writes: {formatTokens(sessionCacheCreationTokens)} tokens
+              </div>
+              <div>Output: {formatTokens(sessionOutputTokens)} tokens</div>
             </div>
-            <div>Output: {formatTokens(sessionOutputTokens)} tokens</div>
-          </div>
-        </TooltipContent>
-      </Tooltip>
+          </TooltipContent>
+        </Tooltip>
+      )}
     </div>
   );
 }

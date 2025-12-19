@@ -117,6 +117,11 @@ export async function generateEntityWithResearch(
 
   // Phase 1: Research (if enabled)
   if (enableResearch) {
+    // Check for cancellation before starting
+    if (callbacks?.signal?.aborted) {
+      return { success: false, error: "Cancelled" };
+    }
+
     callbacks?.onResearchStart?.();
 
     try {
@@ -129,10 +134,14 @@ export async function generateEntityWithResearch(
           maxIterations: request.maxResearchIterations ?? 5,
           onProgress: callbacks?.onResearchProgress,
           onStep: callbacks?.onResearchStep,
-          // Note: We don't pass signal here because we want to complete research
-          // even if the user navigates away - they can cancel during generation
+          signal: callbacks?.signal,
         }
       );
+
+      // Check for cancellation after research
+      if (callbacks?.signal?.aborted) {
+        return { success: false, error: "Cancelled" };
+      }
 
       callbacks?.onResearchComplete?.(researchFindings);
 
@@ -143,6 +152,10 @@ export async function generateEntityWithResearch(
           researchFindings.researchUsage.outputTokens;
       }
     } catch (error) {
+      // Check if this was a cancellation
+      if (callbacks?.signal?.aborted) {
+        return { success: false, error: "Cancelled" };
+      }
       // Research failed - log but continue with basic generation
       console.error("[AgenticGenerator] Research phase failed:", error);
       researchFindings = {
@@ -154,6 +167,11 @@ export async function generateEntityWithResearch(
   }
 
   // Phase 2: Generation
+  // Check for cancellation before starting generation
+  if (callbacks?.signal?.aborted) {
+    return { success: false, error: "Cancelled" };
+  }
+
   callbacks?.onGenerationStart?.();
 
   // Build enhanced context by combining user context with research findings
