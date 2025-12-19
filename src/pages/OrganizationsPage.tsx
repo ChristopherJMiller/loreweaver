@@ -137,6 +137,7 @@ export function OrganizationsPage() {
             entityType="organization"
             onGenerate={generator.generate}
             isLoading={generator.isLoading}
+            expandable
           >
             Generate
           </GenerateButton>

@@ -184,6 +184,7 @@ export function LocationDetailPage() {
       defaultParentId={id}
       defaultParentName={location.name}
       parentLocked
+      expandable
     >
       Generate Child
     </GenerateButton>
@@ -218,6 +219,7 @@ export function LocationDetailPage() {
                   description: location.description || "",
                   gm_notes: location.gm_notes || "",
                 }}
+                expandable
               />
             )}
             {generateChildButton}

@@ -216,6 +216,7 @@ export function CharacterDetailPage() {
                 secrets: character.secrets || "",
                 voice_notes: character.voice_notes || "",
               }}
+              expandable
             />
           ) : undefined
         }

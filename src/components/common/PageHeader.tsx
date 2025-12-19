@@ -1,5 +1,9 @@
 import { ReactNode } from "react";
 import { Button } from "@/components/ui/button";
+import {
+  ExpandableButton,
+  ExpandableButtonGroup,
+} from "@/components/ui/expandable-button-group";
 import { Plus, LayoutGrid, List } from "lucide-react";
 import { useUIStore } from "@/stores";
 
@@ -62,14 +66,16 @@ export function PageHeader({
           </div>
         )}
 
-        {actions}
-
-        {onCreateClick && (
-          <Button onClick={onCreateClick}>
-            <Plus className="mr-2 h-4 w-4" />
-            {createLabel}
-          </Button>
-        )}
+        <ExpandableButtonGroup>
+          {actions}
+          {onCreateClick && (
+            <ExpandableButton
+              icon={<Plus className="h-4 w-4" />}
+              label={createLabel}
+              onClick={onCreateClick}
+            />
+          )}
+        </ExpandableButtonGroup>
       </div>
     </div>
   );

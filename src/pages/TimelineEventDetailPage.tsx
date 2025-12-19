@@ -196,6 +196,7 @@ export function TimelineEventDetailPage() {
               content={{
                 description: event.description || "",
               }}
+              expandable
             />
           ) : undefined
         }

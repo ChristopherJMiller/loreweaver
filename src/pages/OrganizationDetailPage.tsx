@@ -214,6 +214,7 @@ export function OrganizationDetailPage() {
                 reputation: org.reputation || "",
                 secrets: org.secrets || "",
               }}
+              expandable
             />
           ) : undefined
         }

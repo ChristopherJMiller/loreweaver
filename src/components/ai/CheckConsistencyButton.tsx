@@ -8,6 +8,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ExpandableButton } from "@/components/ui/expandable-button-group";
 import {
   Dialog,
   DialogContent,
@@ -33,6 +34,8 @@ interface CheckConsistencyButtonProps {
   content: Record<string, string>;
   /** Whether this is a new entity */
   isNew?: boolean;
+  /** When true, renders as expandable icon button */
+  expandable?: boolean;
 }
 
 /**
@@ -53,6 +56,7 @@ export function CheckConsistencyButton({
   entityName,
   content,
   isNew = false,
+  expandable = false,
 }: CheckConsistencyButtonProps) {
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
@@ -90,10 +94,19 @@ export function CheckConsistencyButton({
   return (
     <Dialog open={isOpen} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
-          <Search className="mr-2 h-4 w-4" />
-          Check Consistency
-        </Button>
+        {expandable ? (
+          <ExpandableButton
+            icon={<Search className="h-4 w-4" />}
+            label="Check Consistency"
+            variant="outline"
+            forceExpanded={isOpen}
+          />
+        ) : (
+          <Button variant="outline" size="sm">
+            <Search className="mr-2 h-4 w-4" />
+            Check Consistency
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="max-w-lg max-h-[80vh] p-0 flex flex-col">
         <DialogHeader className="p-4 pb-2 border-b">

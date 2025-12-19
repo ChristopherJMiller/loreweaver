@@ -245,6 +245,7 @@ export function QuestDetailPage() {
                 resolution: quest.resolution || "",
                 reward: quest.reward || "",
               }}
+              expandable
             />
           ) : undefined
         }

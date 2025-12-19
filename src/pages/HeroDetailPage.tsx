@@ -233,6 +233,7 @@ export function HeroDetailPage() {
                 goals: hero.goals || "",
                 bonds: hero.bonds || "",
               }}
+              expandable
             />
           ) : undefined
         }

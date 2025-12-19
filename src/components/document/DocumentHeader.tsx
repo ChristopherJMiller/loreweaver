@@ -1,6 +1,10 @@
 import { Link } from "react-router-dom";
 import { ArrowLeft, Edit2, Trash2, Save, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import {
+  ExpandableButton,
+  ExpandableButtonGroup,
+} from "@/components/ui/expandable-button-group";
 import { cn } from "@/lib/utils";
 
 export interface DocumentHeaderProps {
@@ -72,16 +76,22 @@ export function DocumentHeader({
               </Button>
             </>
           ) : (
-            <>
+            <ExpandableButtonGroup>
               {actions}
-              <Button variant="outline" onClick={onEdit}>
-                <Edit2 className="mr-2 h-4 w-4" />
-                Edit
-              </Button>
-              <Button variant="ghost" size="icon" onClick={onDelete}>
-                <Trash2 className="h-4 w-4 text-destructive" />
-              </Button>
-            </>
+              <ExpandableButton
+                icon={<Edit2 className="h-4 w-4" />}
+                label="Edit"
+                variant="outline"
+                onClick={onEdit}
+              />
+              <ExpandableButton
+                icon={<Trash2 className="h-4 w-4" />}
+                label="Delete"
+                variant="ghost"
+                className="text-destructive"
+                onClick={onDelete}
+              />
+            </ExpandableButtonGroup>
           )}
         </div>
       </div>

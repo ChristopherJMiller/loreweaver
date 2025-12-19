@@ -8,6 +8,7 @@
 import { useState } from "react";
 import { Sparkles, Loader2, MapPin } from "lucide-react";
 import { Button, type ButtonProps } from "@/components/ui/button";
+import { ExpandableButton } from "@/components/ui/expandable-button-group";
 import {
   Dialog,
   DialogContent,
@@ -44,6 +45,9 @@ interface GenerateButtonProps extends Omit<ButtonProps, "onClick"> {
 
   /** If true, parent selection is shown but disabled/read-only */
   parentLocked?: boolean;
+
+  /** When true, renders as expandable icon button */
+  expandable?: boolean;
 }
 
 export function GenerateButton({
@@ -55,6 +59,7 @@ export function GenerateButton({
   defaultParentId,
   defaultParentName,
   parentLocked = false,
+  expandable = false,
   ...buttonProps
 }: GenerateButtonProps) {
   const isAIAvailable = useAIAvailable();
@@ -78,21 +83,41 @@ export function GenerateButton({
   // Format entity type for display
   const entityLabel = entityType.toLowerCase();
 
+  // Determine the label text
+  const labelText = typeof children === "string" ? children : `Generate ${entityType}`;
+
   return (
     <>
-      <Button
-        variant="outline"
-        onClick={() => setDialogOpen(true)}
-        disabled={!isAIAvailable || isLoading}
-        {...buttonProps}
-      >
-        {isLoading ? (
-          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-        ) : (
-          <Sparkles className="mr-2 h-4 w-4" />
-        )}
-        {children ?? `Generate ${entityType}`}
-      </Button>
+      {expandable ? (
+        <ExpandableButton
+          icon={
+            isLoading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Sparkles className="h-4 w-4" />
+            )
+          }
+          label={labelText}
+          variant="outline"
+          onClick={() => setDialogOpen(true)}
+          disabled={!isAIAvailable || isLoading}
+          forceExpanded={dialogOpen}
+        />
+      ) : (
+        <Button
+          variant="outline"
+          onClick={() => setDialogOpen(true)}
+          disabled={!isAIAvailable || isLoading}
+          {...buttonProps}
+        >
+          {isLoading ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : (
+            <Sparkles className="mr-2 h-4 w-4" />
+          )}
+          {children ?? `Generate ${entityType}`}
+        </Button>
+      )}
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="sm:max-w-[500px]">

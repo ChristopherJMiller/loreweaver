@@ -158,6 +158,7 @@ export function QuestsPage() {
             entityType="quest"
             onGenerate={generator.generate}
             isLoading={generator.isLoading}
+            expandable
           >
             Generate
           </GenerateButton>

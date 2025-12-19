@@ -151,6 +151,7 @@ export function LocationsPage() {
             onGenerate={generator.generate}
             isLoading={generator.isLoading}
             locations={entities}
+            expandable
           >
             Generate
           </GenerateButton>

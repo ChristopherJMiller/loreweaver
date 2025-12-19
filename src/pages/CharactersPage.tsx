@@ -132,6 +132,7 @@ export function CharactersPage() {
             entityType="character"
             onGenerate={generator.generate}
             isLoading={generator.isLoading}
+            expandable
           >
             Generate
           </GenerateButton>
