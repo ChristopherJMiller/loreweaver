@@ -19,6 +19,7 @@ import {
   MetadataSection,
   DocumentSection,
 } from "@/components/document";
+import { CheckConsistencyButton } from "@/components/ai";
 import { useTimelineEventStore, useCampaignStore } from "@/stores";
 import { SIGNIFICANCE_LEVELS, getSignificanceLabel } from "@/lib/constants";
 
@@ -185,6 +186,19 @@ export function TimelineEventDetailPage() {
         onCancel={handleCancel}
         onDelete={() => setDeleteDialogOpen(true)}
         backLink="/timeline"
+        actions={
+          activeCampaignId && id ? (
+            <CheckConsistencyButton
+              campaignId={activeCampaignId}
+              entityType="timeline_event"
+              entityId={id}
+              entityName={event.title}
+              content={{
+                description: event.description || "",
+              }}
+            />
+          ) : undefined
+        }
       />
 
       <DocumentCanvas

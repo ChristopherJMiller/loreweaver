@@ -316,7 +316,6 @@ async fn test_update_location() {
         Some("landmark".to_string()),
         None,
         Some("A mighty fortress".to_string()),
-        Some(5),
         Some("Secret entrance behind waterfall".to_string()),
     )
     .await
@@ -325,7 +324,6 @@ async fn test_update_location() {
     assert_eq!(updated.name, "Updated Name");
     assert_eq!(updated.location_type, "landmark");
     assert_eq!(updated.description, Some("A mighty fortress".to_string()));
-    assert_eq!(updated.detail_level, 5);
     assert_eq!(
         updated.gm_notes,
         Some("Secret entrance behind waterfall".to_string())
@@ -375,7 +373,6 @@ async fn test_update_location_reparent() {
         None,
         None,
         Some(parent2.id.clone()),
-        None,
         None,
         None,
     )
@@ -454,7 +451,6 @@ async fn test_location_crud_lifecycle() {
         &db,
         location.id.clone(),
         Some("Updated Location".to_string()),
-        None,
         None,
         None,
         None,

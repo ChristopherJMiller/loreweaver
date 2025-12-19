@@ -3,7 +3,6 @@ import { useParams, useNavigate, Link } from "react-router-dom";
 import { MapPin } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Badge } from "@/components/ui/badge";
 import {
   Select,
   SelectContent,
@@ -20,8 +19,8 @@ import {
   RelationshipsPanel,
   DocumentSection,
 } from "@/components/document";
-import { GenerateButton, GenerationPreview } from "@/components/ai";
-import { DetailLevelBar, LocationBreadcrumb } from "@/components/location";
+import { GenerateButton, GenerationPreview, CheckConsistencyButton } from "@/components/ai";
+import { LocationBreadcrumb } from "@/components/location";
 import { useLocationStore, useCampaignStore, useRelationshipStore } from "@/stores";
 import { useGenerator } from "@/hooks";
 import { LOCATION_TYPES, getLocationTypeLabel } from "@/lib/constants";
@@ -31,7 +30,7 @@ export function LocationDetailPage() {
   const navigate = useNavigate();
   const { entities, isLoading, fetchOne, fetchAll, update, remove } = useLocationStore();
   const { activeCampaignId } = useCampaignStore();
-  const { relationships, fetchForEntity } = useRelationshipStore();
+  const { fetchForEntity } = useRelationshipStore();
 
   // Generator for creating child locations
   const generator = useGenerator({
@@ -54,7 +53,6 @@ export function LocationDetailPage() {
     parent_id: "",
     description: "",
     gm_notes: "",
-    detail_level: 0,
   });
 
   const location = entities.find((l) => l.id === id);
@@ -83,7 +81,6 @@ export function LocationDetailPage() {
         parent_id: location.parent_id || "",
         description: location.description || "",
         gm_notes: location.gm_notes || "",
-        detail_level: location.detail_level,
       });
     }
   }, [location]);
@@ -98,7 +95,6 @@ export function LocationDetailPage() {
         parent_id: editForm.parent_id || undefined,
         description: editForm.description || undefined,
         gm_notes: editForm.gm_notes || undefined,
-        detail_level: editForm.detail_level,
       });
       setIsEditing(false);
     } finally {
@@ -114,7 +110,6 @@ export function LocationDetailPage() {
         parent_id: location.parent_id || "",
         description: location.description || "",
         gm_notes: location.gm_notes || "",
-        detail_level: location.detail_level,
       });
     }
     setIsEditing(false);
@@ -180,16 +175,6 @@ export function LocationDetailPage() {
     </>
   );
 
-  const badges = (
-    <div className="w-32">
-      <DetailLevelBar
-        location={location}
-        relationships={relationships}
-        childCount={childLocations.length}
-      />
-    </div>
-  );
-
   const generateChildButton = (
     <GenerateButton
       entityType="location"
@@ -214,7 +199,6 @@ export function LocationDetailPage() {
       <DocumentHeader
         title={titleContent}
         subtitle={subtitle}
-        badges={badges}
         isEditing={isEditing}
         isSaving={isSaving}
         onEdit={() => setIsEditing(true)}
@@ -222,7 +206,23 @@ export function LocationDetailPage() {
         onCancel={handleCancel}
         onDelete={() => setDeleteDialogOpen(true)}
         backLink="/locations"
-        actions={generateChildButton}
+        actions={
+          <div className="flex gap-2">
+            {activeCampaignId && id && (
+              <CheckConsistencyButton
+                campaignId={activeCampaignId}
+                entityType="location"
+                entityId={id}
+                entityName={location.name}
+                content={{
+                  description: location.description || "",
+                  gm_notes: location.gm_notes || "",
+                }}
+              />
+            )}
+            {generateChildButton}
+          </div>
+        }
       />
 
       <DocumentCanvas
@@ -283,16 +283,6 @@ export function LocationDetailPage() {
                   </SelectContent>
                 </Select>
               </div>
-              <div className="sm:col-span-2">
-                <span className="text-sm text-muted-foreground">Detail Level</span>
-                <DetailLevelBar
-                  location={location}
-                  relationships={relationships}
-                  childCount={childLocations.length}
-                  showLabel
-                  className="mt-1 w-48"
-                />
-              </div>
             </div>
           ) : (
             <div className="grid gap-4 sm:grid-cols-2">
@@ -314,16 +304,6 @@ export function LocationDetailPage() {
                     "—"
                   )}
                 </p>
-              </div>
-              <div className="sm:col-span-2">
-                <span className="text-sm text-muted-foreground">Detail Level</span>
-                <DetailLevelBar
-                  location={location}
-                  relationships={relationships}
-                  childCount={childLocations.length}
-                  showLabel
-                  className="mt-1 w-48"
-                />
               </div>
             </div>
           )}
@@ -355,7 +335,6 @@ export function LocationDetailPage() {
                         </p>
                       </div>
                     </div>
-                    <Badge variant="outline">{child.detail_level}%</Badge>
                   </Link>
                 ))}
               </div>

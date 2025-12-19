@@ -15,7 +15,6 @@ pub struct LocationResponse {
     pub name: String,
     pub location_type: String,
     pub description: Option<String>,
-    pub detail_level: i32,
     pub gm_notes: Option<String>,
     pub created_at: String,
     pub updated_at: String,
@@ -30,7 +29,6 @@ impl From<locations::Model> for LocationResponse {
             name: model.name,
             location_type: model.location_type,
             description: model.description,
-            detail_level: model.detail_level,
             gm_notes: model.gm_notes,
             created_at: model.created_at.to_string(),
             updated_at: model.updated_at.to_string(),
@@ -57,7 +55,6 @@ pub async fn create_location_impl(
         name: Set(input.name),
         location_type: Set(input.location_type),
         description: Set(input.description),
-        detail_level: Set(0),
         gm_notes: Set(None),
         created_at: Set(now),
         updated_at: Set(now),
@@ -105,7 +102,6 @@ pub async fn get_location_children_impl(
     Ok(locations.into_iter().map(|l| l.into()).collect())
 }
 
-#[allow(clippy::too_many_arguments)]
 pub async fn update_location_impl(
     db: &DatabaseConnection,
     id: String,
@@ -113,7 +109,6 @@ pub async fn update_location_impl(
     location_type: Option<String>,
     parent_id: Option<String>,
     description: Option<String>,
-    detail_level: Option<i32>,
     gm_notes: Option<String>,
 ) -> Result<LocationResponse, AppError> {
     let location = Location::find_by_id(&id)
@@ -134,9 +129,6 @@ pub async fn update_location_impl(
     }
     if let Some(d) = description {
         active.description = Set(Some(d));
-    }
-    if let Some(dl) = detail_level {
-        active.detail_level = Set(dl);
     }
     if let Some(gm) = gm_notes {
         active.gm_notes = Set(Some(gm));
@@ -205,20 +197,10 @@ pub async fn update_location(
     location_type: Option<String>,
     parent_id: Option<String>,
     description: Option<String>,
-    detail_level: Option<i32>,
     gm_notes: Option<String>,
 ) -> Result<LocationResponse, AppError> {
-    update_location_impl(
-        &state.db,
-        id,
-        name,
-        location_type,
-        parent_id,
-        description,
-        detail_level,
-        gm_notes,
-    )
-    .await
+    update_location_impl(&state.db, id, name, location_type, parent_id, description, gm_notes)
+        .await
 }
 
 #[tauri::command(rename_all = "snake_case")]

@@ -20,7 +20,6 @@ interface LocationEntity extends BaseEntity {
   parent_id: string | null;
   location_type: string;
   description: string | null;
-  detail_level: number;
   gm_notes: string | null;
 }
 

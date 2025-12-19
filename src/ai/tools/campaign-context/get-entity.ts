@@ -95,7 +95,6 @@ function formatEntity(type: string, entity: EntityData): string {
     const l = entity as Location;
     if (l.location_type) lines.push(`location_type: ${l.location_type}`);
     if (l.parent_id) lines.push(`parent_id: ${l.parent_id}`);
-    lines.push(`detail_level: ${l.detail_level}`);
   } else if (type === "organization") {
     const o = entity as Organization;
     if (o.org_type) lines.push(`org_type: ${o.org_type}`);

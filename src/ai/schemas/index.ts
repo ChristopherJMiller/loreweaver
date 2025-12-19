@@ -144,22 +144,42 @@ export type EntityOutput =
   | OrganizationOutput
   | QuestOutput;
 
-// ============ Future Agent Schemas ============
+// ============ Consistency Checker Agent Schemas ============
 
 /**
- * Consistency check issue (for future Consistency Checker agent)
+ * Conflicting entity reference
+ */
+export const ConflictingEntitySchema = z.object({
+  type: z.string(),
+  id: z.string(),
+  name: z.string(),
+});
+
+/**
+ * Consistency check issue
  */
 export const ConsistencyIssueSchema = z.object({
   severity: z.enum(["error", "warning", "suggestion"]),
   field: z.string(),
-  message: z.string(),
-  conflictingEntityId: z.string().optional(),
+  issue: z.string(),
+  conflictingEntity: ConflictingEntitySchema.optional(),
   suggestion: z.string().optional(),
 });
 
-export const ConsistencyOutputSchema = z.object({
+/**
+ * Full consistency check output
+ *
+ * Note: We use z.number() without min/max constraints because
+ * Anthropic's structured outputs API doesn't support those.
+ */
+export const ConsistencyCheckOutputSchema = z.object({
   issues: z.array(ConsistencyIssueSchema),
+  overallScore: z.number(),
+  reasoning: z.string(),
 });
+
+// Keep old name for backward compatibility
+export const ConsistencyOutputSchema = ConsistencyCheckOutputSchema;
 
 /**
  * Entity update proposal (for future Session Processor agent)
@@ -178,8 +198,12 @@ export const SessionOutputSchema = z.object({
   updates: z.array(EntityUpdateSchema),
 });
 
-// Inferred types for future agents
+// Inferred types for consistency checker
+export type ConflictingEntity = z.infer<typeof ConflictingEntitySchema>;
 export type ConsistencyIssue = z.infer<typeof ConsistencyIssueSchema>;
-export type ConsistencyOutput = z.infer<typeof ConsistencyOutputSchema>;
+export type ConsistencyCheckOutput = z.infer<typeof ConsistencyCheckOutputSchema>;
+export type ConsistencyOutput = ConsistencyCheckOutput; // Alias for backward compatibility
+
+// Inferred types for session processor
 export type EntityUpdate = z.infer<typeof EntityUpdateSchema>;
 export type SessionOutput = z.infer<typeof SessionOutputSchema>;

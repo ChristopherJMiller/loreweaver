@@ -18,6 +18,7 @@ import {
   MetadataSection,
   DocumentSection,
 } from "@/components/document";
+import { CheckConsistencyButton } from "@/components/ai";
 import { useHeroStore, usePlayerStore, useCampaignStore } from "@/stores";
 
 export function HeroDetailPage() {
@@ -219,6 +220,22 @@ export function HeroDetailPage() {
         onCancel={handleCancel}
         onDelete={() => setDeleteDialogOpen(true)}
         backLink="/heroes"
+        actions={
+          activeCampaignId && id ? (
+            <CheckConsistencyButton
+              campaignId={activeCampaignId}
+              entityType="hero"
+              entityId={id}
+              entityName={hero.name}
+              content={{
+                description: hero.description || "",
+                backstory: hero.backstory || "",
+                goals: hero.goals || "",
+                bonds: hero.bonds || "",
+              }}
+            />
+          ) : undefined
+        }
       />
 
       <DocumentCanvas

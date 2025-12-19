@@ -16,7 +16,6 @@ pub struct Model {
     pub location_type: String,
     #[sea_orm(column_type = "Text", nullable)]
     pub description: Option<String>,
-    pub detail_level: i32,
     #[sea_orm(column_type = "Text", nullable)]
     pub gm_notes: Option<String>,
     pub created_at: DateTimeUtc,

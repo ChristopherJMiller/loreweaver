@@ -95,7 +95,6 @@ export function LocationsPage() {
         name: newLocation.name,
         location_type: newLocation.location_type,
         parent_id: newLocation.parent_id || undefined,
-        detail_level: 0,
       });
       setCreateDialogOpen(false);
       setNewLocation({
@@ -204,7 +203,6 @@ export function LocationsPage() {
               <TableHead>Name</TableHead>
               <TableHead>Type</TableHead>
               <TableHead>Parent</TableHead>
-              <TableHead>Detail Level</TableHead>
               <TableHead className="w-[50px]"></TableHead>
             </TableRow>
           </TableHeader>
@@ -225,19 +223,6 @@ export function LocationsPage() {
                   </Badge>
                 </TableCell>
                 <TableCell>{getParentName(location.parent_id)}</TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-2">
-                    <div className="h-2 w-16 rounded-full bg-secondary">
-                      <div
-                        className="h-2 rounded-full bg-primary"
-                        style={{ width: `${location.detail_level}%` }}
-                      />
-                    </div>
-                    <span className="text-xs text-muted-foreground">
-                      {location.detail_level}%
-                    </span>
-                  </div>
-                </TableCell>
                 <TableCell>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>

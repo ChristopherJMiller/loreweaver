@@ -7,6 +7,9 @@
 export { AIChatPanel } from "./AIChatPanel";
 export { AIFullPageChat } from "./AIFullPageChat";
 export { ChatMessageList, type ChatMessageListHandle } from "./ChatMessageList";
+export { CheckConsistencyButton } from "./CheckConsistencyButton";
+export { ConsistencyCheckPanel } from "./ConsistencyCheckPanel";
+export { ConsistencyIssueCard } from "./ConsistencyIssueCard";
 export { PendingApprovalsButton } from "./PendingApprovalsButton";
 export { ProposalCard, formatEntityType } from "./ProposalCard";
 export { GenerateButton } from "./GenerateButton";

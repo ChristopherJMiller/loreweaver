@@ -10,7 +10,6 @@ import {
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Badge } from "@/components/ui/badge";
 import { useLocationStore, useCampaignStore, useUIStore } from "@/stores";
 import type { Location } from "@/types";
 
@@ -103,12 +102,6 @@ function TreeNode({
         >
           {node.location.name}
         </Link>
-
-        {node.location.detail_level > 0 && (
-          <Badge variant="outline" className="h-4 px-1 text-[10px]">
-            {node.location.detail_level}%
-          </Badge>
-        )}
       </div>
 
       {hasChildren && isExpanded && (

@@ -260,7 +260,7 @@ User requests AI generation
     │ name        │ │ lineage     │ │ type        │ │ status      │ │ date        │
     │ type        │ │ is_alive    │ │ description │ │ plot_type   │ │ title       │
     │ description │ │ description │ │             │ │ description │ │ notes       │
-    │ detail_level│ │             │ │             │ │ reward      │ │ summary     │
+    │ gm_notes    │ │             │ │             │ │ reward      │ │ summary     │
     └──────┬──────┘ └──────┬──────┘ └──────┬──────┘ └──────┬──────┘ └─────────────┘
            │               │               │               │
            │               │               │               │
@@ -342,7 +342,6 @@ pub struct Model {
     pub name: String,
     pub location_type: LocationType,
     pub description: Option<String>,
-    pub detail_level: i32,  // 0-100, used for "zoom level" visualization
     pub gm_notes: Option<String>,  // Hidden from players
     pub created_at: DateTime,
     pub updated_at: DateTime,

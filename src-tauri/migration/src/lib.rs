@@ -17,6 +17,7 @@ mod m20251126_000014_create_search_index;
 mod m20251129_000001_create_ai_conversations;
 mod m20251129_000002_create_ai_messages;
 mod m20251129_000003_add_agent_messages_to_ai_conversations;
+mod m20251218_000001_drop_detail_level;
 
 pub struct Migrator;
 
@@ -41,6 +42,7 @@ impl MigratorTrait for Migrator {
             Box::new(m20251129_000001_create_ai_conversations::Migration),
             Box::new(m20251129_000002_create_ai_messages::Migration),
             Box::new(m20251129_000003_add_agent_messages_to_ai_conversations::Migration),
+            Box::new(m20251218_000001_drop_detail_level::Migration),
         ]
     }
 }

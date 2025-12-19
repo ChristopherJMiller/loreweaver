@@ -19,6 +19,7 @@ import {
   RelationshipsPanel,
   DocumentSection,
 } from "@/components/document";
+import { CheckConsistencyButton } from "@/components/ai";
 import { useOrganizationStore, useCampaignStore } from "@/stores";
 import { ORG_TYPES, getOrgTypeLabel } from "@/lib/constants";
 
@@ -199,6 +200,23 @@ export function OrganizationDetailPage() {
         onCancel={handleCancel}
         onDelete={() => setDeleteDialogOpen(true)}
         backLink="/organizations"
+        actions={
+          activeCampaignId && id ? (
+            <CheckConsistencyButton
+              campaignId={activeCampaignId}
+              entityType="organization"
+              entityId={id}
+              entityName={org.name}
+              content={{
+                description: org.description || "",
+                goals: org.goals || "",
+                resources: org.resources || "",
+                reputation: org.reputation || "",
+                secrets: org.secrets || "",
+              }}
+            />
+          ) : undefined
+        }
       />
 
       <DocumentCanvas

@@ -68,7 +68,6 @@ pub async fn create_test_location(
         name: Set(name.to_string()),
         location_type: Set("settlement".to_string()),
         description: Set(Some("A test location".to_string())),
-        detail_level: Set(0),
         gm_notes: Set(None),
         created_at: Set(now),
         updated_at: Set(now),

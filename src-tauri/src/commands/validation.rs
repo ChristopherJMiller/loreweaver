@@ -224,8 +224,6 @@ pub struct UpdateLocationInput {
     #[validate(length(max = 50000, message = "description too long"))]
     pub description: Option<String>,
 
-    pub detail_level: Option<i32>,
-
     #[validate(length(max = 50000, message = "gm_notes too long"))]
     pub gm_notes: Option<String>,
 }

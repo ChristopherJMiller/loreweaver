@@ -6,7 +6,7 @@
  * Includes both non-streaming and streaming variants for all operations.
  */
 
-import Anthropic from "@anthropic-ai/sdk";
+import Anthropic, { APIUserAbortError } from "@anthropic-ai/sdk";
 import type {
   MessageParam,
   Tool,
@@ -343,6 +343,8 @@ export async function createStructuredMessageStream<T>(options: {
   toolProgress?: ToolProgressCallback;
   /** Maximum number of tool loop iterations (default 10) */
   maxToolIterations?: number;
+  /** Abort signal for cancellation */
+  signal?: AbortSignal;
 }): Promise<StructuredStreamResult<T>> {
   const client = getClient();
 
@@ -365,18 +367,26 @@ export async function createStructuredMessageStream<T>(options: {
   while (iteration < maxIterations) {
     iteration++;
 
-    const stream = client.beta.messages.stream({
-      model: options.model,
-      system: options.system,
-      messages: conversationMessages,
-      max_tokens: options.maxTokens ?? 4096,
-      betas: [STRUCTURED_OUTPUT_BETA],
-      output_format: {
-        type: "json_schema",
-        schema: jsonSchema,
+    // Check if already aborted before starting
+    if (options.signal?.aborted) {
+      throw new APIUserAbortError();
+    }
+
+    const stream = client.beta.messages.stream(
+      {
+        model: options.model,
+        system: options.system,
+        messages: conversationMessages,
+        max_tokens: options.maxTokens ?? 4096,
+        betas: [STRUCTURED_OUTPUT_BETA],
+        output_format: {
+          type: "json_schema",
+          schema: jsonSchema,
+        },
+        tools: anthropicTools,
       },
-      tools: anthropicTools,
-    });
+      { signal: options.signal }
+    );
 
     // Accumulate text and emit deltas
     let accumulated = "";

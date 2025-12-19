@@ -18,6 +18,7 @@ import {
   RelationshipsPanel,
   DocumentSection,
 } from "@/components/document";
+import { CheckConsistencyButton } from "@/components/ai";
 import { useQuestStore, useCampaignStore } from "@/stores";
 import {
   QUEST_STATUS,
@@ -229,6 +230,24 @@ export function QuestDetailPage() {
         onCancel={handleCancel}
         onDelete={() => setDeleteDialogOpen(true)}
         backLink="/quests"
+        actions={
+          activeCampaignId && id ? (
+            <CheckConsistencyButton
+              campaignId={activeCampaignId}
+              entityType="quest"
+              entityId={id}
+              entityName={quest.name}
+              content={{
+                description: quest.description || "",
+                hook: quest.hook || "",
+                objectives: quest.objectives || "",
+                complications: quest.complications || "",
+                resolution: quest.resolution || "",
+                reward: quest.reward || "",
+              }}
+            />
+          ) : undefined
+        }
       />
 
       <DocumentCanvas

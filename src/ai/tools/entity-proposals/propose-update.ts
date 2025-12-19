@@ -109,7 +109,7 @@ You must first use search_entities or get_entity to find the entity_id before pr
 
 Common fields by entity type:
 - character: name, lineage, occupation, description, personality, motivations, secrets, voice_notes, is_alive
-- location: name, location_type, description, parent_id, detail_level, gm_notes
+- location: name, location_type, description, parent_id, gm_notes
 - organization: name, org_type, description, goals, resources, is_active
 - quest: name, plot_type, status, description, hook, objectives, complications, resolution, reward
 - hero: name, classes, backstory, goals, bonds, is_active

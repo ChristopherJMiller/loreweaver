@@ -103,7 +103,6 @@ export const locations = {
     parent_id?: string;
     location_type?: string;
     description?: string;
-    detail_level?: number;
     gm_notes?: string;
   }) => invoke<Location>("update_location", data),
 

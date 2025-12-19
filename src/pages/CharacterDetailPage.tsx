@@ -12,6 +12,7 @@ import {
   RelationshipsPanel,
   type DocumentSection,
 } from "@/components/document";
+import { CheckConsistencyButton } from "@/components/ai";
 import { useCharacterStore, useCampaignStore } from "@/stores";
 
 export function CharacterDetailPage() {
@@ -201,6 +202,23 @@ export function CharacterDetailPage() {
         onCancel={handleCancel}
         onDelete={() => setDeleteDialogOpen(true)}
         backLink="/characters"
+        actions={
+          activeCampaignId && id ? (
+            <CheckConsistencyButton
+              campaignId={activeCampaignId}
+              entityType="character"
+              entityId={id}
+              entityName={character.name}
+              content={{
+                description: character.description || "",
+                personality: character.personality || "",
+                motivations: character.motivations || "",
+                secrets: character.secrets || "",
+                voice_notes: character.voice_notes || "",
+              }}
+            />
+          ) : undefined
+        }
       />
 
       <DocumentCanvas
