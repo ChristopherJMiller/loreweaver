@@ -43,7 +43,82 @@
             license = with licenses; [ mit asl20 ];
           };
         };
+
+        # Common dependencies for both dev shell and package
+        tauriDeps = with pkgs; [
+          openssl
+          gtk3
+          cairo
+          gdk-pixbuf
+          glib
+          libsoup_3
+          webkitgtk_4_1
+          librsvg
+          harfbuzz
+          at-spi2-atk
+          pango
+        ];
       in {
+        # Package derivation for building the application
+        packages.default = pkgs.rustPlatform.buildRustPackage (finalAttrs: {
+          pname = "loreweaver";
+          version = "0.1.0";
+
+          src = ./.;
+
+          # Point to the Rust source directory
+          cargoRoot = "src-tauri";
+          buildAndTestSubdir = "src-tauri";
+
+          # Cargo dependency hash
+          cargoHash = "sha256-s0/AC/VDRhjvpo+472/UB65xP2uEnZ+KU18beqOcSwM=";
+
+          # pnpm dependencies for the frontend
+          pnpmDeps = pkgs.pnpm_10.fetchDeps {
+            inherit (finalAttrs) pname version src;
+            # fetcherVersion 2 ensures consistent permissions
+            fetcherVersion = 2;
+            hash = "sha256-YUxYxefgDmxxIuvJsc+o8x+mEPhM3jOYRS+Y1AKJi8U=";
+          };
+
+          nativeBuildInputs = with pkgs; [
+            # Tauri build hook
+            cargo-tauri.hook
+
+            # Frontend tooling
+            pnpm_10
+            pnpm_10.configHook
+            nodejs_22
+
+            # Build tools
+            pkg-config
+            wrapGAppsHook4
+            gobject-introspection
+          ];
+
+          buildInputs = tauriDeps ++ (with pkgs; [
+            glib-networking
+          ]);
+
+          # Disable tests during build (run separately if needed)
+          doCheck = false;
+
+          # Fix for WebKit DMABUF renderer issues on some systems
+          preFixup = ''
+            gappsWrapperArgs+=(
+              --set WEBKIT_DISABLE_DMABUF_RENDERER 1
+            )
+          '';
+
+          meta = with pkgs.lib; {
+            description = "A Tauri v2 desktop application for tabletop RPG world-building";
+            homepage = "https://github.com/ChristopherJMiller/loreweaver";
+            license = licenses.mit;
+            platforms = platforms.linux;
+            mainProgram = "loreweaver";
+          };
+        });
+
         devShells.default = pkgs.mkShell {
           nativeBuildInputs = with pkgs; [
             # Rust
@@ -60,20 +135,7 @@
             gobject-introspection
           ];
 
-          buildInputs = with pkgs; [
-            # Tauri v2 dependencies (Linux)
-            openssl
-            gtk3
-            cairo
-            gdk-pixbuf
-            glib
-            libsoup_3
-            webkitgtk_4_1
-            librsvg
-            harfbuzz
-            at-spi2-atk
-            pango
-          ];
+          buildInputs = tauriDeps;
 
           shellHook = ''
             export LD_LIBRARY_PATH=${pkgs.lib.makeLibraryPath [

@@ -22,3 +22,5 @@ pnpm-debug.log*
 *.suo
 *.sw?
 .DS_Store
+
+result
