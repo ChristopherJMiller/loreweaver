@@ -7,7 +7,12 @@
 import { useEffect } from "react";
 import { Settings } from "lucide-react";
 import { useAIStore } from "@/stores/aiStore";
-import { ApiKeySection, ModelPreferences } from "@/components/settings";
+import {
+  ApiKeySection,
+  ModelPreferences,
+  AIBehaviorSettings,
+  TokenUsageDisplay,
+} from "@/components/settings";
 
 export function SettingsPage() {
   const { initialize, isLoading } = useAIStore();
@@ -41,21 +46,14 @@ export function SettingsPage() {
         <div className="grid gap-6 lg:grid-cols-2">
           <div className="space-y-6">
             <ApiKeySection />
+            <AIBehaviorSettings />
           </div>
           <div className="space-y-6">
             <ModelPreferences />
+            <TokenUsageDisplay />
           </div>
         </div>
       )}
-
-      {/* Future settings sections */}
-      {/* <Card>
-        <CardHeader>
-          <CardTitle>Export Settings</CardTitle>
-          <CardDescription>Configure default export formats</CardDescription>
-        </CardHeader>
-        <CardContent>Coming in future release</CardContent>
-      </Card> */}
     </div>
   );
 }

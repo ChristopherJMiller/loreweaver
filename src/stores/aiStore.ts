@@ -14,6 +14,8 @@ import { load, type Store } from "@tauri-apps/plugin-store";
 const STORE_NAME = "ai-config.json";
 const API_KEY_KEY = "anthropic_api_key";
 const MODEL_PREF_KEY = "model_preference";
+const CONSISTENCY_CHECK_KEY = "consistency_check_on_save";
+const SHOW_REASONING_KEY = "show_ai_reasoning";
 
 export type ModelPreference = "speed" | "balanced" | "quality";
 
@@ -23,7 +25,13 @@ interface AIState {
   isApiKeyValid: boolean | null; // null = not checked, true/false = validation result
   isLoading: boolean;
   modelPreference: ModelPreference;
+  consistencyCheckOnSave: boolean;
+  showAiReasoning: boolean;
   error: string | null;
+  /** Connection test state */
+  isTestingConnection: boolean;
+  connectionTestResult: "success" | "error" | null;
+  connectionTestError: string | null;
 
   // Actions
   initialize: () => Promise<void>;
@@ -31,10 +39,21 @@ interface AIState {
   clearApiKey: () => Promise<void>;
   validateApiKey: () => boolean;
   setModelPreference: (pref: ModelPreference) => Promise<void>;
+  setConsistencyCheckOnSave: (enabled: boolean) => Promise<void>;
+  setShowAiReasoning: (enabled: boolean) => Promise<void>;
+  testConnection: () => Promise<boolean>;
+  resetToDefaults: () => Promise<void>;
 }
 
 // Singleton store instance
 let storeInstance: Store | null = null;
+
+/** Default values for AI settings */
+const DEFAULTS = {
+  modelPreference: "balanced" as ModelPreference,
+  consistencyCheckOnSave: true,
+  showAiReasoning: false,
+};
 
 async function getStore(): Promise<Store> {
   if (!storeInstance) {
@@ -42,7 +61,9 @@ async function getStore(): Promise<Store> {
     storeInstance = await load(STORE_NAME, {
       defaults: {
         [API_KEY_KEY]: null,
-        [MODEL_PREF_KEY]: "balanced",
+        [MODEL_PREF_KEY]: DEFAULTS.modelPreference,
+        [CONSISTENCY_CHECK_KEY]: DEFAULTS.consistencyCheckOnSave,
+        [SHOW_REASONING_KEY]: DEFAULTS.showAiReasoning,
       },
       autoSave: 100, // Auto-save with 100ms debounce
     });
@@ -63,8 +84,13 @@ export const useAIStore = create<AIState>()((set, get) => ({
   apiKey: null,
   isApiKeyValid: null,
   isLoading: false,
-  modelPreference: "balanced",
+  modelPreference: DEFAULTS.modelPreference,
+  consistencyCheckOnSave: DEFAULTS.consistencyCheckOnSave,
+  showAiReasoning: DEFAULTS.showAiReasoning,
   error: null,
+  isTestingConnection: false,
+  connectionTestResult: null,
+  connectionTestError: null,
 
   initialize: async () => {
     set({ isLoading: true, error: null });
@@ -72,13 +98,17 @@ export const useAIStore = create<AIState>()((set, get) => ({
       const store = await getStore();
       const key = await store.get<string>(API_KEY_KEY);
       const pref = await store.get<ModelPreference>(MODEL_PREF_KEY);
+      const consistencyCheck = await store.get<boolean>(CONSISTENCY_CHECK_KEY);
+      const showReasoning = await store.get<boolean>(SHOW_REASONING_KEY);
 
       const isValid = isValidKeyFormat(key ?? null);
 
       set({
         apiKey: key ?? null,
         isApiKeyValid: key ? isValid : null,
-        modelPreference: pref ?? "balanced",
+        modelPreference: pref ?? DEFAULTS.modelPreference,
+        consistencyCheckOnSave: consistencyCheck ?? DEFAULTS.consistencyCheckOnSave,
+        showAiReasoning: showReasoning ?? DEFAULTS.showAiReasoning,
         isLoading: false,
       });
     } catch (e) {
@@ -149,6 +179,99 @@ export const useAIStore = create<AIState>()((set, get) => ({
     } catch (e) {
       console.error("Failed to save model preference:", e);
       set({ error: `Failed to save model preference: ${e}` });
+    }
+  },
+
+  setConsistencyCheckOnSave: async (enabled: boolean) => {
+    try {
+      const store = await getStore();
+      await store.set(CONSISTENCY_CHECK_KEY, enabled);
+      await store.save();
+      set({ consistencyCheckOnSave: enabled });
+    } catch (e) {
+      console.error("Failed to save consistency check setting:", e);
+      set({ error: `Failed to save setting: ${e}` });
+    }
+  },
+
+  setShowAiReasoning: async (enabled: boolean) => {
+    try {
+      const store = await getStore();
+      await store.set(SHOW_REASONING_KEY, enabled);
+      await store.save();
+      set({ showAiReasoning: enabled });
+    } catch (e) {
+      console.error("Failed to save show reasoning setting:", e);
+      set({ error: `Failed to save setting: ${e}` });
+    }
+  },
+
+  testConnection: async () => {
+    const { apiKey } = get();
+    if (!apiKey) {
+      set({
+        connectionTestResult: "error",
+        connectionTestError: "No API key configured",
+      });
+      return false;
+    }
+
+    set({
+      isTestingConnection: true,
+      connectionTestResult: null,
+      connectionTestError: null,
+    });
+
+    try {
+      // Import dynamically to avoid circular dependencies
+      const { initializeClient, getClient } = await import("@/ai/client");
+
+      // Initialize or reinitialize the client with current key
+      initializeClient(apiKey);
+      const client = getClient();
+
+      // Make a minimal API call to test the connection
+      // Using a simple message that should be very cheap
+      await client.messages.create({
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 1,
+        messages: [{ role: "user", content: "Hi" }],
+      });
+
+      set({
+        isTestingConnection: false,
+        connectionTestResult: "success",
+        isApiKeyValid: true,
+      });
+      return true;
+    } catch (e) {
+      const errorMessage = e instanceof Error ? e.message : String(e);
+      console.error("Connection test failed:", e);
+      set({
+        isTestingConnection: false,
+        connectionTestResult: "error",
+        connectionTestError: errorMessage,
+        isApiKeyValid: false,
+      });
+      return false;
+    }
+  },
+
+  resetToDefaults: async () => {
+    try {
+      const store = await getStore();
+      await store.set(MODEL_PREF_KEY, DEFAULTS.modelPreference);
+      await store.set(CONSISTENCY_CHECK_KEY, DEFAULTS.consistencyCheckOnSave);
+      await store.set(SHOW_REASONING_KEY, DEFAULTS.showAiReasoning);
+      await store.save();
+      set({
+        modelPreference: DEFAULTS.modelPreference,
+        consistencyCheckOnSave: DEFAULTS.consistencyCheckOnSave,
+        showAiReasoning: DEFAULTS.showAiReasoning,
+      });
+    } catch (e) {
+      console.error("Failed to reset settings:", e);
+      set({ error: `Failed to reset settings: ${e}` });
     }
   },
 }));
