@@ -1,5 +1,11 @@
 export { useCampaignStore } from "./campaignStore";
-export { useUIStore } from "./uiStore";
+export {
+  useUIStore,
+  SIDEBAR_MIN_WIDTH,
+  SIDEBAR_MAX_WIDTH,
+  WORLD_NAV_MIN_WIDTH,
+  WORLD_NAV_MAX_WIDTH,
+} from "./uiStore";
 export { useSearchStore } from "./searchStore";
 export { useRelationshipStore } from "./relationshipStore";
 export { useChatStore } from "./chatStore";

@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
   ChevronRight,
@@ -10,6 +10,7 @@ import {
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { ResizeHandle } from "@/components/ui/resize-handle";
 import { useLocationStore, useCampaignStore, useUIStore } from "@/stores";
 import type { Location } from "@/types";
 
@@ -126,7 +127,15 @@ export function WorldNavigator() {
   const { id: currentLocationId } = useParams<{ id: string }>();
   const { activeCampaignId } = useCampaignStore();
   const { entities, fetchAll, isLoading } = useLocationStore();
-  const { worldNavigatorOpen, toggleWorldNavigator } = useUIStore();
+  const { worldNavigatorOpen, worldNavigatorWidth, toggleWorldNavigator, setWorldNavigatorWidth } = useUIStore();
+
+  const handleResize = useCallback(
+    (delta: number) => {
+      // For left-side handle, delta is inverted in ResizeHandle
+      setWorldNavigatorWidth(worldNavigatorWidth + delta);
+    },
+    [worldNavigatorWidth, setWorldNavigatorWidth]
+  );
 
   const [expandedIds, setExpandedIds] = useState<Set<string>>(new Set());
 
@@ -183,7 +192,13 @@ export function WorldNavigator() {
   }
 
   return (
-    <aside className="flex w-64 flex-col border-l bg-card">
+    <aside
+      className="relative flex flex-col border-l bg-card transition-[width] duration-100"
+      style={{ width: worldNavigatorWidth }}
+    >
+      {/* Resize handle on left edge */}
+      <ResizeHandle side="left" onResize={handleResize} />
+
       <div className="flex items-center justify-between border-b px-3 py-2">
         <div className="flex items-center gap-2">
           <Globe className="h-4 w-4" />

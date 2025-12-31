@@ -1,4 +1,4 @@
-import { memo } from "react";
+import { memo, useCallback } from "react";
 import { NavLink } from "react-router-dom";
 import {
   MapPin,
@@ -25,7 +25,8 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
-import { useUIStore, useChatStore } from "@/stores";
+import { ResizeHandle } from "@/components/ui/resize-handle";
+import { useUIStore, useChatStore, SIDEBAR_MIN_WIDTH } from "@/stores";
 
 interface NavItem {
   label: string;
@@ -106,20 +107,31 @@ const NavItemLink = memo(function NavItemLink({
 });
 
 export function Sidebar() {
-  const { sidebarCollapsed, toggleSidebar } = useUIStore();
+  const { sidebarCollapsed, sidebarWidth, toggleSidebar, setSidebarWidth } = useUIStore();
   const isAIRunning = useChatStore((state) => state.isRunning);
+
+  const handleResize = useCallback(
+    (delta: number) => {
+      setSidebarWidth(sidebarWidth + delta);
+    },
+    [sidebarWidth, setSidebarWidth]
+  );
+
+  // Auto-collapse when width gets too small
+  const effectiveCollapsed = sidebarCollapsed || sidebarWidth <= SIDEBAR_MIN_WIDTH + 20;
 
   return (
     <aside
-      className={cn(
-        "flex flex-col border-r bg-card transition-all duration-300",
-        sidebarCollapsed ? "w-16" : "w-56"
-      )}
+      className="relative flex flex-col border-r bg-card transition-[width] duration-100"
+      style={{ width: sidebarCollapsed ? 64 : sidebarWidth }}
     >
+      {/* Resize handle on right edge */}
+      {!sidebarCollapsed && <ResizeHandle side="right" onResize={handleResize} />}
+
       <ScrollArea className="flex-1 py-4">
         {/* Loreweaver AI - Primary action at top */}
-        <div className={cn("px-2 mb-2", sidebarCollapsed && "px-2")}>
-          {sidebarCollapsed ? (
+        <div className={cn("px-2 mb-2", effectiveCollapsed && "px-2")}>
+          {effectiveCollapsed ? (
             <Tooltip delayDuration={0}>
               <TooltipTrigger asChild>
                 <NavLink
@@ -170,14 +182,14 @@ export function Sidebar() {
 
         <Separator className="my-2" />
 
-        <div className={cn("space-y-1 px-2", sidebarCollapsed && "px-2")}>
+        <div className={cn("space-y-1 px-2", effectiveCollapsed && "px-2")}>
           <NavItemLink
             item={{ label: "Dashboard", icon: Home, to: "/" }}
-            collapsed={sidebarCollapsed}
+            collapsed={effectiveCollapsed}
           />
           <NavItemLink
             item={{ label: "Search", icon: Search, to: "/search" }}
-            collapsed={sidebarCollapsed}
+            collapsed={effectiveCollapsed}
           />
         </div>
 
@@ -185,17 +197,17 @@ export function Sidebar() {
 
         {navSections.map((section) => (
           <div key={section.title} className="mb-4">
-            {!sidebarCollapsed && (
+            {!effectiveCollapsed && (
               <h4 className="mb-2 px-4 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                 {section.title}
               </h4>
             )}
-            <div className={cn("space-y-1 px-2", sidebarCollapsed && "px-2")}>
+            <div className={cn("space-y-1 px-2", effectiveCollapsed && "px-2")}>
               {section.items.map((item) => (
                 <NavItemLink
                   key={item.to}
                   item={item}
-                  collapsed={sidebarCollapsed}
+                  collapsed={effectiveCollapsed}
                 />
               ))}
             </div>
@@ -206,7 +218,7 @@ export function Sidebar() {
       <div className="border-t p-2 space-y-1">
         <NavItemLink
           item={{ label: "Settings", icon: Settings, to: "/settings" }}
-          collapsed={sidebarCollapsed}
+          collapsed={effectiveCollapsed}
         />
         <Button
           variant="ghost"
