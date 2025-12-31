@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Calendar } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -117,32 +117,40 @@ export function SessionDetailPage() {
     return <LoadingState type="detail" />;
   }
 
-  const sections: DocumentSection[] = [
-    {
-      id: "planned_content",
-      title: "Planned Content",
-      content: editForm.planned_content,
-      placeholder: "Encounters, story beats, locations to visit...",
-    },
-    {
-      id: "notes",
-      title: "Session Notes",
-      content: editForm.notes,
-      placeholder: "What happened, player actions, important decisions...",
-    },
-    {
-      id: "summary",
-      title: "Summary",
-      content: editForm.summary,
-      placeholder: "A concise summary of the session...",
-    },
-    {
-      id: "highlights",
-      title: "Highlights",
-      content: editForm.highlights,
-      placeholder: "Epic moments, funny quotes, dramatic reveals...",
-    },
-  ];
+  const sections: DocumentSection[] = useMemo(
+    () => [
+      {
+        id: "planned_content",
+        title: "Planned Content",
+        content: editForm.planned_content,
+        placeholder: "Encounters, story beats, locations to visit...",
+      },
+      {
+        id: "notes",
+        title: "Session Notes",
+        content: editForm.notes,
+        placeholder: "What happened, player actions, important decisions...",
+      },
+      {
+        id: "summary",
+        title: "Summary",
+        content: editForm.summary,
+        placeholder: "A concise summary of the session...",
+      },
+      {
+        id: "highlights",
+        title: "Highlights",
+        content: editForm.highlights,
+        placeholder: "Epic moments, funny quotes, dramatic reveals...",
+      },
+    ],
+    [
+      editForm.planned_content,
+      editForm.notes,
+      editForm.summary,
+      editForm.highlights,
+    ]
+  );
 
   const titleContent = isEditing ? (
     <div className="flex items-center gap-2">

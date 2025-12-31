@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { UserCheck, UserX } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -135,32 +135,35 @@ export function HeroDetailPage() {
     return <LoadingState type="detail" />;
   }
 
-  const sections: DocumentSection[] = [
-    {
-      id: "description",
-      title: "Description",
-      content: editForm.description,
-      placeholder: "Physical appearance, personality...",
-    },
-    {
-      id: "backstory",
-      title: "Backstory",
-      content: editForm.backstory,
-      placeholder: "Where they came from, what shaped them...",
-    },
-    {
-      id: "goals",
-      title: "Goals",
-      content: editForm.goals,
-      placeholder: "Short-term and long-term goals...",
-    },
-    {
-      id: "bonds",
-      title: "Bonds",
-      content: editForm.bonds,
-      placeholder: "Family, friends, enemies, organizations...",
-    },
-  ];
+  const sections: DocumentSection[] = useMemo(
+    () => [
+      {
+        id: "description",
+        title: "Description",
+        content: editForm.description,
+        placeholder: "Physical appearance, personality...",
+      },
+      {
+        id: "backstory",
+        title: "Backstory",
+        content: editForm.backstory,
+        placeholder: "Where they came from, what shaped them...",
+      },
+      {
+        id: "goals",
+        title: "Goals",
+        content: editForm.goals,
+        placeholder: "Short-term and long-term goals...",
+      },
+      {
+        id: "bonds",
+        title: "Bonds",
+        content: editForm.bonds,
+        placeholder: "Family, friends, enemies, organizations...",
+      },
+    ],
+    [editForm.description, editForm.backstory, editForm.goals, editForm.bonds]
+  );
 
   const badges = (
     <Badge

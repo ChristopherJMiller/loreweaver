@@ -1,16 +1,19 @@
-import { useEffect } from "react";
+import { useEffect, lazy, Suspense } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Header } from "./Header";
 import { Sidebar } from "./Sidebar";
 import { CommandPalette } from "./CommandPalette";
 import { WorldNavigator } from "./WorldNavigator";
-import { AIChatPanel } from "@/components/ai/AIChatPanel";
-import { useCampaignStore } from "@/stores";
+import { useCampaignStore, useAIStore } from "@/stores";
+
+// Lazy load AI panel - only loaded when API key is configured
+const AIChatPanel = lazy(() => import("@/components/ai/AIChatPanel").then(m => ({ default: m.AIChatPanel })));
 
 export function AppShell() {
   const navigate = useNavigate();
   const { activeCampaignId, campaigns, isLoading } = useCampaignStore();
+  const apiKey = useAIStore((state) => state.apiKey);
 
   // Redirect to campaigns page if no active campaign
   useEffect(() => {
@@ -29,7 +32,12 @@ export function AppShell() {
             <Outlet />
           </main>
           <WorldNavigator />
-          <AIChatPanel />
+          {/* Only load AI panel when API key is configured */}
+          {apiKey && (
+            <Suspense fallback={null}>
+              <AIChatPanel />
+            </Suspense>
+          )}
         </div>
         <CommandPalette />
       </div>

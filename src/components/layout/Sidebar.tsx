@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { NavLink } from "react-router-dom";
 import {
   MapPin,
@@ -67,7 +68,7 @@ const navSections: NavSection[] = [
   },
 ];
 
-function NavItemLink({
+const NavItemLink = memo(function NavItemLink({
   item,
   collapsed,
 }: {
@@ -102,7 +103,7 @@ function NavItemLink({
   }
 
   return link;
-}
+});
 
 export function Sidebar() {
   const { sidebarCollapsed, toggleSidebar } = useUIStore();

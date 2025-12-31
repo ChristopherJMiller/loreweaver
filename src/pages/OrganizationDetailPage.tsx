@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { CheckCircle, XCircle } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -123,38 +123,47 @@ export function OrganizationDetailPage() {
     return <LoadingState type="detail" />;
   }
 
-  const sections: DocumentSection[] = [
-    {
-      id: "description",
-      title: "Description",
-      content: editForm.description,
-      placeholder: "Describe this organization...",
-    },
-    {
-      id: "goals",
-      title: "Goals",
-      content: editForm.goals,
-      placeholder: "Short-term and long-term objectives...",
-    },
-    {
-      id: "resources",
-      title: "Resources",
-      content: editForm.resources,
-      placeholder: "Members, wealth, territory, influence...",
-    },
-    {
-      id: "reputation",
-      title: "Reputation",
-      content: editForm.reputation,
-      placeholder: "Public perception, rumors, reputation...",
-    },
-    {
-      id: "secrets",
-      title: "Secrets",
-      content: editForm.secrets,
-      placeholder: "True motives, hidden agendas, secret members...",
-    },
-  ];
+  const sections: DocumentSection[] = useMemo(
+    () => [
+      {
+        id: "description",
+        title: "Description",
+        content: editForm.description,
+        placeholder: "Describe this organization...",
+      },
+      {
+        id: "goals",
+        title: "Goals",
+        content: editForm.goals,
+        placeholder: "Short-term and long-term objectives...",
+      },
+      {
+        id: "resources",
+        title: "Resources",
+        content: editForm.resources,
+        placeholder: "Members, wealth, territory, influence...",
+      },
+      {
+        id: "reputation",
+        title: "Reputation",
+        content: editForm.reputation,
+        placeholder: "Public perception, rumors, reputation...",
+      },
+      {
+        id: "secrets",
+        title: "Secrets",
+        content: editForm.secrets,
+        placeholder: "True motives, hidden agendas, secret members...",
+      },
+    ],
+    [
+      editForm.description,
+      editForm.goals,
+      editForm.resources,
+      editForm.reputation,
+      editForm.secrets,
+    ]
+  );
 
   const badges = (
     <Badge

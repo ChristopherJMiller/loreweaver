@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { EyeOff, Eye } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -128,14 +128,17 @@ export function TimelineEventDetailPage() {
     return <LoadingState type="detail" />;
   }
 
-  const sections: DocumentSection[] = [
-    {
-      id: "description",
-      title: "Description",
-      content: editForm.description,
-      placeholder: "Describe what happened during this event...",
-    },
-  ];
+  const sections: DocumentSection[] = useMemo(
+    () => [
+      {
+        id: "description",
+        title: "Description",
+        content: editForm.description,
+        placeholder: "Describe what happened during this event...",
+      },
+    ],
+    [editForm.description]
+  );
 
   const badges = (
     <>

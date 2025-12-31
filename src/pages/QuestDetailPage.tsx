@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -146,44 +146,54 @@ export function QuestDetailPage() {
     return <LoadingState type="detail" />;
   }
 
-  const sections: DocumentSection[] = [
-    {
-      id: "description",
-      title: "Description",
-      content: editForm.description,
-      placeholder: "Describe this quest...",
-    },
-    {
-      id: "hook",
-      title: "Hook",
-      content: editForm.hook,
-      placeholder: "The party discovers a mysterious letter...",
-    },
-    {
-      id: "objectives",
-      title: "Objectives",
-      content: editForm.objectives,
-      placeholder: "1. Find the lost artifact\n2. Return it to the temple...",
-    },
-    {
-      id: "complications",
-      title: "Complications",
-      content: editForm.complications,
-      placeholder: "The artifact is guarded by ancient traps...",
-    },
-    {
-      id: "resolution",
-      title: "Resolution",
-      content: editForm.resolution,
-      placeholder: "Success: The artifact is returned and the curse lifted...",
-    },
-    {
-      id: "reward",
-      title: "Rewards",
-      content: editForm.reward,
-      placeholder: "500 gold pieces, a magical sword...",
-    },
-  ];
+  const sections: DocumentSection[] = useMemo(
+    () => [
+      {
+        id: "description",
+        title: "Description",
+        content: editForm.description,
+        placeholder: "Describe this quest...",
+      },
+      {
+        id: "hook",
+        title: "Hook",
+        content: editForm.hook,
+        placeholder: "The party discovers a mysterious letter...",
+      },
+      {
+        id: "objectives",
+        title: "Objectives",
+        content: editForm.objectives,
+        placeholder: "1. Find the lost artifact\n2. Return it to the temple...",
+      },
+      {
+        id: "complications",
+        title: "Complications",
+        content: editForm.complications,
+        placeholder: "The artifact is guarded by ancient traps...",
+      },
+      {
+        id: "resolution",
+        title: "Resolution",
+        content: editForm.resolution,
+        placeholder: "Success: The artifact is returned and the curse lifted...",
+      },
+      {
+        id: "reward",
+        title: "Rewards",
+        content: editForm.reward,
+        placeholder: "500 gold pieces, a magical sword...",
+      },
+    ],
+    [
+      editForm.description,
+      editForm.hook,
+      editForm.objectives,
+      editForm.complications,
+      editForm.resolution,
+      editForm.reward,
+    ]
+  );
 
   const badges = !isEditing ? (
     <Select value={quest.status} onValueChange={handleStatusChange}>

@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { MapPin } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -131,20 +131,23 @@ export function LocationDetailPage() {
     return <LoadingState type="detail" />;
   }
 
-  const sections: DocumentSection[] = [
-    {
-      id: "description",
-      title: "Description",
-      content: editForm.description,
-      placeholder: "Describe this location...",
-    },
-    {
-      id: "gm_notes",
-      title: "GM Notes",
-      content: editForm.gm_notes,
-      placeholder: "Hidden information, plot hooks, secrets about this location...",
-    },
-  ];
+  const sections: DocumentSection[] = useMemo(
+    () => [
+      {
+        id: "description",
+        title: "Description",
+        content: editForm.description,
+        placeholder: "Describe this location...",
+      },
+      {
+        id: "gm_notes",
+        title: "GM Notes",
+        content: editForm.gm_notes,
+        placeholder: "Hidden information, plot hooks, secrets about this location...",
+      },
+    ],
+    [editForm.description, editForm.gm_notes]
+  );
 
   const titleContent = isEditing ? (
     <Input

@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { Heart, Skull } from "lucide-react";
 import { Input } from "@/components/ui/input";
@@ -119,38 +119,47 @@ export function CharacterDetailPage() {
     return <LoadingState type="detail" />;
   }
 
-  const sections: DocumentSection[] = [
-    {
-      id: "description",
-      title: "Description",
-      content: editForm.description,
-      placeholder: "Physical appearance, mannerisms, notable features...",
-    },
-    {
-      id: "personality",
-      title: "Personality",
-      content: editForm.personality,
-      placeholder: "Personality traits, quirks, behaviors...",
-    },
-    {
-      id: "motivations",
-      title: "Motivations",
-      content: editForm.motivations,
-      placeholder: "Goals, desires, fears...",
-    },
-    {
-      id: "voice_notes",
-      title: "Voice Notes",
-      content: editForm.voice_notes,
-      placeholder: "Accent, catch phrases, mannerisms...",
-    },
-    {
-      id: "secrets",
-      title: "Secrets",
-      content: editForm.secrets,
-      placeholder: "Hidden information, plot hooks, true identity...",
-    },
-  ];
+  const sections: DocumentSection[] = useMemo(
+    () => [
+      {
+        id: "description",
+        title: "Description",
+        content: editForm.description,
+        placeholder: "Physical appearance, mannerisms, notable features...",
+      },
+      {
+        id: "personality",
+        title: "Personality",
+        content: editForm.personality,
+        placeholder: "Personality traits, quirks, behaviors...",
+      },
+      {
+        id: "motivations",
+        title: "Motivations",
+        content: editForm.motivations,
+        placeholder: "Goals, desires, fears...",
+      },
+      {
+        id: "voice_notes",
+        title: "Voice Notes",
+        content: editForm.voice_notes,
+        placeholder: "Accent, catch phrases, mannerisms...",
+      },
+      {
+        id: "secrets",
+        title: "Secrets",
+        content: editForm.secrets,
+        placeholder: "Hidden information, plot hooks, true identity...",
+      },
+    ],
+    [
+      editForm.description,
+      editForm.personality,
+      editForm.motivations,
+      editForm.voice_notes,
+      editForm.secrets,
+    ]
+  );
 
   const subtitle = (
     <>

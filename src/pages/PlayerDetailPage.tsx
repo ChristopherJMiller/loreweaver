@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useMemo } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -97,26 +97,29 @@ export function PlayerDetailPage() {
     return <LoadingState type="detail" />;
   }
 
-  const sections: DocumentSection[] = [
-    {
-      id: "preferences",
-      title: "Preferences",
-      content: editForm.preferences,
-      placeholder: "Combat, roleplay, puzzles, exploration...",
-    },
-    {
-      id: "boundaries",
-      title: "Boundaries",
-      content: editForm.boundaries,
-      placeholder: "Topics or content to avoid...",
-    },
-    {
-      id: "notes",
-      title: "GM Notes",
-      content: editForm.notes,
-      placeholder: "Scheduling preferences, play style observations...",
-    },
-  ];
+  const sections: DocumentSection[] = useMemo(
+    () => [
+      {
+        id: "preferences",
+        title: "Preferences",
+        content: editForm.preferences,
+        placeholder: "Combat, roleplay, puzzles, exploration...",
+      },
+      {
+        id: "boundaries",
+        title: "Boundaries",
+        content: editForm.boundaries,
+        placeholder: "Topics or content to avoid...",
+      },
+      {
+        id: "notes",
+        title: "GM Notes",
+        content: editForm.notes,
+        placeholder: "Scheduling preferences, play style observations...",
+      },
+    ],
+    [editForm.preferences, editForm.boundaries, editForm.notes]
+  );
 
   const titleContent = isEditing ? (
     <Input

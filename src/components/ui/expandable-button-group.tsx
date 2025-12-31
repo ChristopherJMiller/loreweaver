@@ -1,10 +1,9 @@
 import * as React from "react";
-import { motion, AnimatePresence } from "motion/react";
 import { cva, type VariantProps } from "class-variance-authority";
 import { cn } from "@/lib/utils";
 
 const expandableButtonVariants = cva(
-  "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  "inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium transition-all duration-200 focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
@@ -78,14 +77,13 @@ const ExpandableButton = React.forwardRef<
       forceExpanded || !supportsHover || (isHovered && !disabled) || isFocused;
 
     return (
-      <motion.button
+      <button
         ref={ref}
         type={type}
-        layout
         className={cn(
           expandableButtonVariants({ variant }),
           "h-9 overflow-hidden",
-          isExpanded ? "px-3" : "w-9",
+          isExpanded ? "px-3" : "w-9 px-0",
           className
         )}
         onMouseEnter={() => setIsHovered(true)}
@@ -94,26 +92,17 @@ const ExpandableButton = React.forwardRef<
         onBlur={() => setIsFocused(false)}
         disabled={disabled}
         onClick={onClick}
-        transition={{ type: "spring", stiffness: 500, damping: 30 }}
       >
-        <motion.span layout="position" className="shrink-0">
-          {icon}
-        </motion.span>
-        <AnimatePresence mode="wait">
-          {isExpanded && (
-            <motion.span
-              key="label"
-              initial={{ width: 0, opacity: 0 }}
-              animate={{ width: "auto", opacity: 1 }}
-              exit={{ width: 0, opacity: 0 }}
-              transition={{ duration: 0.15 }}
-              className="overflow-hidden whitespace-nowrap ms-2"
-            >
-              {label}
-            </motion.span>
+        <span className="shrink-0">{icon}</span>
+        <span
+          className={cn(
+            "overflow-hidden whitespace-nowrap transition-all duration-200",
+            isExpanded ? "ms-2 max-w-[200px] opacity-100" : "max-w-0 opacity-0"
           )}
-        </AnimatePresence>
-      </motion.button>
+        >
+          {label}
+        </span>
+      </button>
     );
   }
 );

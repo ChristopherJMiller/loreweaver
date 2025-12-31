@@ -15,6 +15,36 @@ export default defineConfig(async () => ({
     },
   },
 
+  // Build optimization for code splitting
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks(id) {
+          // React core in its own chunk
+          if (id.includes("node_modules/react/") || id.includes("node_modules/react-dom/")) {
+            return "vendor-react";
+          }
+          // React Router
+          if (id.includes("node_modules/react-router")) {
+            return "vendor-router";
+          }
+          // Radix UI components
+          if (id.includes("node_modules/@radix-ui")) {
+            return "vendor-radix";
+          }
+          // Tiptap editor (heavy)
+          if (id.includes("node_modules/@tiptap") || id.includes("node_modules/prosemirror")) {
+            return "vendor-tiptap";
+          }
+          // Anthropic SDK
+          if (id.includes("node_modules/@anthropic-ai")) {
+            return "vendor-anthropic";
+          }
+        },
+      },
+    },
+  },
+
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
   //
   // 1. prevent Vite from obscuring rust errors
