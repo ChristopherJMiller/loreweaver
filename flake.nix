@@ -78,7 +78,7 @@
             inherit (finalAttrs) pname version src;
             # fetcherVersion 2 ensures consistent permissions
             fetcherVersion = 2;
-            hash = "sha256-YUxYxefgDmxxIuvJsc+o8x+mEPhM3jOYRS+Y1AKJi8U=";
+            hash = "sha256-LlgwtzVq0v10Xi7v36UE6L2hHtPnqf5M7NzrPgOcFY4=";
           };
 
           nativeBuildInputs = with pkgs; [
