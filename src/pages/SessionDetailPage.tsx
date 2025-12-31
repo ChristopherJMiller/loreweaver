@@ -66,7 +66,6 @@ export function SessionDetailPage() {
         summary: editForm.summary || undefined,
         highlights: editForm.highlights || undefined,
       });
-      setIsEditing(false);
     } finally {
       setIsSaving(false);
     }
@@ -185,6 +184,7 @@ export function SessionDetailPage() {
         onEdit={() => setIsEditing(true)}
         onSave={handleSave}
         onCancel={handleCancel}
+        onClose={() => setIsEditing(false)}
         onDelete={() => setDeleteDialogOpen(true)}
         backLink="/sessions"
       />

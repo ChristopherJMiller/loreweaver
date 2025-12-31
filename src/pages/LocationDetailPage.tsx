@@ -96,7 +96,6 @@ export function LocationDetailPage() {
         description: editForm.description || undefined,
         gm_notes: editForm.gm_notes || undefined,
       });
-      setIsEditing(false);
     } finally {
       setIsSaving(false);
     }
@@ -205,6 +204,7 @@ export function LocationDetailPage() {
         onEdit={() => setIsEditing(true)}
         onSave={handleSave}
         onCancel={handleCancel}
+        onClose={() => setIsEditing(false)}
         onDelete={() => setDeleteDialogOpen(true)}
         backLink="/locations"
         actions={

@@ -63,7 +63,6 @@ export function PlayerDetailPage() {
         boundaries: editForm.boundaries || undefined,
         notes: editForm.notes || undefined,
       });
-      setIsEditing(false);
     } finally {
       setIsSaving(false);
     }
@@ -145,6 +144,7 @@ export function PlayerDetailPage() {
         onEdit={() => setIsEditing(true)}
         onSave={handleSave}
         onCancel={handleCancel}
+        onClose={() => setIsEditing(false)}
         onDelete={() => setDeleteDialogOpen(true)}
         backLink="/players"
       />

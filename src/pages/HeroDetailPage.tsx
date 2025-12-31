@@ -91,7 +91,6 @@ export function HeroDetailPage() {
         bonds: editForm.bonds || undefined,
         is_active: editForm.is_active,
       });
-      setIsEditing(false);
     } finally {
       setIsSaving(false);
     }
@@ -218,6 +217,7 @@ export function HeroDetailPage() {
         onEdit={() => setIsEditing(true)}
         onSave={handleSave}
         onCancel={handleCancel}
+        onClose={() => setIsEditing(false)}
         onDelete={() => setDeleteDialogOpen(true)}
         backLink="/heroes"
         actions={

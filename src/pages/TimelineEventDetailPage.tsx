@@ -87,7 +87,6 @@ export function TimelineEventDetailPage() {
         significance: editForm.significance,
         is_public: editForm.is_public,
       });
-      setIsEditing(false);
     } finally {
       setIsSaving(false);
     }
@@ -184,6 +183,7 @@ export function TimelineEventDetailPage() {
         onEdit={() => setIsEditing(true)}
         onSave={handleSave}
         onCancel={handleCancel}
+        onClose={() => setIsEditing(false)}
         onDelete={() => setDeleteDialogOpen(true)}
         backLink="/timeline"
         actions={

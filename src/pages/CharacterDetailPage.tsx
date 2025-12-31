@@ -75,7 +75,6 @@ export function CharacterDetailPage() {
         voice_notes: editForm.voice_notes || undefined,
         is_alive: editForm.is_alive,
       });
-      setIsEditing(false);
     } finally {
       setIsSaving(false);
     }
@@ -200,6 +199,7 @@ export function CharacterDetailPage() {
         onEdit={() => setIsEditing(true)}
         onSave={handleSave}
         onCancel={handleCancel}
+        onClose={() => setIsEditing(false)}
         onDelete={() => setDeleteDialogOpen(true)}
         backLink="/characters"
         actions={

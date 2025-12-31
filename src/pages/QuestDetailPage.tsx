@@ -102,7 +102,6 @@ export function QuestDetailPage() {
         resolution: editForm.resolution || undefined,
         reward: editForm.reward || undefined,
       });
-      setIsEditing(false);
     } finally {
       setIsSaving(false);
     }
@@ -228,6 +227,7 @@ export function QuestDetailPage() {
         onEdit={() => setIsEditing(true)}
         onSave={handleSave}
         onCancel={handleCancel}
+        onClose={() => setIsEditing(false)}
         onDelete={() => setDeleteDialogOpen(true)}
         backLink="/quests"
         actions={

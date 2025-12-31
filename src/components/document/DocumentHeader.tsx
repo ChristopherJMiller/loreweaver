@@ -1,5 +1,6 @@
+import { useEffect } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, Edit2, Trash2, Save, X } from "lucide-react";
+import { ArrowLeft, Edit2, Trash2, Save, X, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   ExpandableButton,
@@ -16,6 +17,7 @@ export interface DocumentHeaderProps {
   onEdit: () => void;
   onSave: () => void;
   onCancel: () => void;
+  onClose: () => void;
   onDelete: () => void;
   backLink: string;
   className?: string;
@@ -32,11 +34,26 @@ export function DocumentHeader({
   onEdit,
   onSave,
   onCancel,
+  onClose,
   onDelete,
   backLink,
   className,
   actions,
 }: DocumentHeaderProps) {
+  useEffect(() => {
+    if (!isEditing) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key === "s") {
+        e.preventDefault();
+        onSave();
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isEditing, onSave]);
+
   return (
     <div
       className={cn(
@@ -70,9 +87,13 @@ export function DocumentHeader({
               <Button variant="ghost" size="icon" onClick={onCancel}>
                 <X className="h-4 w-4" />
               </Button>
-              <Button onClick={onSave} disabled={isSaving}>
+              <Button variant="outline" onClick={onSave} disabled={isSaving}>
                 <Save className="mr-2 h-4 w-4" />
                 {isSaving ? "Saving..." : "Save"}
+              </Button>
+              <Button onClick={onClose}>
+                <Check className="mr-2 h-4 w-4" />
+                Done
               </Button>
             </>
           ) : (
