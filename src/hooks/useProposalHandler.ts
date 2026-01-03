@@ -16,13 +16,16 @@ import type {
   EntityProposal,
   CreateProposal,
   UpdateProposal,
+  PatchProposal,
   RelationshipProposal,
 } from "@/ai/tools/entity-proposals/types";
 import {
   isCreateProposal,
   isUpdateProposal,
+  isPatchProposal,
   isRelationshipProposal,
 } from "@/ai/tools/entity-proposals/types";
+import { tryApplyPatches } from "@/ai/utils/diff-utils";
 import { RICH_TEXT_FIELDS, type EntityType } from "@/types";
 import type { SuggestedRelationship } from "@/ai/agents/types";
 import {
@@ -368,6 +371,49 @@ async function executeUpdateProposal(
 }
 
 /**
+ * Execute a patch proposal
+ * Applies unified diffs (text) or JSON patches to the current entity data
+ */
+async function executePatchProposal(
+  proposal: PatchProposal,
+  editedData?: Record<string, unknown>
+): Promise<void> {
+  // If user provided edited data (preview they modified), use that directly
+  if (editedData) {
+    const changes = convertRichTextFields(editedData);
+    await updateEntity(proposal.entityType, proposal.entityId, changes);
+    return;
+  }
+
+  // Otherwise, apply patches to current data
+  if (!proposal.currentData) {
+    throw new Error("Cannot apply patches: missing current entity data");
+  }
+
+  // Apply the patches
+  const patchResult = tryApplyPatches(proposal.currentData, proposal.patches);
+
+  if (!patchResult.success || !patchResult.result) {
+    const errorMessages = patchResult.errors
+      .map((e) => `${e.field}: ${e.message}`)
+      .join(", ");
+    throw new Error(`Failed to apply patches: ${errorMessages}`);
+  }
+
+  // Filter to only the fields that were patched
+  const patchedFields = proposal.patches.map((p) => p.field);
+  const changes: Record<string, unknown> = {};
+  for (const field of patchedFields) {
+    changes[field] = patchResult.result[field];
+  }
+
+  // Convert rich text fields to ProseMirror JSON
+  const convertedChanges = convertRichTextFields(changes);
+
+  await updateEntity(proposal.entityType, proposal.entityId, convertedChanges);
+}
+
+/**
  * Execute a relationship proposal
  */
 async function executeRelationshipProposal(
@@ -409,6 +455,10 @@ export function useProposalHandler({
           entityType = proposal.entityType;
         } else if (isUpdateProposal(proposal)) {
           await executeUpdateProposal(proposal, editedData);
+          entityId = proposal.entityId;
+          entityType = proposal.entityType;
+        } else if (isPatchProposal(proposal)) {
+          await executePatchProposal(proposal, editedData);
           entityId = proposal.entityId;
           entityType = proposal.entityType;
         } else if (isRelationshipProposal(proposal)) {

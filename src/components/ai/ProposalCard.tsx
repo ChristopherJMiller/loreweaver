@@ -32,13 +32,17 @@ import type {
   EntityProposal,
   CreateProposal,
   UpdateProposal,
+  PatchProposal,
   RelationshipProposal,
 } from "@/ai/tools/entity-proposals/types";
 import {
   isCreateProposal,
   isUpdateProposal,
+  isPatchProposal,
   isRelationshipProposal,
 } from "@/ai/tools/entity-proposals/types";
+import { UnifiedDiffView } from "./UnifiedDiffView";
+import { JsonPatchView } from "./JsonPatchView";
 import type { SuggestedRelationship } from "@/ai/agents/types";
 import { RICH_TEXT_FIELDS } from "@/types";
 
@@ -218,6 +222,7 @@ function getOperationVariant(
     case "create":
       return "default";
     case "update":
+    case "patch":
       return "secondary";
     case "relationship":
       return "outline";
@@ -457,6 +462,58 @@ function RelationshipProposalContent({
   );
 }
 
+/**
+ * Render patch proposal content with diff visualization
+ */
+function PatchProposalContent({ proposal }: { proposal: PatchProposal }) {
+  const [selectedPatch, setSelectedPatch] = useState(0);
+
+  if (proposal.patches.length === 0) {
+    return <p className="text-sm text-muted-foreground">No patches to apply</p>;
+  }
+
+  const currentPatch = proposal.patches[selectedPatch];
+
+  return (
+    <div className="space-y-3">
+      {/* Field selector tabs if multiple patches */}
+      {proposal.patches.length > 1 && (
+        <div className="flex gap-1 flex-wrap">
+          {proposal.patches.map((patch, idx) => (
+            <Button
+              key={idx}
+              variant={selectedPatch === idx ? "default" : "outline"}
+              size="sm"
+              className="h-7 text-xs"
+              onClick={() => setSelectedPatch(idx)}
+              onMouseDown={(e) => e.preventDefault()}
+            >
+              {formatEntityType(patch.field)}
+            </Button>
+          ))}
+        </div>
+      )}
+
+      {/* Field label for single patch */}
+      {proposal.patches.length === 1 && (
+        <div className="text-xs font-medium text-muted-foreground">
+          Field: {formatEntityType(currentPatch.field)}
+        </div>
+      )}
+
+      {/* Diff view based on patch type */}
+      {currentPatch.patchType === "unified_diff" ? (
+        <UnifiedDiffView patch={currentPatch.patch} />
+      ) : (
+        <JsonPatchView
+          patch={currentPatch.patch}
+          currentValue={proposal.currentData?.[currentPatch.field]}
+        />
+      )}
+    </div>
+  );
+}
+
 export function ProposalCard({
   proposal,
   onAccept,
@@ -476,7 +533,9 @@ export function ProposalCard({
               ? "Create"
               : proposal.operation === "update"
                 ? "Update"
-                : "Link"}
+                : proposal.operation === "patch"
+                  ? "Patch"
+                  : "Link"}
           </Badge>
           <Badge variant="outline">{formatEntityType(
             isRelationshipProposal(proposal)
@@ -497,6 +556,9 @@ export function ProposalCard({
         )}
         {isUpdateProposal(proposal) && (
           <UpdateProposalContent proposal={proposal} />
+        )}
+        {isPatchProposal(proposal) && (
+          <PatchProposalContent proposal={proposal} />
         )}
         {isRelationshipProposal(proposal) && (
           <RelationshipProposalContent proposal={proposal} />

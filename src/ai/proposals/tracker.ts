@@ -11,6 +11,8 @@ import type {
   EntityProposal,
   CreateProposal,
   UpdateProposal,
+  PatchProposal,
+  FieldPatch,
   RelationshipProposal,
   ProposalStatus,
 } from "@/ai/tools/entity-proposals/types";
@@ -94,6 +96,38 @@ export class ProposalTracker {
       changes,
       reasoning: options?.reasoning,
       currentData: options?.currentData,
+      createdAt: new Date(),
+      status: "pending",
+    };
+
+    this.proposals.set(id, proposal);
+    this.onProposalCreated?.(proposal);
+    return proposal;
+  }
+
+  /**
+   * Add a patch proposal
+   */
+  addPatchProposal(
+    entityType: EntityType,
+    entityId: string,
+    patches: FieldPatch[],
+    options?: {
+      reasoning?: string;
+      currentData?: Record<string, unknown>;
+      previewData?: Record<string, unknown>;
+    }
+  ): PatchProposal {
+    const id = this.generateId();
+    const proposal: PatchProposal = {
+      id,
+      operation: "patch",
+      entityType,
+      entityId,
+      patches,
+      reasoning: options?.reasoning,
+      currentData: options?.currentData,
+      previewData: options?.previewData,
       createdAt: new Date(),
       status: "pending",
     };
@@ -213,6 +247,9 @@ export class ProposalTracker {
     } else if (proposal.operation === "update") {
       const fields = Object.keys(proposal.changes).join(", ");
       return `${statusIcon} Update ${proposal.entityType} (${proposal.entityId}): fields [${fields}] (id: ${proposal.id})`;
+    } else if (proposal.operation === "patch") {
+      const fields = proposal.patches.map((p) => p.field).join(", ");
+      return `${statusIcon} Patch ${proposal.entityType} (${proposal.entityId}): fields [${fields}] (id: ${proposal.id})`;
     } else {
       return `${statusIcon} Relationship: ${proposal.sourceName} → ${proposal.relationshipType} → ${proposal.targetName} (id: ${proposal.id})`;
     }

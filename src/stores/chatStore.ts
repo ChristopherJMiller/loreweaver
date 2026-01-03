@@ -625,6 +625,9 @@ export const useChatStore = create<ChatState>((set, get) => ({
     } else if (proposal.operation === "update") {
       const fields = Object.keys(proposal.changes).join(", ");
       content = `Proposing to update ${proposal.entityType}: fields [${fields}]`;
+    } else if (proposal.operation === "patch") {
+      const fields = proposal.patches.map((p) => p.field).join(", ");
+      content = `Proposing to patch ${proposal.entityType}: fields [${fields}]`;
     } else {
       content = `Proposing relationship: ${proposal.sourceName} → ${proposal.relationshipType} → ${proposal.targetName}`;
     }

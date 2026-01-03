@@ -10,7 +10,7 @@ import type { SuggestedRelationship } from "@/ai/agents/types";
 /**
  * Operation type for proposals
  */
-export type ProposalOperation = "create" | "update" | "relationship";
+export type ProposalOperation = "create" | "update" | "patch" | "relationship";
 
 /**
  * Status of a proposal
@@ -79,6 +79,42 @@ export interface UpdateProposal extends BaseProposal {
 }
 
 /**
+ * A patch for a single field using diff format
+ */
+export interface FieldPatch {
+  /** Field name to patch */
+  field: string;
+
+  /** Type of patch: unified_diff for text, json_patch for structured data */
+  patchType: "unified_diff" | "json_patch";
+
+  /** The patch content (unified diff string or JSON patch array as string) */
+  patch: string;
+}
+
+/**
+ * Proposal for patching an existing entity using diffs
+ */
+export interface PatchProposal extends BaseProposal {
+  operation: "patch";
+
+  /** Entity type being patched */
+  entityType: EntityType;
+
+  /** ID of entity to patch */
+  entityId: string;
+
+  /** Array of field patches to apply */
+  patches: FieldPatch[];
+
+  /** Current entity data for diff visualization */
+  currentData?: Record<string, unknown>;
+
+  /** Computed preview after patches applied */
+  previewData?: Record<string, unknown>;
+}
+
+/**
  * Proposal for creating a relationship between entities
  */
 export interface RelationshipProposal extends BaseProposal {
@@ -115,7 +151,7 @@ export interface RelationshipProposal extends BaseProposal {
 /**
  * Union type for all proposal types
  */
-export type EntityProposal = CreateProposal | UpdateProposal | RelationshipProposal;
+export type EntityProposal = CreateProposal | UpdateProposal | PatchProposal | RelationshipProposal;
 
 /**
  * Input for propose_create tool
@@ -144,6 +180,20 @@ export interface ProposeUpdateInput {
   entity_type: EntityType;
   entity_id: string;
   changes: Record<string, unknown>;
+  reasoning?: string;
+}
+
+/**
+ * Input for propose_patch tool
+ */
+export interface ProposePatchInput {
+  entity_type: EntityType;
+  entity_id: string;
+  patches: Array<{
+    field: string;
+    patch_type: "unified_diff" | "json_patch";
+    patch: string;
+  }>;
   reasoning?: string;
 }
 
@@ -177,6 +227,15 @@ export function isUpdateProposal(
   proposal: EntityProposal
 ): proposal is UpdateProposal {
   return proposal.operation === "update";
+}
+
+/**
+ * Type guard for PatchProposal
+ */
+export function isPatchProposal(
+  proposal: EntityProposal
+): proposal is PatchProposal {
+  return proposal.operation === "patch";
 }
 
 /**

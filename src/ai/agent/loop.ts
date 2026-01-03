@@ -63,7 +63,7 @@ export interface AgentMessage {
  */
 function getToolCategory(toolName: string): ToolCategory {
   const internalTools = ["add_work_item", "update_work_item", "list_work_items"];
-  const writeTools = ["propose_create", "propose_update", "propose_relationship"];
+  const writeTools = ["propose_create", "propose_update", "propose_patch", "propose_relationship"];
 
   if (internalTools.includes(toolName)) return "internal";
   if (writeTools.includes(toolName)) return "write";

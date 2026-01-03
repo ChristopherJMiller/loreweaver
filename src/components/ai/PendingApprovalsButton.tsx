@@ -47,6 +47,13 @@ function getProposalSummary(proposal: EntityProposal): { title: string; subtitle
       title: `${fields}${more}`,
       subtitle: formatEntityType(proposal.entityType),
     };
+  } else if (proposal.operation === "patch") {
+    const fields = proposal.patches.map((p) => p.field).slice(0, 2).join(", ");
+    const more = proposal.patches.length > 2 ? "..." : "";
+    return {
+      title: `Patch: ${fields}${more}`,
+      subtitle: formatEntityType(proposal.entityType),
+    };
   } else {
     return {
       title: `${proposal.sourceName} → ${proposal.targetName}`,
