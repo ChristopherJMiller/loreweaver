@@ -10,8 +10,15 @@
     };
   };
 
-  outputs = { self, nixpkgs, flake-utils, rust-overlay }:
-    flake-utils.lib.eachDefaultSystem (system:
+  outputs =
+    {
+      self,
+      nixpkgs,
+      flake-utils,
+      rust-overlay,
+    }:
+    flake-utils.lib.eachDefaultSystem (
+      system:
       let
         pkgs = import nixpkgs {
           inherit system;
@@ -19,7 +26,10 @@
         };
 
         rustToolchain = pkgs.rust-bin.stable.latest.default.override {
-          extensions = [ "rust-src" "rust-analyzer" ];
+          extensions = [
+            "rust-src"
+            "rust-analyzer"
+          ];
         };
 
         # SeaORM CLI for entity generation (matching SeaORM 1.1.x)
@@ -40,7 +50,10 @@
           meta = with pkgs.lib; {
             description = "Command line utility for SeaORM";
             homepage = "https://www.sea-ql.org/SeaORM/";
-            license = with licenses; [ mit asl20 ];
+            license = with licenses; [
+              mit
+              asl20
+            ];
           };
         };
 
@@ -58,7 +71,8 @@
           at-spi2-atk
           pango
         ];
-      in {
+      in
+      {
         # Package derivation for building the application
         packages.default = pkgs.rustPlatform.buildRustPackage (finalAttrs: {
           pname = "loreweaver";
@@ -78,7 +92,7 @@
             inherit (finalAttrs) pname version src;
             # fetcherVersion 2 ensures consistent permissions
             fetcherVersion = 2;
-            hash = "sha256-LlgwtzVq0v10Xi7v36UE6L2hHtPnqf5M7NzrPgOcFY4=";
+            hash = "sha256-GXYSqFO3qjQgHeZCiWCCUmV5mHQmN4lBAzO7w4K4bhs=";
           };
 
           nativeBuildInputs = with pkgs; [
@@ -96,9 +110,11 @@
             gobject-introspection
           ];
 
-          buildInputs = tauriDeps ++ (with pkgs; [
-            glib-networking
-          ]);
+          buildInputs =
+            tauriDeps
+            ++ (with pkgs; [
+              glib-networking
+            ]);
 
           # Disable tests during build (run separately if needed)
           doCheck = false;
@@ -138,13 +154,15 @@
           buildInputs = tauriDeps;
 
           shellHook = ''
-            export LD_LIBRARY_PATH=${pkgs.lib.makeLibraryPath [
-              pkgs.openssl
-              pkgs.webkitgtk_4_1
-              pkgs.gtk3
-              pkgs.libsoup_3
-              pkgs.glib
-            ]}:$LD_LIBRARY_PATH
+            export LD_LIBRARY_PATH=${
+              pkgs.lib.makeLibraryPath [
+                pkgs.openssl
+                pkgs.webkitgtk_4_1
+                pkgs.gtk3
+                pkgs.libsoup_3
+                pkgs.glib
+              ]
+            }:$LD_LIBRARY_PATH
 
             export PKG_CONFIG_PATH="${pkgs.libsoup_3}/lib/pkgconfig:$PKG_CONFIG_PATH"
             export GIO_MODULE_DIR="${pkgs.glib-networking}/lib/gio/modules"
